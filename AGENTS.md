@@ -199,6 +199,24 @@ Résumé :
 
 ---
 
+## Règle 8 — Le contenu pédagogique vient d'un document validé
+
+> **Ne jamais inventer un énoncé, une réponse attendue, une intervention ou
+> une règle de diagnostic.**
+
+Les contenus pédagogiques sont transcrits d'un document validé par le
+responsable pédagogique, présent dans le dépôt
+(`relio_chapitre1_banque_exercices_diagnostic_v1.md` pour le chapitre 1).
+
+Si ce document est absent, **demander qu'il soit ajouté** plutôt que de le
+reconstituer de mémoire : un contenu inventé pollue définitivement
+l'historique d'apprentissage, qui est append-only par conception.
+
+Une valeur mathématique ajoutée (tâche de vérification, réponse attendue) doit
+être **vérifiée arithmétiquement** et couverte par un test.
+
+---
+
 ## État du dépôt
 
 | Élément | Valeur |
@@ -208,7 +226,7 @@ Résumé :
 | Flutter | 3.47.7 |
 | NDK requis | 28.2.13676358 |
 | Persistance | Drift / SQLite, schéma v2 |
-| Tests | 50 |
+| Tests | 137 (50 socle + 87 curriculum chapitre 1) |
 
 ### Branches
 

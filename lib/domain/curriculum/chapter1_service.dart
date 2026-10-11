@@ -1,0 +1,448 @@
+﻿/// Service d'intÃ©gration : relie la banque du chapitre 1 aux Ã©vÃ©nements
+/// d'apprentissage existants.
+///
+/// Ce service NE REFAIT PAS la persistance : il utilise
+/// [LearningEventRepository] et le modÃ¨le [LearningEvent] du socle. Aucun
+/// Ã©tat parallÃ¨le n'est introduit.
+///
+/// Principe central : **aucun boolÃ©en de maÃ®trise n'est stockÃ©**. La
+/// distinction autonome / assistÃ©e est dÃ©rivÃ©e de l'historique rÃ©el des
+/// indices au moment de la classification.
+// Le service utilise des champs privÃ©s initialisÃ©s depuis des paramÃ¨tres
+// optionnels (horloge, moteur, gÃ©nÃ©rateur d'identifiants) : les
+// initialising formals ne s'appliquent pas Ã  ce motif.
+// ignore_for_file: prefer_initializing_formals
+library;
+
+import '../../core/clock.dart';
+import '../../core/id.dart';
+import '../learning/exercise_attempt.dart';
+import '../learning/learning_event.dart';
+import '../learning/learning_event_repository.dart';
+import '../learning/observed_error.dart';
+import '../learning/offered_hint.dart';
+import 'chapter1_bank.dart';
+import 'diagnostic_case.dart';
+import 'diagnostic_engine.dart';
+import 'exercise.dart';
+import 'hint_trajectory.dart';
+
+/// Type d'Ã©vÃ©nement Â« consultation d'indice Â».
+///
+/// Chaque indice consultÃ© est un Ã©vÃ©nement DISTINCT : l'ordre rÃ©el de
+/// consultation est ainsi conservÃ© dans l'historique immuable.
+const String kHintRequestedEventType = 'hint_requested';
+
+/// Type d'Ã©vÃ©nement Â« tentative d'exercice Â».
+const String kAttemptEventType = 'exercise_attempt';
+
+/// Vue d'une tentative reconstituÃ©e depuis l'historique.
+class AttemptRecord {
+  AttemptRecord({
+    required this.eventId,
+    required this.exerciseId,
+    required this.trajectory,
+    required this.classification,
+    required this.outcome,
+    required this.attemptKey,
+    this.submittedAt,
+  });
+
+  /// Identifiant de l'Ã©vÃ©nement d'apprentissage.
+  final String eventId;
+
+  /// ClÃ© reliant les indices consultÃ©s Ã  CETTE tentative.
+  ///
+  /// Distincte de [eventId] : les indices sont enregistrÃ©s avant la
+  /// soumission, donc avant que l'identifiant dÃ©finitif n'existe.
+  final String attemptKey;
+
+  /// Exercice tentÃ©.
+  final String exerciseId;
+
+  /// Trajectoire des indices, dans l'ordre rÃ©el de consultation.
+  final HintTrajectory trajectory;
+
+  /// Classification dÃ©rivÃ©e des faits.
+  final AttemptClassification classification;
+
+  /// RÃ©sultat observable de la correction.
+  final AnswerOutcome outcome;
+
+  /// Date de soumission.
+  final DateTime? submittedAt;
+
+  /// La rÃ©ussite est-elle autonome (aucun indice consultÃ©) ?
+  ///
+  /// Une rÃ©ussite aprÃ¨s indice n'est JAMAIS autonome.
+  bool get isAutonomous => classification == AttemptClassification.autonomousSuccess;
+
+  @override
+  String toString() =>
+      'AttemptRecord($exerciseId, ${classification.name}, '
+      'indices=${trajectory.consumedOrders})';
+}
+
+/// Resultat de la correction d'une rÃ©ponse, calculÃ© MÃ‰CANIQUEMENT.
+///
+/// Ne contient aucun jugement : uniquement l'adÃ©quation Ã  la rÃ©ponse
+/// attendue du document validÃ©.
+class CorrectionResult {
+  const CorrectionResult({
+    required this.isCorrect,
+    required this.isEvaluated,
+    required this.matchedValue,
+  });
+
+  /// La rÃ©ponse correspond-elle Ã  la rÃ©ponse attendue ?
+  final bool isCorrect;
+
+  /// La rÃ©ponse a-t-elle pu Ãªtre Ã©valuÃ©e ?
+  final bool isEvaluated;
+
+  /// Valeur attendue retenue, si la rÃ©ponse Ã©tait numÃ©rique.
+  final int? matchedValue;
+}
+
+/// Corrige une rÃ©ponse saisie par rapport Ã  un exercice.
+///
+/// Correction purely FORMELLE : comparaison Ã  la rÃ©ponse attendue.
+/// Aucune infÃ©rence pÃ©dagogique n'est faite ici.
+CorrectionResult correct(Exercise exercise, String rawInput) {
+  final raw = rawInput.trim();
+  if (raw.isEmpty) {
+    return const CorrectionResult(
+      isCorrect: false,
+      isEvaluated: true,
+      matchedValue: null,
+    );
+  }
+
+  final criterion = exercise.correction;
+
+  // Expression textuelle normalisÃ©e (ex. Â« ppcm = produit / pgcd Â»).
+  final normalized = _normalizeExpression(raw);
+  if (criterion.acceptsExpression(normalized)) {
+    return CorrectionResult(
+      isCorrect: true,
+      isEvaluated: true,
+      matchedValue: criterion.acceptedValues.isEmpty
+          ? null
+          : criterion.acceptedValues.first,
+    );
+  }
+
+  // Valeur numÃ©rique.
+  final parsed = _parseNumber(raw);
+  if (parsed == null) {
+    // Format non reconnu : distinct d'une rÃ©ponse fausse.
+    return const CorrectionResult(
+      isCorrect: false,
+      isEvaluated: false,
+      matchedValue: null,
+    );
+  }
+
+  final matches = criterion.accepts(parsed);
+  return CorrectionResult(
+    isCorrect: matches,
+    isEvaluated: true,
+    matchedValue: matches ? parsed : null,
+  );
+}
+
+/// Analyse une saisie numÃ©rique en tolÃ©rant les espaces et la virgule.
+int? _parseNumber(String raw) {
+  final cleaned = raw.replaceAll(RegExp(r'\s'), '').replaceAll(',', '.');
+  return int.tryParse(cleaned);
+}
+
+/// Normalise une expression pour comparaison textuelle.
+String _normalizeExpression(String raw) {
+  return raw
+      .toLowerCase()
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .replaceAll('*', 'Ã—')
+      .trim();
+}
+
+/// Service d'intÃ©gration de la banque du chapitre 1.
+class Chapter1Service {
+  Chapter1Service(
+    this._repository, {
+    Clock clock = systemClockUtc,
+    DiagnosticEngine engine = const DiagnosticEngine(),
+    String Function()? idGenerator,
+  })  : _clock = clock,
+        _engine = engine,
+        _newId = idGenerator ?? newId;
+
+  final LearningEventRepository _repository;
+  final Clock _clock;
+  final DiagnosticEngine _engine;
+  final String Function() _newId;
+
+  /// Moteur de diagnostic utilisÃ©.
+  DiagnosticEngine get engine => _engine;
+
+  // ---------------------------------------------------------------------
+  // Lecture de la banque
+  // ---------------------------------------------------------------------
+
+  /// Les 11 exercices validÃ©s.
+  List<Exercise> get exercises =>
+      Chapter1Bank.exercises.where((e) => e.kind == BankElementKind.exercise).toList();
+
+  /// Les tÃ¢ches de vÃ©rification post-rÃ©mediation.
+  List<Exercise> get verificationTasks =>
+      Chapter1Bank.verificationTasks.toList();
+
+  /// Exercice par identifiant (exercices ET tÃ¢ches de vÃ©rification).
+  Exercise? findExercise(String id) => Chapter1Bank.findExercise(id);
+
+  /// Prochain indice Ã  proposer, selon l'ordre de la banque.
+  ///
+  /// Retourne `null` si tous les indices ont Ã©tÃ© distribuÃ©s : la banque
+  /// interdit d'afficher d'emblÃ©e toute la solution, et n'autorise pas
+  /// d'inventer une aide supplÃ©mentaire.
+  ExerciseHint? nextHint(Exercise exercise, Set<int> consumedOrders) =>
+      exercise.nextHintAfter(consumedOrders);
+
+  // ---------------------------------------------------------------------
+  // Enregistrement
+  // ---------------------------------------------------------------------
+
+  /// Enregistre la consultation d'un indice comme Ã©vÃ©nement immuable.
+  ///
+  /// Un indice = un Ã©vÃ©nement : l'ordre de consultation est ainsi conservÃ©
+  /// sans aucune colonne d'ordre Ã  maintenir.
+  ///
+  /// [attemptKey] relie l'indice Ã  la tentative en cours, y compris si
+  /// l'application se ferme avant la soumission.
+  Future<String> recordHintRequested({
+    required String attemptKey,
+    required Exercise exercise,
+    required int hintOrder,
+  }) async {
+    final hint = exercise.orderedHints.firstWhere(
+      (h) => h.order == hintOrder,
+      orElse: () => throw ArgumentError(
+        'Indice #$hintOrder inexistant pour ${exercise.id}',
+      ),
+    );
+
+    final now = _clock();
+    final event = LearningEvent(
+      id: _newId(),
+      type: kHintRequestedEventType,
+      occurredAt: now,
+      notionIds: _notionsFor(exercise),
+      metadata: <String, Object?>{
+        'attemptKey': attemptKey,
+        'exerciseId': exercise.id,
+        'hintOrder': hint.order,
+        'hintId': hint.hintId,
+        'hintKind': hint.kind,
+        'hintText': hint.text,
+      },
+    );
+
+    await _repository.record(event);
+    return event.id;
+  }
+
+  /// Enregistre une tentative d'exercice avec sa correction et son
+  /// erreur constatÃ©e.
+  ///
+  /// [attemptKey] identifie la tentative EN COURS, avant soumission : c'est
+  /// lui qui relie les Ã©vÃ©nements d'indices Ã  la tentative, et non
+  /// l'identifiant dÃ©finitif de l'Ã©vÃ©nement de soumission.
+  ///
+  /// [hintOrders] est l'ENSEMBLE des indices consultÃ©s AVANT cette
+  /// soumission : c'est ce qui permet de dÃ©river une rÃ©ussite assistÃ©e
+  /// sans stocker d'Ã©tat supplÃ©mentaire.
+  Future<AttemptRecord> recordAttempt({
+    required Exercise exercise,
+    required String rawAnswer,
+    String? attemptKey,
+    Set<int> hintOrders = const <int>{},
+    String? errorType,
+    bool showSteps = true,
+  }) async {
+    final correction = correct(exercise, rawAnswer);
+    final now = _clock();
+    final resolvedKey = attemptKey ?? 'attempt-${_newId()}';
+
+    final trajectory = HintTrajectory(<ConsumedHint>[
+      for (final order in hintOrders)
+        ConsumedHint(order: order, consumedAt: now, hintId: _hintId(exercise, order)),
+    ]);
+
+    final classification = trajectory.classify(
+      isCorrect: correction.isCorrect,
+      isEmpty: rawAnswer.trim().isEmpty,
+      notEvaluated: !correction.isEvaluated,
+    );
+
+    final attempt = ExerciseAttempt(
+      exerciseId: exercise.id,
+      startedAt: now,
+      submittedAt: now,
+      outcome: correction.isCorrect
+          ? AnswerOutcome.correct
+          : (correction.isEvaluated ? AnswerOutcome.incorrect : AnswerOutcome.notEvaluated),
+      answer: StudentAnswer(
+        answerId: 'a-${exercise.id}',
+        rawText: rawAnswer,
+        normalizedValue: rawAnswer.trim(),
+        isEmpty: rawAnswer.trim().isEmpty,
+      ),
+      // Une erreur constatÃ©e n'est dÃ©crite que si elle est identifiable :
+      // `errorType` reste NULL sinon, jamais devinÃ©.
+      error: ObservedError(
+        id: _newId(),
+        occurredAt: now,
+        errorType: errorType,
+        description: errorType == null && !correction.isCorrect
+            ? 'RÃ©ponse non conforme Ã  la rÃ©ponse attendue.'
+            : null,
+      ),
+      // Le dernier indice consultÃ© est conservÃ© pour l'affichage ; la
+      // trajectoire complÃ¨te reste dans les Ã©vÃ©nements `hint_requested`.
+      hint: hintOrders.isEmpty
+          ? null
+          : OfferedHint(
+              id: _newId(),
+              offeredAt: now,
+              hintId: _hintId(exercise, hintOrders.last),
+              kind: 'methode',
+            ),
+      context: null,
+    );
+
+    final event = LearningEvent(
+      id: _newId(),
+      type: kAttemptEventType,
+      occurredAt: now,
+      notionIds: _notionsFor(exercise),
+      attempt: attempt,
+      metadata: <String, Object?>{
+        'exerciseId': exercise.id,
+        'lessonId': exercise.lesson.id,
+        // ClÃ© de tentative reliant les indices consultÃ©s Ã  cette soumission.
+        'attemptKey': resolvedKey,
+        // Ordre rÃ©el de consultation : conservÃ© comme FAIT.
+        'hintOrders': hintOrders.toList()..sort(),
+        'classification': classification.name,
+        'stepsShown': showSteps,
+      },
+    );
+
+    await _repository.record(event);
+
+    return AttemptRecord(
+      eventId: event.id,
+      attemptKey: resolvedKey,
+      exerciseId: exercise.id,
+      trajectory: trajectory,
+      classification: classification,
+      outcome: attempt.outcome,
+      submittedAt: now,
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Reconstruction depuis l'historique
+  // ---------------------------------------------------------------------
+
+  /// Reconstitue une tentative depuis les Ã©vÃ©nements persistÃ©s.
+  ///
+  /// La classification est RECALCULÃ‰E depuis les Ã©vÃ©nements d'indices : elle
+  /// ne dÃ©pend d'aucun Ã©tat stockÃ©, donc ne peut pas devenir incohÃ©rente.
+  Future<AttemptRecord?> findAttempt(String eventId) async {
+    final event = await _repository.findById(eventId);
+    if (event == null) return null;
+
+    // Les indices sont rattachÃ©s Ã  la CLÃ‰ de tentative, pas Ã  l'identifiant
+    // de l'Ã©vÃ©nement : ils sont enregistrÃ©s avant la soumission.
+    final key = (event.metadata['attemptKey'] as String?) ?? event.id;
+    final hintEvents = await _repository.findByType(kHintRequestedEventType);
+    final consumed = <ConsumedHint>[
+      for (final hintEvent in hintEvents)
+        if (hintEvent.metadata['attemptKey'] == key)
+          if (hintEvent.metadata['hintOrder'] case final int order)
+            ConsumedHint(order: order, consumedAt: hintEvent.occurredAt),
+    ];
+
+    final trajectory = HintTrajectory(consumed);
+
+    final outcome = event.attempt?.outcome ?? AnswerOutcome.notEvaluated;
+    final isCorrect = outcome == AnswerOutcome.correct;
+    final isEmpty = event.attempt?.answer?.isEmpty ?? false;
+
+    return AttemptRecord(
+      eventId: event.id,
+      attemptKey: (event.metadata['attemptKey'] as String?) ?? event.id,
+      exerciseId: event.attempt?.exerciseId ?? '',
+      trajectory: trajectory,
+      classification: trajectory.classify(
+        isCorrect: isCorrect,
+        isEmpty: isEmpty,
+        notEvaluated: outcome == AnswerOutcome.notEvaluated,
+        abandoned: outcome == AnswerOutcome.abandoned,
+      ),
+      outcome: outcome,
+      submittedAt: event.attempt?.submittedAt,
+    );
+  }
+
+  /// Historique des indices d'une tentative, dans l'ordre rÃ©el.
+  ///
+  /// [attemptKey] est la clÃ© de tentative, pas l'identifiant de
+  /// l'Ã©vÃ©nement de soumission.
+  Future<List<ConsumedHint>> hintHistoryOf(String attemptKey) async {
+    final hintEvents = await _repository.findByType(kHintRequestedEventType);
+    return <ConsumedHint>[
+      for (final hintEvent in hintEvents)
+        if (hintEvent.metadata['attemptKey'] == attemptKey)
+          if (hintEvent.metadata['hintOrder'] case final int order)
+            ConsumedHint(order: order, consumedAt: hintEvent.occurredAt),
+    ]..sort((a, b) => a.consumedAt.compareTo(b.consumedAt));
+  }
+
+  /// Lance un diagnostic sur une tentative observÃ©e.
+  ///
+  /// Les FAITS sont fournis par l'appelant ; le moteur ne produit que des
+  /// hypothÃ¨ses.
+  DiagnosisOutcome diagnose({
+    required AttemptObservation observation,
+    required String failedExerciseId,
+    int clarificationAlreadyAsked = 0,
+  }) {
+    return _engine.diagnose(
+      DiagnosticContext(
+        observation: observation,
+        failedExerciseId: failedExerciseId,
+        clarificationAlreadyAsked: clarificationAlreadyAsked,
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Interne
+  // ---------------------------------------------------------------------
+
+  String? _hintId(Exercise exercise, int order) {
+    for (final hint in exercise.orderedHints) {
+      if (hint.order == order) return hint.hintId;
+    }
+    return null;
+  }
+
+  /// Notions concernÃ©es par un exercice.
+  ///
+  /// Aucun contenu pÃ©dagogique n'est inventÃ© : les identifiants sont
+  /// dÃ©rivÃ©s de la leÃ§on, ce sont des clÃ©s structurelles.
+  List<String> _notionsFor(Exercise exercise) => <String>['lecon-${exercise.lesson.id}'];
+}
+
