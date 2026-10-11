@@ -1,12 +1,12 @@
 /// Base de données locale Relio (SQLite via Drift).
 ///
-/// VERSION DE SCHÉMA : [schemaVersion] = 1.
+/// VERSION DE SCHÉMA : [kSchemaVersion] = 2.
 ///
 /// Politique de versionnage :
-///  - toute évolution du schéma INCREMENTE `schemaVersion` ;
+///  - toute évolution du schéma INCREMENTE `kSchemaVersion` ;
 ///  - chaque increment DOIT fournir une étape de migration explicite dans
 ///    [MigrationStrategy.onUpgrade] ;
-///  - les migrations sont testées (cf. `test/data/migration_test.dart`),
+///  - les migrations sont testées (cf. `test/migration_test.dart`),
 ///    y compris la PRÉSERVATION des événements déjà enregistrés.
 ///
 /// La stratégie de migration ne doit JAMAIS supprimer ni réécrire un
@@ -57,10 +57,10 @@ class AppDatabase extends _$AppDatabase {
 
   /// Ouvre la base dans le répertoire privé de l'application Android.
   ///
-  /// Le stockage est 100 % LOCAL : aucune donnée d'apprentissage ne sort
-  /// de l'appareil, et aucune connexion n'est requise pour lire ou écrire.
+  /// Le stockage est 100 % LOCAL : aucune donnée d'apprentissage ne sort de
+  /// l'appareil, et aucune connexion réseau n'est requise pour lire ou écrire.
   static Future<AppDatabase> openLocal() async {
-    // Nécessaire sur Android pour charger la bundled SQLite native.
+    // Nécessaire sur Android pour charger la SQLite native.
     await applyWorkaroundToOpenSqlite3OnOldAndroidVersions();
     final dir = await getApplicationDocumentsDirectory();
     final file = File(p.join(dir.path, 'relio.sqlite'));
@@ -210,10 +210,10 @@ class AppDatabase extends _$AppDatabase {
       ');',
     );
 
-    // 3. Clés étrangères des tables d'apprentissage, absentes en v0.
+    // 3. Clés étrangères des tables d'apprentissage, absentes en v1.
     //
     // Recréer la table conserve les lignes tout en ajoutant les
-    // contraintes d'intégrité attendues en v1.
+    // contraintes d'intégrité attendues en v2.
     await customStatement('DROP TABLE IF EXISTS observed_errors_v1');
     await customStatement(
       'CREATE TABLE observed_errors_v1 ('
@@ -253,6 +253,7 @@ class AppDatabase extends _$AppDatabase {
   }
 }
 
+/// Connexion native, exécutée en arrière-plan pour ne pas bloquer l'UI.
 LazyDatabase _openConnection(File file) {
   return LazyDatabase(() async {
     return NativeDatabase.createInBackground(
