@@ -60,7 +60,79 @@ est préféré pour l'installation sur téléphone.
 
 ---
 
-## Règle 2 — Android est la seule cible
+## Règle 2 — Publier l'APK sur la branche `apk-build`
+
+> **Après tout build réussi, versionner l'APK sur la branche `apk-build`,
+> séparément de `main`.**
+
+### Répartition des rôles
+
+| Branche | Contenu | Usage |
+|---|---|---|
+| `main` | Code source uniquement | Développement, tests, documentation |
+| `apk-build` | Binaire(s) APK + `apk/README.md` | Distribution et téléchargement |
+
+**`main` ne doit JAMAIS contenir de fichier `.apk` ou `.aab`.** Le code et
+les binaires sont séparés pour que l'historique de `main` reste lisible et
+léger.
+
+### Ce qu'il faut faire
+
+1. Se placer sur `apk-build` :
+
+   ```bash
+   git checkout apk-build
+   ```
+
+2. Y copier l'APK sous un nom **versionné**, dans `apk/` :
+
+   ```bash
+   Copy-Item build\app\outputs\flutter-apk\app-release.apk apk\relio-socle-v0.1.0.apk -Force
+   ```
+
+   Convention de nom : `relio-socle-v<version>.apk`, où `<version>` reprend
+   la version de `pubspec.yaml`.
+
+3. **Forcer l'ajout**, car `.gitignore` exclut `*.apk` par défaut :
+
+   ```bash
+   git add -f apk/relio-socle-v0.1.0.apk
+   ```
+
+4. Mettre à jour `apk/README.md` si nécessaire (taille, prérequis).
+
+5. Commiter et pousser :
+
+   ```bash
+   git commit -m "APK de distribution v<version>"
+   git push origin apk-build
+   ```
+
+6. Revenir sur `main` pour poursuivre le développement :
+
+   ```bash
+   git checkout main
+   ```
+
+### Pourquoi cette règle existe
+
+L'utilisateur récupère l'application **depuis GitHub**, pas depuis la
+machine de développement. Sans cette étape, le code est poussé mais
+l'installable n'est pas disponible : l'utilisateur ne peut rien tester.
+
+### À savoir
+
+- Chaque build ajoute ~20 Mo à `apk-build`. Cette branche est une branche de
+  **distribution**, pas de développement : ne jamais y coder.
+- Si le volume devient gênant, la solution propre est une **GitHub Release**
+  (les binaires n'entrent alors pas dans l historic git). Elle nécessite le
+  CLI GitHub (`winget install GitHub.cli`), absent de la machine actuelle.
+- Ne pas supprimer les anciens APK sans demande explicite : l'utilisateur
+  peut être en train d'en télécharger un.
+
+---
+
+## Règle 3 — Android est la seule cible
 
 Relio est une application **Android**. Le web n'est pas supporté et n'a pas
 été conservé.
@@ -73,7 +145,7 @@ fonctionnel dans cet environnement.
 
 ---
 
-## Règle 3 — Le socle pédagogique reste vide
+## Règle 4 — Le socle pédagogique reste vide
 
 Aucune notion, aucun exercice, aucune règle de maîtrise ne doit être
 inventé sans validation explicite. Les champs descriptionnels restent vides
@@ -84,7 +156,7 @@ technique.
 
 ---
 
-## Règle 4 — Pas de champ de maîtrise
+## Règle 5 — Pas de champ de maîtrise
 
 Le stockage contient uniquement des **faits observables** (dates, réponses,
 résultats, erreurs constatées, indices, contexte).
@@ -95,7 +167,7 @@ Interdits dans le modèle et le schéma :
 
 ---
 
-## Règle 5 — Toute évolution de schéma est testée
+## Règle 6 — Toute évolution de schéma est testée
 
 1. Incrémenter `kSchemaVersion` dans `lib/data/db/app_database.dart`.
 2. Ajouter l'étape de migration explicite dans `_runUpgradeSteps`.
@@ -107,10 +179,23 @@ migration.
 
 ---
 
-## Règle 6 — Pas de commit sans demande explicite
+## Règle 7 — Qui commite et pousse quoi
 
-L'utilisateur contrôle les commits et les pushes. Ne pas faire
-`git commit` ni `git push` sans demande claire.
+L'utilisateur contrôle le code : **ne jamais commiter ni pousser le code
+source sur `main` sans demande claire.**
+
+En revanche, la **règle 2 prime** : après tout build réussi, l'APK doit être
+versionné et poussé sur `apk-build`. C'est le seul cas où un `git push` est
+effectué sans demande explicite, précisément parce que l'utilisateur a demandé
+que ce soit automatique.
+
+Résumé :
+
+| Action | Autorisation |
+|---|---|
+| Commit de code sur `main` | ⛔ Sur demande explicite uniquement |
+| Commit + push de l'APK sur `apk-build` | ✅ Automatique après tout build (règle 2) |
+| Suppression d'un APK déjà publié | ⛔ Sur demande explicite |
 
 ---
 
@@ -124,5 +209,16 @@ L'utilisateur contrôle les commits et les pushes. Ne pas faire
 | NDK requis | 28.2.13676358 |
 | Persistance | Drift / SQLite, schéma v2 |
 | Tests | 50 |
+
+### Branches
+
+| Branche | Rôle | Poussée |
+|---|---|---|
+| `main` | Code source, tests, documentation | Sur demande explicite |
+| `apk-build` | APK de distribution dans `apk/` | Automatique après build (règle 2) |
+
+### Récupérer l'APK depuis GitHub
+
+<https://github.com/digitalholding2026-ux/relio-flutter-dart/tree/apk-build/apk>
 
 Détail complet dans `docs/ARCHITECTURE.md` et `docs/BUILD.md`.
