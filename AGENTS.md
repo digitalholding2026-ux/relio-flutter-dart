@@ -226,7 +226,7 @@ Une valeur mathématique ajoutée (tâche de vérification, réponse attendue) d
 | Flutter | 3.47.7 |
 | NDK requis | 28.2.13676358 |
 | Persistance | Drift / SQLite, schéma v2 |
-| Tests | 137 (50 socle + 87 curriculum chapitre 1) |
+| Tests | 180 (50 socle + 87 moteur ch.1 + 43 interface S1/S2) |
 
 ### Branches
 
