@@ -1,0 +1,30 @@
+name: relio
+description: "Relio - tuteur personnel de mathématiques."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Persistance locale (mission D) : SQLite typé + migrations versionnées.
+  drift: ^2.28.2
+  sqlite3_flutter_libs: ^0.5.42
+  path: ^1.9.1
+  path_provider: ^2.1.5
+
+  # Sérialisation des structures de données (versions de schéma).
+  uuid: ^4.5.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  drift_dev: ^2.28.2
+  build_runner: ^2.4.13
+
+flutter:
+  uses-material-design: true
