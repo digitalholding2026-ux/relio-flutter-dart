@@ -12,6 +12,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../branding/relio_lockup.dart';
 import '../strings/relio_strings.dart';
 import '../theme/relio_theme.dart';
 import 'app_shell.dart';
@@ -59,7 +60,17 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       // Racine d'onglet : pas de flèche de retour.
-      appBar: AppBar(automaticallyImplyLeading: false, title: const Text('')),
+      //
+      // Le lockup horizontal remplace le titre vide : c'est la premiere
+      // occurrence de la marque dans l'application (critère d'acceptation de
+      // la mission logo).
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        titleSpacing: RelioSpacing.horizontal,
+        title: const RelioLockupHorizontal(
+          markSize: RelioSpacing.logoCapHeight,
+        ),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(

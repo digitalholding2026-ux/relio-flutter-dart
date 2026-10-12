@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 67.7 24.0" width="67.7" height="24.0" role="img" aria-label="Relio">
+  <title>Relio</title>
+  <desc>Mark Relio, variante monochrome blanc. Grille de reference 100 x 100 ; boite englobante 67.7 x 24.0 unites, trait de 4.0 unites compris.</desc>
+  <g fill="none" fill-rule="evenodd">    <circle cx="66.0" cy="50.0" r="14.0" fill="#FFFFFF"/>
+    <circle cx="24.0" cy="50.0" r="7.7" fill="#FFFFFF"/>
+    <path d="M 31.7,50.0 C 37.993,58.0 45.707,58.0 52.0,50.0" stroke="#FFFFFF" stroke-width="4.0" stroke-linecap="round"/>
+  </g>
+</svg>

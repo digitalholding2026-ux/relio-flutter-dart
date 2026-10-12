@@ -194,6 +194,12 @@ abstract final class RelioSpacing {
   /// Écart entre deux sections d'écran.
   static const double sectionGap = xxl;
 
+  /// Hauteur de capitale du lockup « Relio » en en-tête.
+  ///
+  /// Elle commande la taille de tout le lockup, mark compris : le rapport entre
+  /// les deux est fixe par [RelioBrand], le mot sert donc de reference.
+  static const double logoCapHeight = 22;
+
   static const EdgeInsets screenPadding =
       EdgeInsets.symmetric(horizontal: horizontal);
 

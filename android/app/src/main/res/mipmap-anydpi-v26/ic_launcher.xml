@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icon adaptatif Android.
+     Grille de 108 dp, zone sure de 66 dp. Le mark occupe 55 % de la zone
+     safe (36.3 dp) et laisse de la respiration : c'est une exception assumee
+     a la regle des 14 unites, imposee par les masques de forme des
+     constructeurs.
+
+     Le fond est un aplat orange plein ; le premier plan ne porte que le mark,
+     en position centrale. Voir assets/branding/launcher/. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@mipmap/ic_launcher_background"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+    <monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>
+</adaptive-icon>

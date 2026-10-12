@@ -217,6 +217,59 @@ Une valeur mathématique ajoutée (tâche de vérification, réponse attendue) d
 
 ---
 
+## Règle 9 — La marque est générée, pas dessinée
+
+> **Aucun SVG, PNG ou widget de la marque ne s'édite à la main.**
+
+La géométrie du logo vit dans **un seul fichier** :
+
+```
+lib/presentation/branding/relio_mark_geometry.dart
+```
+
+Le SVG et le rendu à l'écran lisent les **mêmes constantes**. Toute
+déclinaison (lockup, monochrome, launcher, splash) en découle.
+
+### Ce qu'il faut faire après toute retouche de la marque
+
+1. Modifier **uniquement** `relio_mark_geometry.dart`.
+2. Régénérer :
+
+   ```bash
+   dart run tool/gen_branding.dart               # SVG
+   flutter test tool/render_branding_test.dart   # PNG launcher et splash
+   ```
+
+3. Vérifier :
+
+   ```bash
+   flutter analyze
+   flutter test test/branding/mark_geometry_test.dart
+   ```
+
+### Pourquoi cette règle existe
+
+Un SVG retouché à la main dérive du painter, ou l'inverse. Les deux
+décrivent alors deux marques différentes : l'impression ne correspond plus à
+l'écran, et rien ne le signale. `mark_geometry_test.dart` relit les SVG
+générés et échoue dès qu'ils divergent de la géométrie.
+
+### Valeurs figées
+
+Ne pas les ajuster sans remonter le constat. Les ratios de la spécification
+ont été vérifiés un par un ; une correction doit être motivée, pas
+discrète.
+
+| Élément | Valeur |
+|---|---|
+| Cercle droit / gauche | Ø 28 / Ø 15,4, centres (66, 50) et (24, 50) |
+| Courbe | départ (31,7, 50), arrivée (52, 50), point bas (41,85, 56) |
+| Profondeur | 6 sous la ligne des centres — **pas 16** |
+| Trait | 4 u (≥ 48 dp) / 6,2 u (< 48 dp) |
+| Couleurs | mark `#F56207`, wordmark `#1F3A6E` |
+
+---
+
 ## État du dépôt
 
 | Élément | Valeur |
@@ -226,7 +279,8 @@ Une valeur mathématique ajoutée (tâche de vérification, réponse attendue) d
 | Flutter | 3.47.7 |
 | NDK requis | 28.2.13676358 |
 | Persistance | Drift / SQLite, schéma v2 |
-| Tests | 362 (50 socle + 87 moteur ch.1 + 164 fiabilisation, verrouillage, vérification, typographie, relation) |
+| Marque | `assets/branding/` — voir [règle 9](#règle-9--la-marque-est-générée-pas-dessinée) |
+| Tests | 439 (400 applicatifs + 39 marque) |
 
 ### Branches
 

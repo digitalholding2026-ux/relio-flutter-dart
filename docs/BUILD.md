@@ -55,16 +55,19 @@ flutter build apk --debug
 flutter build apk --release
 ```
 
+> `--delete-conflicting-outputs` n'existe plus : `build_runner` le signale
+> comme « removed and ignored ». La commande ci-dessus est la forme valide.
+
 ## Tests
 
-`flutter test` exécute **362 tests**.
+`flutter test` exécute **439 tests**.
 
 | Domaine | Tests |
 |---|---|
 | Socle (persistance, événements, migrations) | 50 |
 | Moteur pédagogique chapitre 1 | 87 |
-| Interface S1/S2 et verrouillage du champ | 112 |
-| Fiabilisation, correction, vérification de transfert | 68 |
+| Interface S1/S2, fiabilisation, typographie, relation | 263 |
+| Marque (géométrie, SVG, lisibilité) | 39 |
 
 ## Résultats obtenus
 

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 67.7 24.0" width="67.7" height="24.0" role="img" aria-label="Relio">
+  <title>Relio — lockup horizontal</title>
+  <desc>Geometrie du mark. Le wordmark "Relio" est pose par l'application en Inter SemiBold 600, interlettrage -1.5 %, couleur #1F3A6E, a 20 unites du bord droit du mark, centre verticalement sur la ligne des centres (y = 50.0).</desc>
+  <g fill="none" fill-rule="evenodd">    <circle cx="66.0" cy="50.0" r="14.0" fill="#F56207"/>
+    <circle cx="24.0" cy="50.0" r="7.7" fill="#F56207"/>
+    <path d="M 31.7,50.0 C 37.993,58.0 45.707,58.0 52.0,50.0" stroke="#F56207" stroke-width="4.0" stroke-linecap="round"/>
+  </g>
+</svg>
