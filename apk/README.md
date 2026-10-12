@@ -3,16 +3,26 @@
 Cette branche contient uniquement l'**artefact compilé**, pratique pour le
 télécharger et l'installer sur un téléphone.
 
-## Fichier
+## Fichiers
 
-| Fichier | Taille |
-|---|---|
-| `apk/relio-socle-v0.1.0.apk` | ~20,3 Mo |
+| Fichier | Taille | Contenu |
+|---|---|---|
+| `apk/relio-socle-v0.3.0-fiabilisation.apk` | ~21,9 Mo | **Dernier build.** Fiabilisation du parcours et des réponses |
+| `apk/relio-socle-v0.3.0-parcours-ch1.apk` | ~21,5 Mo | Écrans S1 / S2 |
+| `apk/relio-socle-v0.2.0-mission2.apk` | ~20,3 Mo | Moteur pédagogique du chapitre 1 |
+| `apk/relio-socle-v0.1.0.apk` | ~20,3 Mo | Socle technique |
 
 ## Téléchargement
 
-Ouvrir le fichier `apk/relio-socle-v0.1.0.apk` depuis cette branche sur
-GitHub, puis **Raw** pour télécharger le binaire.
+Ouvrir le fichier choisi depuis cette branche sur GitHub, puis **Raw** pour
+télécharger le binaire.
+
+## ⚠️ Installer dans l'ordre
+
+Les `versionCode` increases à chaque build (1 → 2). Android **refuse**
+d'installer un APK dont le `versionCode` est inférieur ou égal à celui déjà
+installé. Pour mettre à jour, installer le **dernier** fichier, dans l'ordre
+chronologique ci-dessus.
 
 ## Installation
 
@@ -36,12 +46,27 @@ essai local, mais ce n'est pas publiable sur le Play Store. La clé de
 publication réelle reste à créer (voir `docs/ARCHITECTURE.md`, point à
 arbitrer n° 6).
 
-## Contenu de cette version
+## Contenu du dernier build
 
-Socle technique de la Mission 1 : structure des notions mathématiques,
-événements d'apprentissage, persistance locale SQLite hors ligne. **Aucun
-contenu pédagogique** — l'écran d'accueil n'affiche que des compteurs, vides
-par conception.
+`relio-socle-v0.3.0-fiabilisation.apk` — fiabilisation du parcours du
+chapitre 1 :
+
+- **Correction** : les réponses mathématiquement équivalentes sont désormais
+  reconnues (`÷` et `/`, `×`, `*`, `x`, accents, espaces). Un entier saisi à
+  l'exercice 11 n'est plus enregistré comme **faux** : il est **non
+  évaluable**. Les accents français ne font plus rejeter une bonne réponse.
+- **Type de réponse** : le clavier est désormais déduit des critères de
+  correction, au lieu d'une convention de position.
+- **Parcours** : « Valider » est neutralisé après soumission — plus de
+  tentatives identiques empilées dans l'historique immuable.
+- **Police Inter** embarquée (licence SIL OFL 1.1), variables d'énoncé en
+  italique, sans dépendance ajoutée.
+
+Voir `docs/INTERFACE.md` et `docs/VERIFICATION.md` sur `main`.
+
+> **Ce build n'a pas été testé sur un appareil Android réel** : aucun
+> téléphone ni émulateur n'est disponible dans l'environnement de
+> compilation. Les tests sont automatisés.
 
 ## ⚠️ Branche de distribution, pas de développement
 
