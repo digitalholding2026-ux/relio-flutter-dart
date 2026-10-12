@@ -81,33 +81,20 @@ abstract final class RelioSizes {
 abstract final class RelioTheme {
   /// Police demandee par la specification.
   ///
-  /// Fichier embarque : `assets/fonts/Inter-Regular.ttf`, licence SIL OFL1.1
-  /// dans `assets/fonts/Inter-OFL.txt`.
+  /// Quatre poids droits + un italique, sous-ensemble latin et latin etendu,
+  /// declares dans `pubspec.yaml`. Licence SIL OFL 1.1 dans
+  /// `assets/fonts/Inter-OFL.txt`.
+  ///
+  /// NOTE TECHNIQUE : ces fichiers ont `wght` EPAINGLE. Le poids est donc
+  /// porte par le fichier lui-meme, et `fontWeight` suffit a le selectionner.
+  /// Aucun `fontVariations` n'est necessaire — contrairement a la version
+  /// anterieure, qui utilisait un unique fichier VARIABLE et devait
+  /// piloter l'axe `wght` a la main depuis chaque style.
+  ///
+  /// L'italique est lui aussi un fichier reel : les variables d'un enonce
+  /// sont composees avec de vrais contours inclines, et non un oblique
+  /// simule par le moteur de rendu.
   static const String fontFamily = 'Inter';
-
-  /// Epaisseur reelle de la police VARIABLE, via son axe `wght`.
-  ///
-  /// Inter est un fichier unique a deux axes (`opsz`, `wght`). Sans
-  /// `fontVariations`, Flutter rendrait TOUT a l'instance par defaut — donc
-  /// en graisse 400 — et-simulerait les graisses 500 a 700, ce qui donne un
-  /// faux gras de mauvaise qualite. Chaque style doit donc declarer son axe.
-  ///
-  /// Rappel : `fontWeight` seul ne pilote PAS une police variable en Flutter.
-  ///
-  /// Ces listes sont `const` pour rester utilisables dans les `TextStyle`
-  /// constants du thème.
-  static const List<FontVariation> w400 =
-      <FontVariation>[FontVariation('wght', 400)];
-  static const List<FontVariation> w500 =
-      <FontVariation>[FontVariation('wght', 500)];
-  static const List<FontVariation> w600 =
-      <FontVariation>[FontVariation('wght', 600)];
-  static const List<FontVariation> w700 =
-      <FontVariation>[FontVariation('wght', 700)];
-
-  /// Axe `ital`, pour les variables d'un énoncé.
-  static const List<FontVariation> fontStyleItalic =
-      <FontVariation>[FontVariation('ital', 1)];
 
   static ThemeData build() {
     final base = ThemeData(
@@ -159,7 +146,6 @@ abstract final class RelioTheme {
         fontWeight: FontWeight.w700,
         fontFamily: fontFamily,
 
-        fontVariations: RelioTheme.w700,
         color: RelioColors.text,
         height: 1.2,
       ),
@@ -168,7 +154,6 @@ abstract final class RelioTheme {
         fontWeight: FontWeight.w600,
         fontFamily: fontFamily,
 
-        fontVariations: RelioTheme.w600,
         color: RelioColors.text,
         height: 1.25,
       ),
@@ -177,7 +162,6 @@ abstract final class RelioTheme {
         fontWeight: FontWeight.w600,
         fontFamily: fontFamily,
 
-        fontVariations: RelioTheme.w600,
         color: RelioColors.text,
         height: 1.3,
       ),
@@ -186,7 +170,6 @@ abstract final class RelioTheme {
         fontWeight: FontWeight.w400,
         fontFamily: fontFamily,
 
-        fontVariations: RelioTheme.w400,
         color: RelioColors.text,
         height: 1.45,
       ),
@@ -195,7 +178,6 @@ abstract final class RelioTheme {
         fontWeight: FontWeight.w400,
         fontFamily: fontFamily,
 
-        fontVariations: RelioTheme.w400,
         color: RelioColors.text,
         height: 1.45,
       ),
@@ -204,7 +186,6 @@ abstract final class RelioTheme {
         fontWeight: FontWeight.w500,
         fontFamily: fontFamily,
 
-        fontVariations: RelioTheme.w500,
         color: RelioColors.textSecondary,
         height: 1.35,
       ),
@@ -222,7 +203,6 @@ abstract final class RelioButtons {
       textStyle: const TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w600,
-        fontVariations: RelioTheme.w600,
         fontFamily: RelioTheme.fontFamily,
       ),
       shape: RoundedRectangleBorder(
@@ -243,7 +223,6 @@ abstract final class RelioButtons {
       textStyle: const TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w600,
-        fontVariations: RelioTheme.w600,
         fontFamily: RelioTheme.fontFamily,
       ),
       shape: RoundedRectangleBorder(
@@ -260,7 +239,6 @@ abstract final class RelioButtons {
       textStyle: const TextStyle(
         fontSize: 15,
         fontWeight: FontWeight.w600,
-        fontVariations: RelioTheme.w600,
         fontFamily: RelioTheme.fontFamily,
       ),
       shape: RoundedRectangleBorder(

@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import '../../domain/curriculum/exercise.dart';
 import '../strings/relio_strings.dart';
 import '../theme/relio_theme.dart';
+import 'math_text.dart';
 
 /// Liste ordonnee des indices deja consignes.
 class HintArea extends StatelessWidget {
@@ -57,18 +58,16 @@ class _HintTile extends StatelessWidget {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              fontVariations: RelioTheme.w500,
               fontFamily: RelioTheme.fontFamily,
               color: RelioColors.hintText,
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            hint.text,
+          MathText(
+            text: hint.text,
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w400,
-              fontVariations: RelioTheme.w400,
               height: 1.45,
               fontFamily: RelioTheme.fontFamily,
               color: RelioColors.text,

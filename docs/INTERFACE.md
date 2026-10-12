@@ -101,6 +101,55 @@ Affichée **uniquement** sur les exercices 3, 7 et 11, en Caption
 | 7 | La réponse finale est vérifiée automatiquement ; la comparaison n'est pas encore évaluée. |
 | 11 | L'évaluation de la rédaction n'est pas encore complète. |
 
+### Typographie
+
+Police **Inter** réellement embarquée, en **quatre poids droits** plus un
+italique, sous-ensemble latin et latin étendu :
+
+| Fichier | Poids | Usage |
+|---|---|---|
+| `Inter-Regular.ttf` | 400 | corps de texte, énoncés, indices |
+| `Inter-Italic-Regular.ttf` | 400 italique | variables d'énoncé |
+| `Inter-Medium.ttf` | 500 | captions, texte du champ de réponse |
+| `Inter-SemiBold.ttf` | 600 | sous-titres, boutons, titres de panneau |
+| `Inter-Bold.ttf` | 700 | titres (Display, Title) |
+
+Total **397,8 Ko**, dont **317,4 Ko** pour les quatre poids droits — le
+budget visé était d'environ 300 Ko. Licence SIL OFL 1.1 embarquée.
+
+> Chaque fichier a `wght` **épinglé** : le poids est porté par le fichier,
+> `fontWeight` suffit, aucun `fontVariations` n'est nécessaire. L'italique
+> est un **vrai fichier** : les variables ne sont pas rendues en oblique
+> simulé par le moteur.
+>
+> Fichiers produits par `docs/inter_build.py` (fontTools), reproductible.
+
+### Formateur typographique
+
+`presentation/widgets/math_text.dart` applique un traitement **étroit** aux
+énoncés et aux indices :
+
+- **variables** isolées (lettre minuscule entre espaces, `=`, parenthèse ou
+  virgule) en italique ;
+- **chiffres** en chiffres tabulaires, taille inchangée ;
+- **opérateurs** (`+ − × ÷ =`) et parenthèses inchangés, donc uprights ;
+- **acronymes** `PGCD`, `PPCM`, `PGDC` jamais en italique ;
+- **aucun mot** modifié, aucun caractère ajouté ni retiré.
+
+Il ne gère **ni fractions, ni exposants, ni racines**, aucune mise en page
+multi-ligne, et n'ajoute **aucune bibliothèque**. Toute notation non
+reconnue est laissée telle quelle : mieux vaut un texte imparfaitement
+formaté qu'un texte mal formaté.
+
+> **Limite à connaître.** Dans les 11 énoncés du chapitre 1, le seul texte
+> comportant des variables est l'exercice 9 (`a = 8 et b = 12`). Le formateur
+> est écrit pour être repris tel quel, mais son effet visible reste limité à
+> cet exercice.
+>
+> Le jour où un chapitre introduira des fractions, des exposants ou des
+> racines, une bibliothèque de rendu mathématique devra être **évaluée** —
+> pas avant.
+
 ---
 
 ## 5. S2 — Panneaux de retour
@@ -215,7 +264,7 @@ D1–D6, pas au parcours nominal.
 | `test/presentation/answer_lock_test.dart` | 23 | Verrouillage après validation, retour AppBar, déverrouillage, les 5 panneaux |
 | `test/curriculum/transfer_and_observations_test.dart` | 14 | Observations réellement productibles, associations de vérification |
 | `test/presentation/parcours_reliability_test.dart` | 13 | Double soumission, clavier ouvert, erreur technique, navigation |
-| `test/presentation/typography_test.dart` | 10 | Police embarquée, licence, axe `wght`, rendu d'énoncé |
+| `test/presentation/typography_test.dart` | 25 | Quatre poids de police, accents, budget, points de vérification du formateur |
 | `test/presentation/learner_flow_test.dart` | 34 | Parcours S1→S2, indices, panneaux, brouillon, navigation |
 | `test/presentation/layout_test.dart` | 12 | 360×640, textScale 1.3, cibles tactiles, thème |
 | Autres (socle, moteur, persistance) | 134 | inchangés |
@@ -224,7 +273,7 @@ Résultats réels :
 
 ```
 flutter analyze  → No issues found!
-flutter test     → 00:23 +272: All tests passed!
+flutter test     → 00:26 +332: All tests passed!
 ```
 
 ### Deux vrais défauts trouvés par ces tests

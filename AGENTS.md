@@ -1,4 +1,4 @@
-# AGENTS.md — Règles de travail sur Relio
+﻿# AGENTS.md — Règles de travail sur Relio
 
 Ce fichier s'applique à tout agent (ou personne) travaillant sur ce dépôt.
 Il décrit les **règles obligatoires** à respecter.
@@ -226,7 +226,7 @@ Une valeur mathématique ajoutée (tâche de vérification, réponse attendue) d
 | Flutter | 3.47.7 |
 | NDK requis | 28.2.13676358 |
 | Persistance | Drift / SQLite, schéma v2 |
-| Tests | 317 (50 socle + 87 moteur ch.1 + 46 interface S1/S2 + 134 fiabilisation, verrouillage, vérification) |
+| Tests | 332 (50 socle + 87 moteur ch.1 + 134 fiabilisation, verrouillage, vérification, typographie) |
 
 ### Branches
 
@@ -240,3 +240,4 @@ Une valeur mathématique ajoutée (tâche de vérification, réponse attendue) d
 <https://github.com/digitalholding2026-ux/relio-flutter-dart/tree/apk-build/apk>
 
 Détail complet dans `docs/ARCHITECTURE.md` et `docs/BUILD.md`.
+

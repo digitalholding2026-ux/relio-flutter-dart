@@ -1,7 +1,7 @@
 name: relio
 description: "Relio - tuteur personnel de mathématiques."
 publish_to: 'none'
-version: 0.3.2+4
+version: 0.3.3+5
 
 environment:
   sdk: ^3.13.0
@@ -29,8 +29,25 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   fonts:
-    # Inter, police variable (axes opsz et wght), licence SIL OFL 1.1
-    # embarquée dans assets/fonts/Inter-OFL.txt.
+    # Inter — quatre poids droits + un italique, sous-ensemble latin et
+    # latin étendu. Licence SIL OFL 1.1 dans assets/fonts/Inter-OFL.txt.
+    #
+    # Chaque fichier a `wght` ÉPINGLÉ : le poids est porté par le fichier
+    # lui-même, donc `fontWeight` suffit. Un italique AUTHENTIQUE est fourni
+    # pour les variables d'énoncé — sans lui, les italiques seraient
+    # simulés par le moteur de rendu.
+    #
+    # Fichiers produits par docs/inter_build.py (fontTools).
     - family: Inter
       fonts:
         - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Italic-Regular.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700

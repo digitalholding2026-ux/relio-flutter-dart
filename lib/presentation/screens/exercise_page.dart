@@ -27,7 +27,7 @@ import '../theme/relio_theme.dart';
 import '../widgets/answer_field.dart';
 import '../widgets/feedback_panel.dart';
 import '../widgets/hint_area.dart';
-import '../widgets/math_statement.dart';
+import '../widgets/math_text.dart';
 
 /// Brouillon d'une tentative en cours.
 ///
@@ -304,7 +304,6 @@ class _ExercisePageState extends State<ExercisePage> {
           style: const TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w600,
-            fontVariations: RelioTheme.w600,
             fontFamily: RelioTheme.fontFamily,
             color: RelioColors.text,
           ),
@@ -359,8 +358,8 @@ class _ExercisePageState extends State<ExercisePage> {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(RelioSpacing.cardInner),
-        child: MathStatement(
-          statement: statement,
+        child: MathText(
+          text: statement,
           style: const TextStyle(
             fontSize: 16,
             height: 1.5,
@@ -379,7 +378,6 @@ class _ExercisePageState extends State<ExercisePage> {
       style: const TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w500,
-        fontVariations: RelioTheme.w500,
         height: 1.4,
         fontFamily: RelioTheme.fontFamily,
         color: RelioColors.textSecondary,
@@ -472,7 +470,6 @@ class _ExercisePageState extends State<ExercisePage> {
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      fontVariations: RelioTheme.w600,
                       fontFamily: RelioTheme.fontFamily,
                     ),
                   ),
@@ -544,7 +541,6 @@ class _ExercisePageState extends State<ExercisePage> {
         style: const TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w500,
-          fontVariations: RelioTheme.w500,
           fontFamily: RelioTheme.fontFamily,
           color: RelioColors.errorText,
         ),
