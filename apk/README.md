@@ -7,7 +7,8 @@ télécharger et l'installer sur un téléphone.
 
 | Fichier | Taille | Contenu |
 |---|---|---|
-| `apk/relio-socle-v0.3.1-verrouillage.apk` | ~21,9 Mo | **Dernier build.** Verrouillage du champ après validation |
+| `apk/relio-socle-v0.3.2-verification-transfert.apk` | ~21,9 Mo | **Dernier build.** Cœur de la vérification de transfert |
+| `apk/relio-socle-v0.3.1-verrouillage.apk` | ~21,9 Mo | Verrouillage du champ après validation |
 | `apk/relio-socle-v0.3.0-fiabilisation.apk` | ~21,9 Mo | Fiabilisation du parcours et des réponses |
 | `apk/relio-socle-v0.3.0-parcours-ch1.apk` | ~21,5 Mo | Écrans S1 / S2 |
 | `apk/relio-socle-v0.2.0-mission2.apk` | ~20,3 Mo | Moteur pédagogique du chapitre 1 |
@@ -48,6 +49,28 @@ publication réelle reste à créer (voir `docs/ARCHITECTURE.md`, point à
 arbitrer n° 6).
 
 ## Contenu du dernier build
+
+`relio-socle-v0.3.2-verification-transfert.apk` — cœur métier de la
+vérification de transfert du chapitre 1 :
+
+- **Association activée** : exercice 1 (`PGCD(18,12)`) → tâche
+  `PGCD(16,12) par soustractions`, couple différent, même méthode ;
+- **Deux associations laissées inactives** : `PGCD(35,20)` (son énoncé ne
+  demande pas Euclide et c'est le contrôle du cas D4) et
+  `PPCM de 10 et 15` (la valeur seule suffit, la relation n'est pas
+  vérifiée) ;
+- le moteur expose désormais **ce que l'évaluateur contrôle réellement** :
+  seule la valeur finale, **jamais la méthode** ;
+- quatre issues distinctes pour le résultat : réussite, échec évaluable,
+  **indéterminé**, **erreur technique**. Les deux dernières ne produisent
+  aucune conclusion ni remédiation ;
+- après un échec sans difficulté étayée : reprise guidée **sans diagnostic
+  affirmatif**, et les contenus manquants sont signalés.
+
+> **L'écran S4 reste fermé dans cette version.** Ce build pose la logique
+> métier ; son affichage relève de l'interface.
+
+### Précédent build
 
 `relio-socle-v0.3.1-verrouillage.apk` — verrouillage de l'écran S2 après
 validation :
