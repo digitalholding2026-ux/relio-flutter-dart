@@ -94,6 +94,9 @@ class _LearnerFlowState extends State<LearnerFlow> {
           drafts: _drafts,
           onExit: () => Navigator.of(context).pop(),
           onGoToNext: () => _goToNext(next),
+          // L'eleve enchaîne : le champ du nouvel exercice doit etre
+          // pret a ecrire, sans avoir a le toucher.
+          requestFocusOnOpen: true,
         ),
       ),
     );

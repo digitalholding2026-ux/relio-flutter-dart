@@ -119,6 +119,36 @@ Affichée **uniquement** sur les exercices 3, 7 et 11, en Caption
 | **non évaluable** | `isEvaluated == false` | neutre | — | Je n'ai pas reconnu ta réponse. Vérifie qu'elle est bien écrite. | Réessayer |
 | **non concluant** | exercice 11, non reconnu | neutre | — | Je ne peux pas encore vérifier cette formulation avec certitude. Relis ta réponse, ou essaie une autre formulation. | Réessayer, Continuer |
 
+### Verrouillage après validation
+
+**Dès qu'un panneau est affiché**, le champ et « Valider » sont verrouillés.
+
+| Élément | État verrouillé |
+|---|---|
+| Champ de réponse | Visible, valeur relisible, **non éditable** ; ni focus, ni clavier, ni copier-coller. Bordure outline, texte à 72 % d'opacité |
+| « Valider » | **Visible**, état désactivé standard (opacité réduite) |
+| « Demander un indice » | **Visible** s'il l'était, désactivé |
+| Clavier | **Fermé** dès l'apparition du panneau |
+
+Le verrouillage est une règle d'**interface**, dérivée de la seule présence
+d'un panneau. Il ne touche ni le moteur, ni la classification, ni le
+brouillon : le brouillon est conservé tel quel, seule l'édition est bloquée.
+
+> **Détail d'implémentation.** Le verrouillage repose sur trois Leviers :
+> `readOnly`, `enableInteractiveSelection: false` et `AbsorbPointer`.
+> Poser `focusNode.canRequestFocus = false` ne fonctionne **pas** : le
+> widget `Focus` interne de `TextField` réécrase cette valeur à chaque
+> rebuild, silencieusement.
+
+### Déverrouillage
+
+| Action | Effet |
+|---|---|
+| « Exercice suivant » | Exercice suivant, brouillon du précédent **effacé**, champ vidé, déverrouillé, **focus repris** |
+| « Réessayer » | Même exercice, panneau masqué, champ vidé, déverrouillé, focus repris, **indices effacés** |
+| Retour par la flèche AppBar | **Brouillon conservé tel quel** : valeur, panneau et verrouillage intacts à la réouverture |
+| « Continuer » (ex. 11) | Destination **non tranchée**. Reste S1, et n'est donc pas désactivé — S1 *est* une destination |
+
 **Panneaux C et D : non implémentés.** Le moteur ne produit ni observation,
 ni traitement de clarification. Les concevoir sans moteur serait simuler une
 capacité inexistante.
@@ -176,14 +206,16 @@ D1–D6, pas au parcours nominal.
 
 ## 9. Tests
 
-**249 tests** après la mission de fiabilisation (180 auparavant).
+**272 tests** après les missions de fiabilisation et de verrouillage
+(180 au départ).
 
 | Fichier | Tests | Couvre |
 |---|---|---|
 | `test/curriculum/correction_test.dart` | 32 | Réponses exactes, variantes équivalentes, erreurs, non évaluables, contrat clavier |
+| `test/presentation/answer_lock_test.dart` | 23 | Verrouillage après validation, retour AppBar, déverrouillage, les 5 panneaux |
+| `test/curriculum/transfer_and_observations_test.dart` | 14 | Observations réellement productibles, associations de vérification |
 | `test/presentation/parcours_reliability_test.dart` | 13 | Double soumission, clavier ouvert, erreur technique, navigation |
 | `test/presentation/typography_test.dart` | 10 | Police embarquée, licence, axe `wght`, rendu d'énoncé |
-| `test/curriculum/transfer_and_observations_test.dart` | 14 | Observations réellement productibles, associations de vérification |
 | `test/presentation/learner_flow_test.dart` | 34 | Parcours S1→S2, indices, panneaux, brouillon, navigation |
 | `test/presentation/layout_test.dart` | 12 | 360×640, textScale 1.3, cibles tactiles, thème |
 | Autres (socle, moteur, persistance) | 134 | inchangés |
@@ -192,7 +224,7 @@ Résultats réels :
 
 ```
 flutter analyze  → No issues found!
-flutter test     → 00:36 +249: All tests passed!
+flutter test     → 00:23 +272: All tests passed!
 ```
 
 ### Deux vrais défauts trouvés par ces tests

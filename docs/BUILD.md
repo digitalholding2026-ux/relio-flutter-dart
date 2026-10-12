@@ -69,8 +69,8 @@ Vérification du APK de release :
 | Attribut | Valeur |
 |---|---|
 | `applicationId` | `com.relio.relio` |
-| `versionName` | `0.3.0` |
-| `versionCode` | `2` |
+| `versionName` | `0.3.1` |
+| `versionCode` | `3` |
 | `minSdk` | 24 |
 | Bibliothèques natives | `libsqlite3.so` (arm64-v8a, armeabi-v7a, x86_64), `libapp.so`, `libflutter.so` |
 

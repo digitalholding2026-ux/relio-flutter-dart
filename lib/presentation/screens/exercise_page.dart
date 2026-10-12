@@ -42,6 +42,18 @@ class ExerciseDraft {
   String answer = '';
   final Set<int> consumedHintOrders = <int>{};
   final List<ExerciseHint> shownHints = <ExerciseHint>[];
+
+  /// Panneau de retour affiche, conserve pour la session.
+  ///
+  /// Conserve AU MEME TITRE que la saisie et les indices : si l'eleve quitte
+  /// S2 par la fleche retour alors qu'un panneau est affiche, il doit le
+  /// retrouver intact. Perdre le retour alors que la reponse, elle, est
+  /// conservee, laisserait l'eleve deviner pourquoi il ne peut plus ecrire.
+  ///
+  /// Etat d'INTERFACE : il ne modifie ni le moteur, ni l'historique
+  /// d'apprentissage. « Exercice suivant » et « Ressayer » remplacent le
+  /// brouillon, donc le panneau disparait avec eux.
+  FeedbackSelection? feedback;
 }
 
 /// Ecran d'exercice.
@@ -53,6 +65,7 @@ class ExercisePage extends StatefulWidget {
     required this.drafts,
     required this.onExit,
     required this.onGoToNext,
+    this.requestFocusOnOpen = false,
   });
 
   final Chapter1Service service;
@@ -68,6 +81,14 @@ class ExercisePage extends StatefulWidget {
 
   /// Passage a l'exercice suivant, ou retour S1 si c'est le dernier.
   final VoidCallback onGoToNext;
+
+  /// Reprendre le focus sur le champ a l'ouverture.
+  ///
+  /// Vrai apres « Exercice suivant » : l'eleve enchaîne, le champ doit
+  /// être pret a ecrire. Faux a la premiere ouverture d'une lecon, ou
+  /// lorsque le brouillon restaure un panneau — le clavier ne doit pas
+  /// s'ouvrir tout seul sur un champ verrouille.
+  final bool requestFocusOnOpen;
 
   @override
   State<ExercisePage> createState() => _ExercisePageState();
@@ -86,6 +107,13 @@ class _ExercisePageState extends State<ExercisePage> {
   bool _showSubmitError = false;
   bool _submitting = false;
 
+  /// Le champ est-il verrouille ?
+  ///
+  /// REGLE D'INTERFACE, derivee de la seule presence d'un panneau de retour :
+  /// rien d'autre ne la declenche. Ni le moteur, ni la classification, ni le
+  /// contenu pedagogique n'interviennent.
+  bool get _locked => _feedback != null;
+
   @override
   void initState() {
     super.initState();
@@ -99,6 +127,16 @@ class _ExercisePageState extends State<ExercisePage> {
         (widget.drafts[widget.exercise.id] =
             ExerciseDraft(answerKey: 'tentative-${newId()}'));
     _controller.text = _draft.answer;
+
+    // Retour par la fleche de l'AppBar : le panneau retrouve est restaure
+    // tel quel, et le champ reste verrouille.
+    _feedback = _draft.feedback;
+
+    if (widget.requestFocusOnOpen && !_locked) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_locked) _focusNode.requestFocus();
+      });
+    }
   }
 
   @override
@@ -120,6 +158,11 @@ class _ExercisePageState extends State<ExercisePage> {
   ///
   /// Ne modifie NI la saisie, NI le focus, NI la position de defilement.
   void _askForHint() {
+    // Aucune action d'aide apres validation : demander un indice sous un
+    // panneau transforme une reussite assistee en indichee, et le brouillon
+    // ne le saurait plus.
+    if (_locked) return;
+
     final hint =
         widget.service.nextHint(widget.exercise, _draft.consumedHintOrders);
     if (hint == null) return; // Plus d'indice : le bouton disparait.
@@ -171,9 +214,15 @@ class _ExercisePageState extends State<ExercisePage> {
           exerciseId: widget.exercise.id,
           rawAnswer: raw,
         );
+        // Le panneau fait partie du brouillon de session : il survit au
+        // retour par la fleche de l'AppBar.
+        _draft.feedback = _feedback;
         _showSubmitError = false;
         _submitting = false;
       });
+      // Clavier ferme DES L'APPARITION du panneau : aucun etat intermediaire
+      // ne doit montrer un clavier au-dessus d'un champ desormais verrouille.
+      if (_locked) _focusNode.unfocus();
     } catch (_) {
       // La saisie n'est JAMAIS effacee en cas d'erreur d'envoi.
       if (!mounted) return;
@@ -198,6 +247,15 @@ class _ExercisePageState extends State<ExercisePage> {
       _controller.clear();
     });
     _focusNode.requestFocus();
+  }
+
+  /// « Exercice suivant » : le brouillon de l'exercice courant est efface.
+  ///
+  /// L'eleve a termine cet exercice : conserver son retour en memoire ferait
+  /// reapparaitre un panneau et un champ verrouille s'il rouvrait la lecon.
+  void _goToNextAndClearDraft() {
+    widget.drafts.remove(widget.exercise.id);
+    _goToNext();
   }
 
   /// « Exercice suivant », ou retour S1 si c'est le dernier.
@@ -279,7 +337,11 @@ class _ExercisePageState extends State<ExercisePage> {
                     FeedbackPanelView(
                       selection: _feedback!,
                       onRetry: _retry,
-                      onNext: _goToNext,
+                      onNext: _goToNextAndClearDraft,
+                      // « Continuer » (exercice 11) : destination non encore
+                      // tranchee cote pedagogie. Elle reste S1 — elle n'est
+                      // donc PAS desactivee, puisque S1 EST une destination.
+                      // Voir docs/INTERFACE.md, limites.
                       onContinue: widget.onExit,
                     ),
                   ],
@@ -357,6 +419,7 @@ class _ExercisePageState extends State<ExercisePage> {
               controller: _controller,
               focusNode: _focusNode,
               keyboard: keyboard,
+              locked: _locked,
               onChanged: () {
                 // La saisie est reportee dans le brouillon de session :
                 // sans cela, un retour vers S1 la perdrait.
@@ -375,7 +438,11 @@ class _ExercisePageState extends State<ExercisePage> {
           if (canAskHint) ...<Widget>[
             const SizedBox(height: 4),
             TextButton(
-              onPressed: _askForHint,
+              // Le bouton RESTE VISIBLE s'il etait affiche au moment de la
+              // validation : seule sa disponibilite change. Le retirer
+              // modifierait la hauteur de la barre d'action apres chaque
+              // reponse, ce qui serait plus derangeant qu'un bouton inactif.
+              onPressed: _locked ? null : _askForHint,
               style: RelioButtons.text(),
               child: const Text(RelioStrings.askHint),
             ),
