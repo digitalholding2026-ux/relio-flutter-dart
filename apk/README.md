@@ -7,7 +7,8 @@ télécharger et l'installer sur un téléphone.
 
 | Fichier | Taille | Contenu |
 |---|---|---|
-| `apk/relio-socle-v0.3.4-navigation.apk` | ~21,9 Mo | **Dernier build.** Navigation à trois onglets, Accueil, Apprendre, Profil |
+| `apk/relio-socle-v0.3.4-logo.apk` | ~21,9 Mo | **Dernier build.** Logo Relio : marque, splash, icône d'application |
+| `apk/relio-socle-v0.3.4-navigation.apk` | ~21,9 Mo | Navigation à trois onglets, Accueil, Apprendre, Profil |
 | `apk/relio-socle-v0.3.4-relation-ppcm.apk` | ~21,7 Mo | Contrat « relation PPCM–PGCD appliquée » |
 | `apk/relio-socle-v0.3.3-typographie.apk` | ~21,7 Mo | Police Inter + formateur typographique |
 | `apk/relio-socle-v0.3.2-verification-transfert.apk` | ~21,9 Mo | Cœur de la vérification de transfert |
@@ -53,6 +54,25 @@ arbitrer n° 6).
 
 ## Contenu du dernier build
 
+`relio-socle-v0.3.4-logo.apk` — **la marque Relio**, déclinée et intégrée à
+l'application :
+
+- **mark** : deux cercles (Ø 28 et Ø 15,4) reliés par une courbe de
+  profondeur 6, en `#F56207` seul ;
+- **splash** : fond blanc, mark centré, « Relio » en dessous en Inter
+  SemiBold indigo. **Aucun délai artificiel** : l'écran disparaît dès que
+  l'application est prête ;
+- **icône d'application** : icône adaptative Android conforme aux masques
+  des constructeurs (zone sûre 66 dp respectée), plus une couche
+  monochrome pour les icônes thémées d'Android 13+ ;
+- **en-tête d'accueil** : lockup horizontal, mark et wordmark alignés ;
+- le nom de l'application sous le lanceur s'affiche désormais « Relio ».
+
+Le logo est **dessiné par le code**, pas embarqué comme image : la marque
+reste nette à toute densité d'écran, sans alourdir l'APK.
+
+### Précédent build
+
 `relio-socle-v0.3.4-navigation.apk` — navigation globale et écrans
 d'accueil, d'apprentissage et de profil :
 
@@ -79,6 +99,15 @@ d'accueil, d'apprentissage et de profil :
 Aucun pourcentage, aucun score, aucun badge, aucune progression, aucun code
 diagnostique interne, aucun compte, aucune mécanique de jeu. La taille de texte
 choisée dans le profil ne réduit jamais celle réglée dans le système.
+
+### Précédent build
+
+`relio-socle-v0.3.4-navigation.apk` — navigation globale :
+
+- **trois onglets permanents** en barre basse : Accueil, Apprendre, Profil ;
+- l'application **ouvre sur Accueil**, plus sur S1 ;
+- **piles indépendantes** par onglet ;
+- schéma de stockage passé en **version 3** (préférences).
 
 ### Précédent build
 
