@@ -148,6 +148,24 @@ abstract final class RelioMarkGeometry {
   /// par les contraintes Android.
   static const double androidMarkSizeDp = androidSafeZoneDp * androidMarkFill;
 
+  /// Largeur REELLE du mark dans la grille de 108 dp, en dp.
+  ///
+  /// La specification dit « environ 36 dp de large » : c'est la largeur du
+  /// mark, pas celle du carre qui l'englobe.
+  ///
+  /// Ces deux valeurs ne se confondent pas. Le mark est plus large que haut
+  /// (67,7 x 24 unites pour le trait principal) : traiter 36 dp comme un cote
+  /// de carre ne donnerait que 25,4 dp de largeur effective, et le mark
+  /// paraitrait trop petit dans le lanceur.
+  static double get androidMarkWidthDp => androidMarkSizeDp;
+
+  /// Hauteur correspondante du mark, en dp, deduite de son rapport de forme.
+  ///
+  /// Le ratio hauteur/largeur de la boite englobante vaut environ 0,375 pour
+  /// le trait compact.
+  static double get androidMarkHeightDp =>
+      androidMarkWidthDp * boundingHeight(strokeCompact) / boundingWidth(strokeCompact);
+
   // --- Boite englobante ---------------------------------------------------
 
   /// Moitie du trait : c'est de combien le trait deborde de chaque cote.
@@ -169,6 +187,32 @@ abstract final class RelioMarkGeometry {
       bottom: curveLowY + cap,
     );
   }
+
+  /// Largeur REELLEMENT encree du mark, en unites de grille.
+  ///
+  /// Distincte de [boundingWidth], qui surestime : celle-ci presume que le
+  /// debord du trait defini les extremites gauche et droite. C'est faux. Le
+  /// trait ne deborde que de sa CAPACITE RONDE aux deux extremites de la
+  /// courbe, c'est-a-dire a x = 31,7 et x = 52 — tres a l'interieur du dessin.
+  /// Les extremites gauche et droite sont les CERCLES PLEINS, dont le bord
+  /// ne depasse jamais le rayon.
+  ///
+  /// Consequence concrete : une icone dimensionnee sur `boundingWidth` sort
+  /// 8 % trop petite, sans que rien ne le signale.
+  static double get inkWidth =>
+      centerSpacing + radiusRight + radiusLeft; // 63,7
+
+  /// Centre vertical REELLEMENT ENCRE du mark, en unites de grille.
+  ///
+  /// Ce n'est pas le milieu de la boite englobante : celle-ci inclut le
+  /// debord de trait en haut (au-dessus du cercle) alors qu'en bas la courbe
+  /// descend seule. L'encre commence au sommet du grand cercle (36) et finit
+  /// au creux de la courbe (56 + capacite), soit un centre a 47,55 — et non a
+  /// 50.
+  ///
+  /// Sans cette correction, une icone centree sur la boite placerait le mark
+  /// 2,45 unites trop bas : il paraitrait descentu dans le lanceur.
+  static double get inkCenterY => (centerLineY - radiusRight + curveLowY + strokeCap(strokeCompact)) / 2;
 
   /// Largeur de la boite englobante, trait compris.
   static double boundingWidth(double stroke) =>

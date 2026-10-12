@@ -7,6 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:relio/presentation/branding/relio_character.dart';
 import 'package:relio/presentation/screens/intro/intro_page.dart';
 import 'package:relio/presentation/screens/intro/intro_sequence.dart';
 import 'package:relio/presentation/theme/relio_theme.dart';
@@ -203,5 +204,72 @@ void main() {
     expect(find.byIcon(Icons.emoji_events), findsNothing);
     expect(find.byIcon(Icons.star), findsNothing);
     expect(find.textContaining('score'), findsNothing);
+  });
+
+  // ---------------------------------------------------------------------
+  // Correction : la sequence narrative ne se rejoue JAMAIS.
+  // ---------------------------------------------------------------------
+
+  testWidgets('apres 5,3 s, l\'ecran reste sur son etat final',
+      (WidgetTester tester) async {
+    await monterIntro(tester);
+    await tester.pump();
+
+    // On laisse passer la sequence entiere.
+    await tester.pump(const Duration(milliseconds: 5300));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text(IntroTexts.question), findsOneWidget,
+        reason: 'la question reste affichee');
+    expect(find.byType(FilledButton), findsOneWidget,
+        reason: 'le bouton reste visible');
+
+    // Puis on laisse s'ecouler beaucoup de temps : le code boucle le controller
+    // sur 6 s, ce qui reposait l'ecran a T = 0 et rejouait toute la sequence.
+    await tester.pump(const Duration(seconds: 30));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text(IntroTexts.question), findsOneWidget,
+        reason: 'la question ne doit JAMAIS disparaitre');
+    expect(find.text(IntroTexts.greeting), findsNothing,
+        reason: 'pas de retour a la premiere phrase');
+    expect(find.text(IntroTexts.promise), findsNothing,
+        reason: 'pas de retour a la deuxieme phrase');
+    expect(find.byType(FilledButton), findsOneWidget,
+        reason: 'le bouton ne doit pas disparaitre');
+  });
+
+  testWidgets('le personnage reste anime apres 5,3 s',
+      (WidgetTester tester) async {
+    await monterIntro(tester);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 5300));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // C'est la SEULE animation encore active : le personnage respire.
+    expect(find.byType(RelioCharacter), findsOneWidget);
+    expect(find.text(IntroTexts.question), findsOneWidget);
+  });
+
+  testWidgets('l\'acceleration ne se rejoue pas non plus',
+      (WidgetTester tester) async {
+    await monterIntro(tester);
+    await tester.pump();
+
+    // Tap d'acceleration.
+    await tester.tapAt(const Offset(200, 400));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text(IntroTexts.question), findsOneWidget);
+
+    // Puis on attend : rien ne doit relancer quoi que ce soit.
+    await tester.pump(const Duration(seconds: 20));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text(IntroTexts.question), findsOneWidget,
+        reason: 'l\'acceleration doit s\'arreter a son etat final');
+    expect(find.text(IntroTexts.greeting), findsNothing);
+    expect(find.byType(FilledButton), findsOneWidget);
   });
 }

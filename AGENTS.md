@@ -332,7 +332,7 @@ fragile — l'animation du personnage ne se stabilise jamais.
 | NDK requis | 28.2.13676358 |
 | Persistance | Drift / SQLite, schéma v2 |
 | Marque | `assets/branding/` — voir [règle 9](#règle-9--la-marque-est-générée-pas-dessinée) |
-| Tests | 512 (400 applicatifs + 39 marque + 73 écran d'entrée) |
+| Tests | 534 (400 applicatifs + 61 marque + 73 écran d'entrée) |
 | Écran d'entrée | 5,3 s, première ouverture uniquement — voir règle 10 |
 
 ### Branches

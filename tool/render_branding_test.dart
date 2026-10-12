@@ -90,6 +90,66 @@ Future<void> _chargerPolice(String chemin, String famille) async {
   await loader.load();
 }
 
+/// Rend le mark en imposant sa LARGEUR, pas un carre englobant.
+///
+/// Le mark est deux fois et demie plus large que haut. Le dimensionner par un
+/// carre — comme le fait [_rendre] — reduit sa largeur reelle de moitie, et il
+/// parait trop petit dans le lanceur. Ici, [largeurMark] est la largeur
+/// EFFECTIVE du mark dans le canvas de [canvas].
+///
+/// Le trait compact est impose : a cette taille, la variante principale
+/// s'efface.
+Future<ui.Image> _rendreParLargeur({
+  required double canvas,
+  required double largeurMark,
+  required Color couleur,
+  required double stroke,
+  Color? fond,
+}) async {
+  final ui.PictureRecorder recorder = ui.PictureRecorder();
+  final Canvas c = Canvas(recorder);
+
+  c.drawRect(
+    Rect.fromLTWH(0, 0, canvas, canvas),
+    Paint()..color = fond ?? const Color(0x00000000),
+  );
+  if (fond != null) {
+    c.drawRect(Rect.fromLTWH(0, 0, canvas, canvas), Paint()..color = fond);
+  }
+
+  // Le painter inscrit le mark dans le carre fourni en le limitant par sa
+  // boite englobante. Cette boite est plus LARGE que l'encre reelle du mark :
+  // le debord de trait ne definit pas les extremites gauche et droite, que
+  // fixent les cercles pleins. On compense, sans quoi l'icone sort 8 % trop
+  // petite.
+  final box = RelioMarkGeometry.boundingBox(stroke);
+  final double boxWidth = box.right - box.left;
+  final double cote = largeurMark * boxWidth / RelioMarkGeometry.inkWidth;
+
+  c.save();
+  c.translate((canvas - cote) / 2, (canvas - cote) / 2);
+  // Centrage sur l'ENCRE, pas sur la boite englobante.
+  //
+  // Le painter centre la BOITE ; or l'encre n'y est pas centree, le debord de
+  // trait pesant en haut sans equivalent en bas. L'ecart vaut
+  // `inkCenterY - boxCenterY`, et il faut le SOUSTRAIRE pour remonter le mark.
+  final double boxCenterY = (box.top + box.bottom) / 2;
+  final double decalage =
+      -(RelioMarkGeometry.inkCenterY - boxCenterY) * cote / RelioMarkGeometry.grid;
+  c.translate(0, decalage);
+  RelioMarkPainter(
+    color: couleur,
+    stroke: stroke,
+    unitsPerPixel: cote,
+  ).paint(c, Size(cote, cote));
+  c.restore();
+
+  final ui.Picture picture = recorder.endRecording();
+  final ui.Image image = await picture.toImage(canvas.round(), canvas.round());
+  picture.dispose();
+  return image;
+}
+
 /// Densites Android : multiplicateur px par dp pour les icones legacy.
 const Map<String, double> _legacyDp = <String, double>{
   'mdpi': 1,
@@ -154,30 +214,36 @@ void main() {
       // 55 % de la zone sure, donc 36.3 dp sur la grille de 108 dp.
       for (final MapEntry<String, double> e in _adaptiveDp.entries) {
         final double grid = RelioMarkGeometry.androidGridDp * e.value;
-        final double markDp = RelioMarkGeometry.androidMarkSizeDp * e.value;
+        // La largeur REELLE du mark : la specification dit « environ 36 dp de
+        // large », et non un carre de 36 dp de cote.
+        final double largeurMarkDp = RelioMarkGeometry.androidMarkWidthDp * e.value;
 
         // Premier plan : mark orange, fond TRANSPARENT. La zone sure reste
         // degagee, conformement aux contraintes des masques constructeur.
-        final ui.Image fg = await _rendre(
+        final ui.Image fg = await _rendreParLargeur(
           canvas: grid,
-          mark: markDp,
+          largeurMark: largeurMarkDp,
           couleur: RelioBrand.mark,
           stroke: RelioMarkGeometry.strokeCompact,
         );
         await _ecrirePng(fg, '$res/mipmap-${e.key}/ic_launcher_foreground.png');
         fg.dispose();
 
-        // Arriere-plan : aplat orange plein, sans mark. L'icon adaptative
-        // compose les deux : le fond ne doit porter aucun dessin.
-        final ui.Image aplat = await _rendreAplat(grid, RelioBrand.mark);
+        // Arriere-plan : aplat BLANC, sans mark.
+        //
+        // Le fond ne doit porter aucun dessin — et surtout pas la couleur du
+        // mark : un fond orange rendrait le mark orange illisible, et le
+        // lanceur afficherait un carre orange uni. C'est exactement le defaut
+        // corrige ici.
+        final ui.Image aplat = await _rendreAplat(grid, RelioBrand.splashBackground);
         await _ecrirePng(aplat, '$res/mipmap-${e.key}/ic_launcher_background.png');
 
         // Couche monochrome : Android 13+ la teinte selon le theme du systeme.
         // Elle doit porter UNIQUEMENT le mark, en noir, sur fond transparent :
         // c'est la seule forme qui survive a une teinte appliquee par l'OS.
-        final ui.Image mono = await _rendre(
+        final ui.Image mono = await _rendreParLargeur(
           canvas: grid,
-          mark: markDp,
+          largeurMark: largeurMarkDp,
           couleur: RelioBrand.monoBlack,
           stroke: RelioMarkGeometry.strokeCompact,
         );
@@ -185,9 +251,9 @@ void main() {
         mono.dispose();
 
         // Copie de reference dans assets, pour documentation et impression.
-        final ui.Image refFg = await _rendre(
+        final ui.Image refFg = await _rendreParLargeur(
           canvas: grid,
-          mark: markDp,
+          largeurMark: largeurMarkDp,
           couleur: RelioBrand.mark,
           stroke: RelioMarkGeometry.strokeCompact,
         );

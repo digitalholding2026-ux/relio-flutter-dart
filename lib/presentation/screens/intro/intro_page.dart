@@ -50,11 +50,10 @@ class IntroPage extends StatefulWidget {
 
 class IntroPageState extends State<IntroPage>
     with SingleTickerProviderStateMixin {
-  /// Portee du controller : une valeur normalisee de 0 a 1 sur [kTimelineSpan].
+  /// Portee du controller narratif : 6 s, soit un peu plus que la sequence.
   ///
-  /// On ne fait pas durer le controller d'un jour entier : la sequence dure
-  /// 5,3 s. Passer d'une valeur normalisee a un temps relu passe par une
-  /// constante unique, ce qui evite de dependre d'une conversion obscure.
+  /// Ce controller ne mesure QUE le temps narratif. Il n'est jamais boucle :
+  /// apres 5,3 s, la sequence est terminee et doit rester telle quelle.
   static const int kTimelineSpanMs = 6000;
 
   late final AnimationController _controller = AnimationController(
@@ -84,7 +83,12 @@ class IntroPageState extends State<IntroPage>
     }
 
     _controller.addListener(_tick);
-    _controller.repeat();
+    // `forward`, PAS `repeat` : la sequence narrative se joue UNE fois.
+    // Boucler ferait revenir l'ecran a T=0 toutes les 6 s — l'eleve verrait
+    // la presentation se rejouer en boucle, ce que la correction 1 interdit.
+    // L'animation du personnage (respiration, ondulation) a son propre
+    // controller, dans `RelioCharacter`, et reste continue.
+    _controller.forward();
   }
 
   void _tick() {
@@ -93,9 +97,16 @@ class IntroPageState extends State<IntroPage>
     );
     final Duration? accel = _acceleratedAt;
 
-    final Duration next = accel == null
-        ? total
-        : (total > accel ? total - accel : Duration.zero);
+    Duration next = accel == null ? total : (total > accel ? total - accel : Duration.zero);
+
+    // Le temps narratif ne recule JAMAIS.
+    if (next < _elapsed) next = _elapsed;
+
+    // Il ne depasse pas non plus la fin de la sequence : au-dela de 5,3 s,
+    // l'etat est fige sur son etat final. C'est la garantie explicite que
+    // rien — un controller qui repartirait, une frame rejouee — ne peut
+    // provoquer un retour a T = 0.
+    if (next > IntroTiming.ready) next = IntroTiming.ready;
 
     if (next != _elapsed && mounted) {
       setState(() => _elapsed = next);

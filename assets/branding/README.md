@@ -76,12 +76,33 @@ Quatre couches sont fournies par densite :
 | Couche | Contenu |
 |---|---|
 | `ic_launcher.png` / `_round` | icone legacy, mark orange sur blanc |
-| `ic_launcher_background` | aplat orange plein |
+| `ic_launcher_background` | aplat **blanc** plein |
 | `ic_launcher_foreground` | mark orange seul, sur transparent |
 | `ic_launcher_monochrome` | mark noir, pour les icones themees Android 13+ |
 
 La couche monochrome ne porte **que** le mark : c'est la seule forme qui
 survit a une teinte appliquee par le systeme.
+
+La couche **background est blanche**, jamais orange. Un fond de la couleur du
+mark le rend illisible, et le lanceur n'affiche qu'un carre orange uni — c'est
+exactement le defaut que ce reglage corrige.
+
+### Deux pieges de dimensionnement
+
+L'icone est le seul rendu ou ces deux subtilites apparaissent. Elles sont
+codees dans `RelioMarkGeometry` et verifiees par
+`test/branding/launcher_icon_test.dart`.
+
+**La boite englobante surestime l'encre de 8 %.** Les extremites gauche et
+droite du mark ne sont *pas* definies par le debord du trait : elles le sont
+par les **cercles pleins**. La capacite arrondie ne deborde qu'aux extremites
+de la courbe, tres a l'interieur. Dimensionne sur la boite, l'icone sort trop
+petite.
+
+**L'encre n'est pas centree dans la boite.** En haut, le trait deborde au-dessus
+du cercle ; en bas, la courbe descend seule. Le centre optique est donc 2,45 u
+au-dessus du centre geometrique. Centre sur la boite, le mark parait descendu
+dans le masque du lanceur.
 
 ## Contenu
 
