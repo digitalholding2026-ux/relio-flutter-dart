@@ -7,7 +7,8 @@ télécharger et l'installer sur un téléphone.
 
 | Fichier | Taille | Contenu |
 |---|---|---|
-| `apk/relio-socle-v0.3.2-verification-transfert.apk` | ~21,9 Mo | **Dernier build.** Cœur de la vérification de transfert |
+| `apk/relio-socle-v0.3.3-typographie.apk` | ~21,7 Mo | **Dernier build.** Police Inter + formateur typographique |
+| `apk/relio-socle-v0.3.2-verification-transfert.apk` | ~21,9 Mo | Cœur de la vérification de transfert |
 | `apk/relio-socle-v0.3.1-verrouillage.apk` | ~21,9 Mo | Verrouillage du champ après validation |
 | `apk/relio-socle-v0.3.0-fiabilisation.apk` | ~21,9 Mo | Fiabilisation du parcours et des réponses |
 | `apk/relio-socle-v0.3.0-parcours-ch1.apk` | ~21,5 Mo | Écrans S1 / S2 |
@@ -49,6 +50,24 @@ publication réelle reste à créer (voir `docs/ARCHITECTURE.md`, point à
 arbitrer n° 6).
 
 ## Contenu du dernier build
+
+`relio-socle-v0.3.3-typographie.apk` — police et rendu mathématique :
+
+- **Inter réellement embarquée**, en quatre poids (400 / 500 / 600 / 700)
+  plus un italique, sous-ensemble latin et latin étendu. Chaque fichier porte
+  son poids : aucun réglage d'axe n'est nécessaire ;
+- l'italique des variables est un **vrai fichier**, pas un oblique simulé ;
+- les accents français (`é è à ç ô î û œ`, majuscules accentuées) sont
+  inclus et vérifiés ;
+- **formateur typographique** sur les énoncés et les indices : variables
+  isolées en italique, chiffres en tabulaire, opérateurs et parenthèses
+  inchangés, acronymes jamais italiques ;
+- aucune bibliothèque de rendu mathématique ajoutée.
+
+> Ce build reste **sans validation sur appareil réel** : aucun téléphone ni
+> émulateur n'est disponible dans l'environnement de compilation.
+
+### Précédent build
 
 `relio-socle-v0.3.2-verification-transfert.apk` — cœur métier de la
 vérification de transfert du chapitre 1 :
