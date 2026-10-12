@@ -7,7 +7,8 @@ télécharger et l'installer sur un téléphone.
 
 | Fichier | Taille | Contenu |
 |---|---|---|
-| `apk/relio-socle-v0.3.0-fiabilisation.apk` | ~21,9 Mo | **Dernier build.** Fiabilisation du parcours et des réponses |
+| `apk/relio-socle-v0.3.1-verrouillage.apk` | ~21,9 Mo | **Dernier build.** Verrouillage du champ après validation |
+| `apk/relio-socle-v0.3.0-fiabilisation.apk` | ~21,9 Mo | Fiabilisation du parcours et des réponses |
 | `apk/relio-socle-v0.3.0-parcours-ch1.apk` | ~21,5 Mo | Écrans S1 / S2 |
 | `apk/relio-socle-v0.2.0-mission2.apk` | ~20,3 Mo | Moteur pédagogique du chapitre 1 |
 | `apk/relio-socle-v0.1.0.apk` | ~20,3 Mo | Socle technique |
@@ -47,6 +48,24 @@ publication réelle reste à créer (voir `docs/ARCHITECTURE.md`, point à
 arbitrer n° 6).
 
 ## Contenu du dernier build
+
+`relio-socle-v0.3.1-verrouillage.apk` — verrouillage de l'écran S2 après
+validation :
+
+- le champ de réponse reste **visible et relisible**, mais devient non
+  éditable : ni focus, ni clavier, ni copier-coller ;
+- « Valider » reste **visible**, désactivé ;
+- « Demander un indice » reste visible s'il l'était, désactivé ;
+- le clavier se **ferme** dès l'apparition du panneau ;
+- un retour par la flèche de l'AppBar **conserve le panneau** : à la
+  réouverture, l'élève retrouve exactement l'état quitté ;
+- « Exercice suivant » vide et déverrouille le champ, avec reprise du focus.
+
+Le moteur pédagogique, la classification et le contenu mathématique sont
+**inchangés** : c'est une règle d'interface, dérivée de la seule présence
+d'un panneau affiché.
+
+### Précédent build
 
 `relio-socle-v0.3.0-fiabilisation.apk` — fiabilisation du parcours du
 chapitre 1 :
