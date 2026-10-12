@@ -87,6 +87,7 @@ class _AnswerFieldState extends State<AnswerField> {
   @override
   Widget build(BuildContext context) {
     final locked = widget.locked;
+    final palette = RelioPaletteScope.of(context);
 
     return Semantics(
       label: RelioStrings.answerFieldLabel,
@@ -117,29 +118,29 @@ class _AnswerFieldState extends State<AnswerField> {
           // Valeur toujours relisible, mais clairement hors jeu : l'élève
           // doit VOIR ce qu'il a repondu pour comprendre le retour.
           color: locked
-              ? RelioColors.text.withValues(alpha: 0.72)
-              : RelioColors.text,
+              ? palette.textPrimary.withValues(alpha: 0.72)
+              : palette.textPrimary,
         ),
         decoration: InputDecoration(
           labelText: RelioStrings.answerFieldLabel,
           hintText: _hint,
           filled: true,
-          fillColor: Colors.white,
+          fillColor: palette.surface,
           isDense: true,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: RelioSpacing.cardInner,
             vertical: 16,
           ),
-          border: _border(RelioColors.border),
+          border: _border(palette.outline),
           // Verrouille : bordure « outline » sobre, jamais le trait bleu de
           // focus — un champ qu'on ne peut pas editer ne doit pas avoir
           // l'air d'en-etre un.
-          enabledBorder: _border(RelioColors.border),
+          enabledBorder: _border(palette.outline),
           focusedBorder:
-              _border(locked ? RelioColors.border : RelioColors.primary,
+              _border(locked ? palette.outline : palette.primary,
                   width: locked ? 1.5 : 2),
-          errorBorder: _border(RelioColors.errorText),
-          focusedErrorBorder: _border(RelioColors.errorText, width: 2),
+          errorBorder: _border(palette.errorText),
+          focusedErrorBorder: _border(palette.errorText, width: 2),
         ),
         ),
       ),
@@ -168,7 +169,7 @@ class _AnswerFieldState extends State<AnswerField> {
 
   OutlineInputBorder _border(Color color, {double width = RelioSizes.fieldBorderWidth}) {
     return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(RelioSizes.fieldRadius),
+      borderRadius: RelioRadius.cardAll,
       borderSide: BorderSide(color: color, width: width),
     );
   }

@@ -25,14 +25,22 @@ import '../helpers/test_database.dart';
 /// Ouvre l'application reelle et aboutit sur le premier exercice de la
 /// lecon 1 (PGCD de 18 et 12).
 ///
-/// On utilise le VRAI parcours (RelioApp > LearnerFlow) et non un
-/// ExercisePage isole : le cas limite « retour par l'AppBar » exige que la
-/// navigation existe reellement.
+/// On utilise le VRAI parcours et non un ExercisePage isole : le cas limite
+/// « retour par l'AppBar » exige que la navigation existe reellement.
+///
+/// L'application ouvre sur ACCUEIL : S1 s'atteint par l'onglet Apprendre
+/// puis la carte du chapitre 1.
 Future<AppDatabase> ouvrirParcours(WidgetTester tester) async {
   final db = await openTestDatabase();
   registerTestDatabase(db);
   await tester.pumpWidget(RelioApp(database: db));
   await tester.pumpAndSettle();
+
+  await tester.tap(find.text(RelioStrings.tabLearn).last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Chapitre 1'));
+  await tester.pumpAndSettle();
+
   await tester.tap(find.byType(LessonCard).at(0));
   await tester.pumpAndSettle();
   return db;

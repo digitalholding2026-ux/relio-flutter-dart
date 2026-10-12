@@ -208,6 +208,25 @@ class ObservedErrors extends Table {
 }
 
 /// Aides et indices proposés à l'élève, tels qu'ils ont été affichés.
+/// Préférences d'affichage et identité de l'élève.
+@DataClassName('AppSettingRow')
+class AppSettings extends Table {
+  /// Clé du réglage. Une seule ligne par clé.
+  TextColumn get key => text()();
+
+  /// Valeur, stockée en texte brut.
+  ///
+  /// Choix VOLONTAIRE : ces réglages sont un petit nombre de chaînes
+  /// courtes et hétérogènes (un prénom, un booléen, un indice d'échelle).
+  /// Un stockage clé/valeur évite d'ajouter une colonne — donc une
+  /// migration — à chaque nouveau réglage.
+  TextColumn get value => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {key};
+}
+
+/// Aides et indices proposés à l'élève, tels qu'ils ont été affichés.
 @DataClassName('OfferedHintRow')
 class OfferedHints extends Table {
   TextColumn get id => text()();

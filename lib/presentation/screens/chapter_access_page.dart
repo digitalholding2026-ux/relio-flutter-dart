@@ -26,20 +26,22 @@ class LessonCard extends StatelessWidget {
   Widget build(BuildContext context) {
     // L'intitule est affiche TEL QUEL : la lecon 2 porte « PGDC », conserve
     // fidelement a la source.
+    final palette = RelioPaletteScope.of(context);
+
     return Semantics(
       button: true,
       label: lesson.title,
       child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(RelioSizes.cardRadius),
+        color: palette.surface,
+        borderRadius: RelioRadius.cardAll,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(RelioSizes.cardRadius),
+          borderRadius: RelioRadius.cardAll,
           child: Ink(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(RelioSizes.cardRadius),
+              borderRadius: RelioRadius.cardAll,
               border: Border.all(
-                color: RelioColors.border,
+                color: palette.outline,
                 width: RelioSizes.cardBorderWidth,
               ),
             ),
@@ -49,19 +51,19 @@ class LessonCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     lesson.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
                       height: 1.3,
                       fontFamily: RelioTheme.fontFamily,
-                      color: RelioColors.text,
+                      color: palette.textPrimary,
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Icon(
+                Icon(
                   Icons.chevron_right,
-                  color: RelioColors.textSecondary,
+                  color: palette.textSecondary,
                 ),
               ],
             ),
@@ -81,49 +83,51 @@ class ChapterAccessPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = RelioPaletteScope.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        // S1 est la racine en V1 : pas de retour possible.
-        automaticallyImplyLeading: false,
-        title: const Text(''),
+        // S1 n'est PLUS la racine : elle est atteinte depuis l'onglet
+        // Apprendre, via la carte du chapitre 1. Sa flèche de retour est donc
+        // active et ramène à l'écran Apprendre.
+        leading: IconButton(
+          onPressed: () => Navigator.of(context).maybePop(),
+          icon: const Icon(Icons.arrow_back),
+          tooltip: RelioStrings.back,
+          // Cible tactile d'au moins 48 dp : l'icône seule mesure 24 dp.
+          constraints: const BoxConstraints(
+            minWidth: RelioSizes.minTouchTarget,
+            minHeight: RelioSizes.minTouchTarget,
+          ),
+        ),
+        title: Text(
+          RelioStrings.chapterCaption,
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            fontFamily: RelioTheme.fontFamily,
+            color: palette.textPrimary,
+          ),
+        ),
       ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             RelioSpacing.horizontal,
-            8,
+            RelioSpacing.sm,
             RelioSpacing.horizontal,
-            24,
+            RelioSpacing.xxl,
           ),
           children: <Widget>[
             Text(
-              RelioStrings.chapterCaption,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                fontFamily: RelioTheme.fontFamily,
-                color: RelioColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
               RelioStrings.chapterTitle,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                height: 1.2,
-                fontFamily: RelioTheme.fontFamily,
-                color: RelioColors.text,
-              ),
+              style: RelioType.display(palette),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            const SizedBox(height: RelioSpacing.sm),
+            Text(
               RelioStrings.chapterIntro,
-              style: TextStyle(
-                fontSize: 16,
-                height: 1.45,
-                fontFamily: RelioTheme.fontFamily,
-                color: RelioColors.textSecondary,
+              style: RelioType.body(palette).copyWith(
+                color: palette.textSecondary,
               ),
             ),
             const SizedBox(height: RelioSpacing.sectionGap),

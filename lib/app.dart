@@ -1,101 +1,224 @@
 /// Application Relio — racine de l'interface.
 ///
-/// Point d'entree du parcours eleve du chapitre 1 :
-///   S1 (acces au chapitre) → S2 (exercice).
+/// NAVIGATION : trois onglets permanents (Accueil, Apprendre, Profil) portés
+/// par [AppShell]. L'application ouvre sur ACCUEIL, plus sur S1.
 ///
-/// La navigation est PORTEE ici : les ecrans ne connaissent que les
-/// evenements qu'ils emettent, jamais la suite du parcours.
+/// S1 (accès aux leçons du chapitre 1) est désormais atteint depuis
+/// Apprendre, via la carte du chapitre 1. Sa flèche de retour est donc active,
+/// et ramène à l'écran Apprendre.
+///
+/// Les écrans ne connaissent que les événements qu'ils émettent : jamais la
+/// suite du parcours.
 library;
 
 import 'package:flutter/material.dart';
 
 import 'data/db/app_database.dart';
-import 'domain/catalog/notion_catalog.dart';
 import 'domain/curriculum/chapter1_service.dart';
 import 'domain/curriculum/exercise.dart';
 import 'domain/learning/learning_event_repository.dart';
+import 'domain/settings/learner_settings.dart';
 import 'presentation/rules/v1_screen_rules.dart';
+import 'presentation/screens/app_shell.dart';
+import 'presentation/screens/app_shell_nav.dart';
 import 'presentation/screens/chapter_access_page.dart';
 import 'presentation/screens/exercise_page.dart';
+import 'presentation/screens/home_page.dart';
+import 'presentation/screens/learn_page.dart';
+import 'presentation/screens/profile_page.dart';
 import 'presentation/theme/relio_theme.dart';
 
-class RelioApp extends StatelessWidget {
-  const RelioApp({super.key, required this.database});
+class RelioApp extends StatefulWidget {
+  const RelioApp({super.key, required this.database, this.settingsController});
 
   final AppDatabase database;
 
+  /// Préférences de l'élève.
+  ///
+  /// Optionnel pour les tests : à défaut, l'application crée son propre
+  /// contrôleur et lit les préférences depuis la base.
+  final SettingsController? settingsController;
+
+  @override
+  State<RelioApp> createState() => _RelioAppState();
+}
+
+class _RelioAppState extends State<RelioApp> {
+  late final SettingsController _controller;
+  late final bool _ownsController;
+
+  @override
+  void initState() {
+    super.initState();
+    final provided = widget.settingsController;
+    _ownsController = provided == null;
+    _controller = provided ?? SettingsController(SettingsRepository(widget.database));
+    if (_ownsController) _controller.load();
+  }
+
+  @override
+  void dispose() {
+    // Seul un contrôleur créé ici est détruit : un contrôleur fourni par un
+    // parent reste la responsabilité de son propriétaire.
+    if (_ownsController) _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Relio',
-      debugShowCheckedModeBanner: false,
-      theme: RelioTheme.build(),
-      home: LearnerFlow(
-        service: Chapter1Service(LearningEventRepository(database)),
-      ),
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (context, _) {
+        final settings = _controller.settings;
+        final palette = RelioPalette.of(highContrast: settings.highContrast);
+
+        return RelioPaletteScope(
+          palette: palette,
+          child: MediaQuery.withClampedTextScaling(
+            // La taille de texte choisie s'applique à TOUTE l'application :
+            // barre basse comprise.
+            //
+            // Elle sert de PLANCHER, jamais de plafond : le réglage
+            // d'accessibilité du système reste respecté. Un élève qui a
+            // agrandi la police de son téléphone doit le sentir aussi dans
+            // Relio — verrouiller l'échelle l'annulerait.
+            minScaleFactor: settings.textScale.factor,
+            maxScaleFactor: switch (MediaQuery.maybeTextScalerOf(context)) {
+              final scaler? =>
+                scaler.scale(10) > settings.textScale.factor * 10
+                    ? scaler.scale(10) / 10
+                    : settings.textScale.factor,
+              null => settings.textScale.factor,
+            },
+            child: MaterialApp(
+              title: 'Relio',
+              debugShowCheckedModeBanner: false,
+              theme: RelioTheme.build(settings: settings),
+              home: _RelioShell(
+                database: widget.database,
+                settings: settings,
+                controller: _controller,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
-/// Parcours eleve : S1 puis S2.
-///
-/// Porte la navigation ET les brouillons de session, afin que la saisie et
-/// les indices restent disponibles apres un aller-retour entre ecrans.
-class LearnerFlow extends StatefulWidget {
-  const LearnerFlow({super.key, required this.service});
+/// Coquille des trois onglets, avec la navigation du chapitre.
+class _RelioShell extends StatefulWidget {
+  const _RelioShell({
+    required this.database,
+    required this.settings,
+    required this.controller,
+  });
 
-  final Chapter1Service service;
+  final AppDatabase database;
+  final LearnerSettings settings;
+  final SettingsController controller;
 
   @override
-  State<LearnerFlow> createState() => _LearnerFlowState();
+  State<_RelioShell> createState() => _RelioShellState();
 }
 
-class _LearnerFlowState extends State<LearnerFlow> {
-  /// Brouillons par identifiant d'exercice — memoire de session uniquement.
+class _RelioShellState extends State<_RelioShell> {
+  /// Brouillons par identifiant d'exercice — mémoire de session uniquement.
   ///
-  /// V1 : aucune persistance. Une fermeture forcee de l'application perd la
-  /// saisie ; limite ACCEPTEE et non masquee.
+  /// V1 : aucune persistance. Une fermeture forcée de l'application perd la
+  /// saisie ; limite ACCEPTÉE et non masquée.
   final Map<String, ExerciseDraft> _drafts = <String, ExerciseDraft>{};
 
-  /// Ouvre S2 sur le premier exercice de la lecon.
+  late final Chapter1Service _service =
+      Chapter1Service(LearningEventRepository(widget.database));
+
+  final GlobalKey<AppShellState> _shellKey = GlobalKey<AppShellState>();
+  final GlobalKey<NavigatorState> _homeKey = GlobalKey<NavigatorState>();
+  final GlobalKey<NavigatorState> _learnKey = GlobalKey<NavigatorState>();
+  final GlobalKey<NavigatorState> _profileKey = GlobalKey<NavigatorState>();
+
+  /// Signal de masquage de la barre basse.
+  ///
+  /// Levé par S2 seul : sur S1 la barre reste visible, sur S2 elle disparaît
+  /// pour laisser la place à la barre d'action fixe (champ + « Valider »).
+  final ValueNotifier<bool> _hideBottomBar = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _hideBottomBar.dispose();
+    super.dispose();
+  }
+
+  NavigatorState? get _learnNavigator => _learnKey.currentState;
+
+  /// Ouvre S1, puis S2, dans la pile de l'onglet Apprendre.
+  ///
+  /// « Commence ici » (Accueil) et le chapitre 1 (Apprendre) convergent donc
+  /// vers le MÊME parcours, sans dupliquer la pile.
+  ///
+  /// Bascule AUSSI sur l'onglet Apprendre : pousser une page dans la pile d'un
+  /// onglet sans l'afficher laisserait S1 invisible.
+  void _openChapter1() {
+    _shellKey.currentState?.selectTab(RelioTab.learn);
+
+    final navigator = _learnNavigator;
+    if (navigator == null) return;
+    navigator.push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ChapterAccessPage(onOpenLesson: _openLesson),
+      ),
+    );
+  }
+
+  /// Ouvre S2 sur le premier exercice de la leçon.
   Future<void> _openLesson(String lessonId) async {
     final exercise = V1ScreenRules.firstOfLesson(lessonId);
-    // Lecon inconnue : ne rien ouvrir plutot que d'afficher un ecran vide.
+    // Leçon inconnue : ne rien ouvrir plutôt qu'afficher un écran vide.
     if (exercise == null) return;
 
-    await Navigator.of(context).push(
+    final navigator = _learnNavigator;
+    if (navigator == null) return;
+
+    await navigator.push<void>(
       MaterialPageRoute<void>(
         builder: (_) => ExercisePage(
-          service: widget.service,
+          service: _service,
           exercise: exercise,
           drafts: _drafts,
-          onExit: () => Navigator.of(context).pop(),
+          // S1 est désormais empilé : son retour ramène à l'écran précédent.
+          onExit: () => navigator.pop(),
           onGoToNext: () => _goToNext(exercise),
+          onFullscreenChanged: _setFullscreen,
         ),
       ),
     );
   }
 
-  /// Passe a l'exercice suivant, ou revient a S1 apres le dernier.
+  /// Passe à l'exercice suivant, ou revient à S1 après le dernier.
   Future<void> _goToNext(Exercise exercise) async {
+    final navigator = _learnNavigator;
+    if (navigator == null || !navigator.mounted) return;
+
     final next = V1ScreenRules.nextAfter(exercise);
     if (next == null) {
-      // Dernier exercice du chapitre : retour a S1.
-      if (mounted) Navigator.of(context).pop();
+      // Dernier exercice du chapitre : retour à S1.
+      navigator.pop();
       return;
     }
-    if (!mounted) return;
+
     // Remplace S2 par l'exercice suivant : la pile ne s'empile pas.
-    Navigator.of(context).pushReplacement(
+    navigator.pushReplacement(
       MaterialPageRoute<void>(
         builder: (_) => ExercisePage(
-          service: widget.service,
+          service: _service,
           exercise: next,
           drafts: _drafts,
-          onExit: () => Navigator.of(context).pop(),
+          onExit: () => navigator.pop(),
           onGoToNext: () => _goToNext(next),
-          // L'eleve enchaîne : le champ du nouvel exercice doit etre
-          // pret a ecrire, sans avoir a le toucher.
+          onFullscreenChanged: _setFullscreen,
+          // L'élève enchaîne : le champ doit être prêt à écrire sans qu'il
+          // ait à le toucher.
           requestFocusOnOpen: true,
         ),
       ),
@@ -104,12 +227,96 @@ class _LearnerFlowState extends State<LearnerFlow> {
 
   @override
   Widget build(BuildContext context) {
-    return ChapterAccessPage(onOpenLesson: _openLesson);
+    return AppShell(
+      key: _shellKey,
+      hideBottomBar: _hideBottomBar,
+      navigatorKeys: <GlobalKey<NavigatorState>>[
+        _homeKey,
+        _learnKey,
+        _profileKey,
+      ],
+      tabs: <Widget Function(BuildContext, GlobalKey<NavigatorState>)>[
+        (context, _) => HomePage(
+              name: widget.settings.name,
+              onStartHere: _openChapter1,
+              // « Programme de 3e » bascule sur l'onglet Apprendre, sans
+              // y pousser d'écran : il en est déjà la racine.
+              onOpenProgram: () => _shellKey.currentState?.selectTab(RelioTab.learn),
+            ),
+        (context, _) => LearnPage(onOpenChapter1: _openChapter1),
+        (context, _) => ProfilePage(
+              settings: widget.settings,
+              onChanged: _onSettingsChanged,
+            ),
+      ],
+    );
+  }
+
+  void _onSettingsChanged(LearnerSettings next) {
+    widget.controller.apply(next);
+  }
+
+  /// S2 réclame (ou rend) toute la hauteur disponible.
+  ///
+  /// S2 signale son propre état, et non l'inverse : la règle « la barre basse
+  /// disparaît sur l'exercice » appartient à l'écran d'exercice, pas à la
+  /// coquille qui ne fait qu'exécuter.
+  void _setFullscreen(bool fullscreen) {
+    // `dispose` peut être atteint alors que la notification différée d'un
+    // exercice vient d'être planifiée : écrire dans un notifier déjà détruit
+    // lève une assertion. Le garde-fou `mounted` l'évite.
+    if (!mounted) return;
+    if (_hideBottomBar.value != fullscreen) _hideBottomBar.value = fullscreen;
   }
 }
 
-/// Service de catalogue conserve pour les usages futurs.
+/// Contrôleur des préférences, notifiant l'interface.
 ///
-/// L'ecran d'accueil technique a ete remplace par le parcours eleve ; le
-/// depot reste disponible pour les notebooks et la suite du parcours.
-typedef CatalogueService = NotionRepository;
+/// Les écritures vont d'abord en mémoire — l'interface reflète immédiatement le
+/// choix — puis en base.
+class SettingsController extends ChangeNotifier {
+  SettingsController(this._repository);
+
+  final SettingsRepository _repository;
+
+  LearnerSettings _settings = LearnerSettings.defaults;
+
+  /// Préférences courantes.
+  LearnerSettings get settings => _settings;
+
+  /// Charge les préférences depuis la base.
+  Future<void> load() async {
+    _apply(await _repository.load());
+  }
+
+  /// Applique [next] puis le persiste.
+  ///
+  /// Une seule porte d'entrée pour l'écran Profil : le widget ne fait que
+  /// décrire le changement voulu, jamais comment l'enregistrer.
+  Future<void> apply(LearnerSettings next) async {
+    if (next == _settings) return;
+    final previous = _settings;
+    _apply(next);
+
+    await _persist(next, previous);
+  }
+
+  Future<void> _persist(LearnerSettings next, LearnerSettings previous) async {
+    if (next.name != previous.name) await _repository.setName(next.name);
+    if (next.textScale != previous.textScale) {
+      await _repository.setTextScale(next.textScale);
+    }
+    if (next.highContrast != previous.highContrast) {
+      await _repository.setHighContrast(next.highContrast);
+    }
+    if (next.reduceAnimations != previous.reduceAnimations) {
+      await _repository.setReduceAnimations(next.reduceAnimations);
+    }
+  }
+
+  void _apply(LearnerSettings next) {
+    if (next == _settings) return;
+    _settings = next;
+    notifyListeners();
+  }
+}

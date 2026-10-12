@@ -1,249 +1,460 @@
-/// Système visuel de Relio.
+/// Jetons de design de Relio — couleurs, espacements, rayons, typographie.
 ///
-/// Palette, typographie, espacements et composants définis par la
-/// spécification d'interface. Centralisés ici pour qu'un ajustement de
-/// design ne touche aucun écran.
+/// FONDEATION DE TOUT L'AUTRE : aucun écran ne doit contenir une valeur
+/// littérale de couleur, d'espacement ou de rayon. Un ajustement de design se
+/// fait ici, et nulle part ailleurs.
 ///
-/// ⚠️ Police : la spécification demande **Inter**. Le fichier de police n'est
-/// pas embarqué dans le dépôt ; `fontFamily: 'Inter'` est donc déclaré, et
-/// Flutter bascule silencieusement sur la police par défaut tant que
-/// l'asset n'est pas ajouté. C'est une limite connue, signalée dans
-/// `docs/INTERFACE.md`.
+/// CONTRASTE : deux palettes coexistent, pas deux systèmes.
+///  - [RelioPalette.standard] : la palette de référence ;
+///  - [RelioPalette.contrast]  : contraste renforcé, choisi par l'élève sur
+///    l'écran Profil.
+///
+/// La palette renforcée n'ajoute AUCUNE information : elle renforce seulement
+/// ce qui existe déjà. Aucune couleur ne porte seule un sens — chaque état
+/// coloré est doublé d'un libellé (voir `RelioStrings` et les panneaux).
 library;
 
 import 'package:flutter/material.dart';
 
-/// Palette de l'application.
-abstract final class RelioColors {
-  /// Primaire — barre haute, bouton principal, focus.
-  static const Color primary = Color(0xFF1F3A6E);
+import '../../domain/settings/learner_settings.dart';
 
-  /// Conteneur primaire — fond des zones selections.
-  static const Color primaryContainer = Color(0xFFE6ECF7);
+/// Palette de l'application.
+///
+/// instance unique, immuable. Le choix se fait à la construction :
+/// `RelioPalette.of(highContrast: true)`.
+@immutable
+class RelioPalette {
+  const RelioPalette._({
+    required this.primary,
+    required this.primaryContainer,
+    required this.brand,
+    required this.hintText,
+    required this.hintBackground,
+    required this.successText,
+    required this.successBackground,
+    required this.errorText,
+    required this.errorBackground,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.outline,
+    required this.background,
+    required this.surface,
+    required this.shadow,
+  });
+
+  /// Palette de référence.
+  factory RelioPalette.standard() => const RelioPalette._(
+        primary: Color(0xFF1F3A6E),
+        primaryContainer: Color(0xFFE6ECF7),
+        brand: Color(0xFFF56207),
+        hintText: Color(0xFFB45309),
+        hintBackground: Color(0xFFFEF3C7),
+        successText: Color(0xFF15803D),
+        successBackground: Color(0xFFDCFCE7),
+        errorText: Color(0xFFB91C1C),
+        errorBackground: Color(0xFFFEE2E2),
+        textPrimary: Color(0xFF111827),
+        textSecondary: Color(0xFF4B5563),
+        outline: Color(0xFFE4E7EC),
+        background: Color(0xFFFAFBFC),
+        surface: Color(0xFFFFFFFF),
+        shadow: Color(0x0F000000),
+      );
+
+  /// Palette à contraste renforcé.
+  ///
+  /// Seule la bordure et le texte secondaire sont renforcés : ce sont les
+  /// deux éléments dont le contraste standard est le plus faible. Le texte
+  /// principal et les couleurs sémantiques sont déjà au-dessus d'AA et ne
+  /// changent pas — les foncer davantage dégraderait la lecture.
+  factory RelioPalette.contrast() => const RelioPalette._(
+        primary: Color(0xFF14264B),
+        primaryContainer: Color(0xFFD7E0F0),
+        brand: Color(0xFFC24704),
+        hintText: Color(0xFF7C3D06),
+        hintBackground: Color(0xFFFCE9B6),
+        successText: Color(0xFF14532D),
+        successBackground: Color(0xFFCEF5DA),
+        errorText: Color(0xFF7F1414),
+        errorBackground: Color(0xFFFBD5D5),
+        textPrimary: Color(0xFF000000),
+        textSecondary: Color(0xFF1F2937),
+        outline: Color(0xFF6B7280),
+        background: Color(0xFFFFFFFF),
+        surface: Color(0xFFFFFFFF),
+        shadow: Color(0x1F000000),
+      );
+
+  /// Palette correspondant à la préférence [highContrast] de l'élève.
+  factory RelioPalette.of({required bool highContrast}) =>
+      highContrast ? RelioPalette.contrast() : RelioPalette.standard();
+
+  /// Indigo principal : barre de navigation active, bouton principal, focus.
+  final Color primary;
+
+  /// Fond des zones sélectionnées.
+  final Color primaryContainer;
+
+  /// Orange de marque.
+  ///
+  /// RÉSERVÉ au mark du logo. Jamais utilisé comme couleur sémantique : il ne
+  /// doit jamais pouvoir être confondu avec un état de l'interface.
+  final Color brand;
 
   /// Texte des indices, sur fond ambre.
-  static const Color hintText = Color(0xFFB45309);
-  static const Color hintBackground = Color(0xFFFEF3C7);
+  final Color hintText;
 
-  /// Texte de reussite, sur fond vert.
-  static const Color successText = Color(0xFF15803D);
-  static const Color successBackground = Color(0xFFDCFCE7);
+  /// Fond des indices.
+  final Color hintBackground;
 
-  /// Texte d'erreur, sur fond rouge.
-  static const Color errorText = Color(0xFFB91C1C);
-  static const Color errorBackground = Color(0xFFFEE2E2);
+  /// Texte de réussite.
+  final Color successText;
+
+  /// Fond de réussite.
+  final Color successBackground;
+
+  /// Texte d'erreur.
+  final Color errorText;
+
+  /// Fond d'erreur.
+  final Color errorBackground;
 
   /// Texte principal.
-  static const Color text = Color(0xFF111827);
+  final Color textPrimary;
 
-  /// Texte secondaire.
-  static const Color textSecondary = Color(0xFF4B5563);
+  /// Texte secondaire : libellés, légendes.
+  final Color textSecondary;
 
-  /// Contour.
-  static const Color border = Color(0xFFE4E7EC);
+  /// Bordure de carte et de champ.
+  final Color outline;
 
-  /// Fond general.
-  static const Color background = Color(0xFFFAFBFC);
+  /// Fond général des écrans.
+  final Color background;
+
+  /// Fond des cartes et des barres.
+  final Color surface;
+
+  /// Ombre portée des cartes, en alpha.
+  final Color shadow;
+}
+
+/// Diffusion de la palette courante dans l'arbre des widgets.
+///
+/// POURQUOI : la palette dépend d'une préférence de l'élève, elle ne peut donc
+/// pas être une constante statique. Un widget lit sa couleur via
+/// `RelioPalette.of(context)`, ce qui rend le changement de contraste
+/// effectif sur TOUS les écrans sans les reconstruire un par un.
+///
+/// Une palette absente du contexte n'est pas une erreur fatale : on retombe
+/// sur la palette standard, pour qu'un widget reste testable isolément.
+class RelioPaletteScope extends InheritedWidget {
+  const RelioPaletteScope({
+    super.key,
+    required this.palette,
+    required super.child,
+  });
+
+  /// Palette à diffuser.
+  final RelioPalette palette;
+
+  /// Palette applicable sous [context].
+  static RelioPalette of(BuildContext context) {
+    return context
+            .dependOnInheritedWidgetOfExactType<RelioPaletteScope>()
+            ?.palette ??
+        RelioPalette.standard();
+  }
+
+  @override
+  bool updateShouldNotify(RelioPaletteScope oldWidget) =>
+      oldWidget.palette != palette;
 }
 
 /// Espacements de la mise en page.
+///
+/// Échelle de 4 : 4 / 8 / 12 / 16 / 20 / 24 / 32. Aucune autre valeur.
 abstract final class RelioSpacing {
-  static const double horizontal = 20;
-  static const double cardInner = 20;
-  static const double cardGap = 16;
-  static const double sectionGap = 24;
+  static const double xs = 4;
+  static const double sm = 8;
+  static const double md = 12;
+  static const double lg = 16;
+  static const double xl = 20;
+  static const double xxl = 24;
+  static const double xxxl = 32;
+
+  /// Marge horizontale des écrans.
+  static const double horizontal = xl;
+
+  /// Marge intérieure des cartes.
+  static const double cardInner = xl;
+
+  /// Écart entre deux cartes d'une même liste.
+  static const double cardGap = lg;
+
+  /// Écart entre deux sections d'écran.
+  static const double sectionGap = xxl;
 
   static const EdgeInsets screenPadding =
       EdgeInsets.symmetric(horizontal: horizontal);
 
-  static const EdgeInsets cardPadding =
-      EdgeInsets.all(cardInner);
+  static const EdgeInsets cardPadding = EdgeInsets.all(cardInner);
+}
+
+/// Rayons d'arrondi.
+///
+/// 8 petit / 12 cartes, champs, boutons / 16 bandeaux / 999 pastilles.
+abstract final class RelioRadius {
+  static const double small = 8;
+  static const double card = 12;
+  static const double banner = 16;
+  static const double pill = 999;
+
+  static const BorderRadius smallAll = BorderRadius.all(Radius.circular(small));
+  static const BorderRadius cardAll = BorderRadius.all(Radius.circular(card));
+  static const BorderRadius bannerAll =
+      BorderRadius.all(Radius.circular(banner));
+  static const BorderRadius pillAll = BorderRadius.all(Radius.circular(pill));
 }
 
 /// Dimensions des composants.
 abstract final class RelioSizes {
+  /// Hauteur du bouton principal.
   static const double primaryButtonHeight = 52;
-  static const double secondaryButtonHeight = 48;
-  static const double textButtonHeight = 44;
 
-  /// Cible tactile minimale, imposee par la specification.
+  /// Hauteur du bouton secondaire.
+  static const double secondaryButtonHeight = 48;
+
+  /// Cible tactile minimale imposée par la spécification.
   static const double minTouchTarget = 48;
 
+  /// Hauteur du champ de saisie.
   static const double fieldHeight = 56;
-  static const double fieldRadius = 12;
+
+  /// Hauteur de la barre de navigation basse.
+  static const double bottomNavHeight = 56;
+
+  /// Épaisseur de bordure des champs.
   static const double fieldBorderWidth = 1.5;
 
-  static const double cardRadius = 12;
+  /// Épaisseur de bordure des cartes.
   static const double cardBorderWidth = 1;
+
+  /// Épaisseur de trait des icônes de la barre basse.
+  static const double iconStrokeWidth = 1.75;
 }
 
-/// Theme Material de Relio.
+/// Échelle typographique.
+///
+/// Le passage par des STYLEScentralisés évite qu'un écran redéfnisse un
+/// poids ou une taille : la règle « 16 partout pour le corps » tient alors par
+/// construction.
+abstract final class RelioType {
+  /// Display — 28 / Bold.
+  static TextStyle display(RelioPalette p) => TextStyle(
+        fontSize: 28,
+        fontWeight: FontWeight.w700,
+        height: 1.2,
+        fontFamily: RelioTheme.fontFamily,
+        color: p.textPrimary,
+      );
+
+  /// Title — 22 / SemiBold.
+  static TextStyle title(RelioPalette p) => TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.w600,
+        height: 1.25,
+        fontFamily: RelioTheme.fontFamily,
+        color: p.textPrimary,
+      );
+
+  /// Subtitle — 17 / SemiBold.
+  static TextStyle subtitle(RelioPalette p) => TextStyle(
+        fontSize: 17,
+        fontWeight: FontWeight.w600,
+        height: 1.3,
+        fontFamily: RelioTheme.fontFamily,
+        color: p.textPrimary,
+      );
+
+  /// Body — 16 / Regular.
+  static TextStyle body(RelioPalette p) => TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+        height: 1.45,
+        fontFamily: RelioTheme.fontFamily,
+        color: p.textPrimary,
+      );
+
+  /// BodyStrong — 16 / SemiBold.
+  static TextStyle bodyStrong(RelioPalette p) => TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        height: 1.45,
+        fontFamily: RelioTheme.fontFamily,
+        color: p.textPrimary,
+      );
+
+  /// Caption — 13 / Medium, texte secondaire.
+  static TextStyle caption(RelioPalette p) => TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        height: 1.35,
+        fontFamily: RelioTheme.fontFamily,
+        color: p.textSecondary,
+      );
+
+  /// Numeric — 20 / Medium, chiffres tabulaires.
+  ///
+  /// Utilisé pour les valeurs chiffrées alignées verticalement.
+  static TextStyle numeric(RelioPalette p) => TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.w500,
+        height: 1.2,
+        fontFamily: RelioTheme.fontFamily,
+        color: p.textPrimary,
+        fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+      );
+}
+
+/// Police de l'application.
+///
+/// Quatre poids droits + un italique, déclarés dans `pubspec.yaml`, sous-ensemble
+/// latin et latin étendu. Licence SIL OFL 1.1 dans `assets/fonts/Inter-OFL.txt`.
+///
+/// NOTE : les fichiers portent `wght` ÉPINGLÉ. Le poids est donc porté par le
+/// fichier lui-même, et `fontWeight` suffit à le sélectionner. Aucun
+/// `fontVariations` n'est nécessaire.
 abstract final class RelioTheme {
-  /// Police demandee par la specification.
-  ///
-  /// Quatre poids droits + un italique, sous-ensemble latin et latin etendu,
-  /// declares dans `pubspec.yaml`. Licence SIL OFL 1.1 dans
-  /// `assets/fonts/Inter-OFL.txt`.
-  ///
-  /// NOTE TECHNIQUE : ces fichiers ont `wght` EPAINGLE. Le poids est donc
-  /// porte par le fichier lui-meme, et `fontWeight` suffit a le selectionner.
-  /// Aucun `fontVariations` n'est necessaire — contrairement a la version
-  /// anterieure, qui utilisait un unique fichier VARIABLE et devait
-  /// piloter l'axe `wght` a la main depuis chaque style.
-  ///
-  /// L'italique est lui aussi un fichier reel : les variables d'un enonce
-  /// sont composees avec de vrais contours inclines, et non un oblique
-  /// simule par le moteur de rendu.
+  /// Nom de la famille déclarée dans `pubspec.yaml`.
   static const String fontFamily = 'Inter';
 
-  static ThemeData build() {
+  /// Construit le thème Material pour la préférence donnée.
+  ///
+  /// [settings] ne fournit QUE la palette : ni le nom de l'élève, ni aucune
+  /// donnée d'apprentissage n'entrent dans le thème.
+  static ThemeData build({
+    LearnerSettings settings = LearnerSettings.defaults,
+  }) {
+    final palette = RelioPalette.of(highContrast: settings.highContrast);
+
     final base = ThemeData(
       useMaterial3: true,
       fontFamily: fontFamily,
-      scaffoldBackgroundColor: RelioColors.background,
+      scaffoldBackgroundColor: palette.background,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: RelioColors.primary,
-        primary: RelioColors.primary,
-        surface: Colors.white,
-        error: RelioColors.errorText,
+        seedColor: palette.primary,
+        primary: palette.primary,
+        surface: palette.surface,
+        error: palette.errorText,
       ),
     );
 
     return base.copyWith(
-      textTheme: _textTheme(base.textTheme),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: RelioColors.background,
-        foregroundColor: RelioColors.text,
+      textTheme: _textTheme(base.textTheme, palette),
+      appBarTheme: AppBarTheme(
+        backgroundColor: palette.background,
+        foregroundColor: palette.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
       ),
       cardTheme: CardThemeData(
-        color: Colors.white,
+        color: palette.surface,
         elevation: 1,
-        shadowColor: Colors.black.withValues(alpha: 0.06),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(RelioSizes.cardRadius),
-          side: const BorderSide(
-            color: RelioColors.border,
-            width: RelioSizes.cardBorderWidth,
-          ),
+        shadowColor: palette.shadow,
+        shape: const RoundedRectangleBorder(
+          borderRadius: RelioRadius.cardAll,
         ),
         margin: EdgeInsets.zero,
       ),
-      dividerTheme: const DividerThemeData(
-        color: RelioColors.border,
+      dividerTheme: DividerThemeData(
+        color: palette.outline,
         thickness: 1,
         space: 1,
       ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: _filledStyle(palette),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: _outlinedStyle(palette),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: _textStyle(palette),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: palette.surface,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: RelioSpacing.lg,
+          vertical: RelioSpacing.md,
+        ),
+        border: _fieldBorder(palette),
+        enabledBorder: _fieldBorder(palette),
+        focusedBorder: _fieldBorder(palette, focused: true),
+        hintStyle: RelioType.body(palette).copyWith(
+          color: palette.textSecondary,
+        ),
+      ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: palette.surface,
+        selectedItemColor: palette.primary,
+        unselectedItemColor: palette.textSecondary,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+      ),
     );
   }
 
-  static TextTheme _textTheme(TextTheme base) {
+  static OutlineInputBorder _fieldBorder(
+    RelioPalette p, {
+    bool focused = false,
+  }) {
+    return OutlineInputBorder(
+      borderRadius: RelioRadius.cardAll,
+      borderSide: BorderSide(
+        color: focused ? p.primary : p.outline,
+        width: focused ? 2 : RelioSizes.fieldBorderWidth,
+      ),
+    );
+  }
+
+  static TextTheme _textTheme(TextTheme base, RelioPalette p) {
     return base.copyWith(
-      displaySmall: const TextStyle(
-        fontSize: 28,
-        fontWeight: FontWeight.w700,
-        fontFamily: fontFamily,
-
-        color: RelioColors.text,
-        height: 1.2,
-      ),
-      titleLarge: const TextStyle(
-        fontSize: 22,
-        fontWeight: FontWeight.w600,
-        fontFamily: fontFamily,
-
-        color: RelioColors.text,
-        height: 1.25,
-      ),
-      titleMedium: const TextStyle(
-        fontSize: 17,
-        fontWeight: FontWeight.w600,
-        fontFamily: fontFamily,
-
-        color: RelioColors.text,
-        height: 1.3,
-      ),
-      bodyLarge: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
-        fontFamily: fontFamily,
-
-        color: RelioColors.text,
-        height: 1.45,
-      ),
-      bodyMedium: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
-        fontFamily: fontFamily,
-
-        color: RelioColors.text,
-        height: 1.45,
-      ),
-      labelMedium: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w500,
-        fontFamily: fontFamily,
-
-        color: RelioColors.textSecondary,
-        height: 1.35,
-      ),
+      displaySmall: RelioType.display(p),
+      titleLarge: RelioType.title(p),
+      titleMedium: RelioType.subtitle(p),
+      bodyLarge: RelioType.body(p),
+      bodyMedium: RelioType.body(p),
+      labelMedium: RelioType.caption(p),
     );
   }
-}
 
-/// Style du bouton primaire — 52 dp, rayon 12.
-abstract final class RelioButtons {
-  static ButtonStyle primary() {
+  static ButtonStyle _filledStyle(RelioPalette p) {
     return FilledButton.styleFrom(
-      backgroundColor: RelioColors.primary,
+      backgroundColor: p.primary,
       foregroundColor: Colors.white,
       minimumSize: const Size.fromHeight(RelioSizes.primaryButtonHeight),
-      textStyle: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        fontFamily: RelioTheme.fontFamily,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(RelioSizes.fieldRadius),
-      ),
+      textStyle: RelioType.bodyStrong(p).copyWith(color: Colors.white),
+      shape: const RoundedRectangleBorder(borderRadius: RelioRadius.cardAll),
     );
   }
 
-  /// Bouton secondaire — 48 dp, bordure 1.5.
-  static ButtonStyle secondary() {
+  static ButtonStyle _outlinedStyle(RelioPalette p) {
     return OutlinedButton.styleFrom(
-      foregroundColor: RelioColors.primary,
+      foregroundColor: p.primary,
       minimumSize: const Size.fromHeight(RelioSizes.secondaryButtonHeight),
-      side: const BorderSide(
-        color: RelioColors.primary,
-        width: RelioSizes.fieldBorderWidth,
-      ),
-      textStyle: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        fontFamily: RelioTheme.fontFamily,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(RelioSizes.fieldRadius),
-      ),
+      side: BorderSide(color: p.primary, width: RelioSizes.fieldBorderWidth),
+      textStyle: RelioType.bodyStrong(p).copyWith(color: p.primary),
+      shape: const RoundedRectangleBorder(borderRadius: RelioRadius.cardAll),
     );
   }
 
-  /// Bouton texte — 44 dp de hauteur, cible tactile elargie a 48 dp.
-  static ButtonStyle text() {
+  static ButtonStyle _textStyle(RelioPalette p) {
     return TextButton.styleFrom(
-      foregroundColor: RelioColors.primary,
+      foregroundColor: p.primary,
       minimumSize: const Size.fromHeight(RelioSizes.minTouchTarget),
-      textStyle: const TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
-        fontFamily: RelioTheme.fontFamily,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(RelioSizes.fieldRadius),
-      ),
+      textStyle: RelioType.bodyStrong(p).copyWith(color: p.primary),
+      shape: const RoundedRectangleBorder(borderRadius: RelioRadius.cardAll),
     );
   }
 }

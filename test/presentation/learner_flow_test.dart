@@ -35,10 +35,19 @@ Future<Harness> pumpApp(WidgetTester tester) async {
 }
 
 /// Pompe l'application jusqu'a S1.
+///
+/// L'application ouvre sur ACCUEIL. S1 s'atteint par l'onglet Apprendre puis
+/// la carte du chapitre 1 — le parcours réel, pas un raccourci de test.
 Future<Harness> pumpChapter(WidgetTester tester) async {
   final harness = await pumpApp(tester);
   await tester.pumpWidget(RelioApp(database: harness.db));
   await tester.pumpAndSettle();
+
+  await tester.tap(find.text(RelioStrings.tabLearn).last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(RelioStrings.chapterArithmetic));
+  await tester.pumpAndSettle();
+
   return harness;
 }
 

@@ -92,4 +92,68 @@ abstract final class RelioStrings {
   /// Exercice 11 : la redaction n'est pas evaluee de facon fiable.
   static const String transparencyRedaction =
       'L’évaluation de la rédaction n’est pas encore complète.';
+
+  // ---------------------------------------------------------------------
+  // Navigation globale — barre basse à trois onglets
+  // ---------------------------------------------------------------------
+
+  /// Libellé de l'onglet 1.
+  static const String tabHome = 'Accueil';
+
+  /// Libellé de l'onglet 2.
+  static const String tabLearn = 'Apprendre';
+
+  /// Libellé de l'onglet 3.
+  static const String tabProfile = 'Profil';
+
+  // ---------------------------------------------------------------------
+  // Accueil
+  // ---------------------------------------------------------------------
+
+  /// En-tête d'accueil. Le prénom est ajouté séparément s'il est renseigné.
+  static const String greeting = 'Bonjour';
+
+  /// Titre de la carte principale.
+  static const String startHereTitle = 'Commence ici';
+
+  /// Sous-titre de la carte principale.
+  static const String startHereSubtitle = 'Chapitre 1 — Arithmétique';
+
+  /// Titre de la carte secondaire.
+  static const String programTitle = 'Programme de 3e';
+
+  /// Sous-titre de la carte secondaire.
+  static const String programSubtitle = 'Voir les chapitres';
+
+  // ---------------------------------------------------------------------
+  // Apprendre
+  // ---------------------------------------------------------------------
+
+  /// Titre d'écran.
+  static const String learnTitle = 'Programme de 3e';
+
+  /// Sous-titre d'un chapitre actif.
+  static const String chapterArithmetic = 'Arithmétique';
+
+  /// Sous-titre d'un chapitre non encore disponible.
+  static const String chapterComingSoon = 'Bientôt disponible';
+
+  // ---------------------------------------------------------------------
+  // Profil
+  // ---------------------------------------------------------------------
+
+  static const String profileTitle = 'Profil';
+
+  static const String sectionIdentity = 'Identité';
+  static const String sectionDisplay = 'Affichage';
+  static const String sectionAccessibility = 'Accessibilité';
+
+  static const String nameLabel = 'Nom';
+  static const String nameHint = 'Ajoute ton prénom';
+  static const String classLabel = 'Classe';
+  static const String classValue = '3e';
+
+  static const String textSizeLabel = 'Taille du texte';
+  static const String highContrastLabel = 'Contraste renforcé';
+  static const String reduceAnimationsLabel = 'Réduire les animations';
 }

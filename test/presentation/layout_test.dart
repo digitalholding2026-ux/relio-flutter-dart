@@ -28,6 +28,18 @@ Future<void> pumpOnSmallPhone(WidgetTester tester, Widget app) async {
   await tester.pumpAndSettle();
 }
 
+/// Ouvre S1 depuis l'onglet Apprendre.
+///
+/// L'application ouvre désormais sur ACCUEIL : S1 n'est plus la racine, elle
+/// s'atteint par Accueil → Apprendre → chapitre 1, ou directement par
+/// Apprendre → chapitre 1.
+Future<void> openS1(WidgetTester tester) async {
+  await tester.tap(find.text(RelioStrings.tabLearn).last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(RelioStrings.chapterArithmetic));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   group('S1 sur 360 x 640', () {
     testWidgets('les trois leçons sont accessibles sans débordement',
@@ -36,6 +48,7 @@ void main() {
       registerTestDatabase(db);
 
       await pumpOnSmallPhone(tester, RelioApp(database: db));
+      await openS1(tester);
 
       expect(find.byType(ChapterAccessPage), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -50,6 +63,7 @@ void main() {
       registerTestDatabase(db);
 
       await pumpOnSmallPhone(tester, RelioApp(database: db));
+      await openS1(tester);
 
       await tester.scrollUntilVisible(
         find.byType(LessonCard).at(2),
@@ -69,6 +83,7 @@ void main() {
       registerTestDatabase(db);
 
       await pumpOnSmallPhone(tester, RelioApp(database: db));
+      await openS1(tester);
       await tester.tap(find.byType(LessonCard).at(0));
       await tester.pumpAndSettle();
     }
@@ -127,6 +142,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await openS1(tester);
       await tester.tap(find.byType(LessonCard).at(0));
       await tester.pumpAndSettle();
 
@@ -164,6 +180,7 @@ void main() {
       registerTestDatabase(db);
 
       await pumpOnSmallPhone(tester, RelioApp(database: db));
+      await openS1(tester);
       await tester.tap(find.byType(LessonCard).at(0));
       await tester.pumpAndSettle();
 
@@ -176,6 +193,7 @@ void main() {
       registerTestDatabase(db);
 
       await pumpOnSmallPhone(tester, RelioApp(database: db));
+      await openS1(tester);
       await tester.tap(find.byType(LessonCard).at(0));
       await tester.pumpAndSettle();
 
@@ -189,18 +207,20 @@ void main() {
 
   group('Thème', () {
     test('couleurs conformes à la spécification', () {
-      expect(RelioColors.primary.toARGB32(), 0xFF1F3A6E);
-      expect(RelioColors.primaryContainer.toARGB32(), 0xFFE6ECF7);
-      expect(RelioColors.hintText.toARGB32(), 0xFFB45309);
-      expect(RelioColors.hintBackground.toARGB32(), 0xFFFEF3C7);
-      expect(RelioColors.successText.toARGB32(), 0xFF15803D);
-      expect(RelioColors.successBackground.toARGB32(), 0xFFDCFCE7);
-      expect(RelioColors.errorText.toARGB32(), 0xFFB91C1C);
-      expect(RelioColors.errorBackground.toARGB32(), 0xFFFEE2E2);
-      expect(RelioColors.text.toARGB32(), 0xFF111827);
-      expect(RelioColors.textSecondary.toARGB32(), 0xFF4B5563);
-      expect(RelioColors.border.toARGB32(), 0xFFE4E7EC);
-      expect(RelioColors.background.toARGB32(), 0xFFFAFBFC);
+      final palette = RelioPalette.standard();
+      expect(palette.primary.toARGB32(), 0xFF1F3A6E);
+      expect(palette.primaryContainer.toARGB32(), 0xFFE6ECF7);
+      expect(palette.brand.toARGB32(), 0xFFF56207);
+      expect(palette.hintText.toARGB32(), 0xFFB45309);
+      expect(palette.hintBackground.toARGB32(), 0xFFFEF3C7);
+      expect(palette.successText.toARGB32(), 0xFF15803D);
+      expect(palette.successBackground.toARGB32(), 0xFFDCFCE7);
+      expect(palette.errorText.toARGB32(), 0xFFB91C1C);
+      expect(palette.errorBackground.toARGB32(), 0xFFFEE2E2);
+      expect(palette.textPrimary.toARGB32(), 0xFF111827);
+      expect(palette.textSecondary.toARGB32(), 0xFF4B5563);
+      expect(palette.outline.toARGB32(), 0xFFE4E7EC);
+      expect(palette.background.toARGB32(), 0xFFFAFBFC);
     });
 
     test('dimensions conformes', () {
@@ -208,7 +228,28 @@ void main() {
       expect(RelioSizes.secondaryButtonHeight, 48);
       expect(RelioSizes.minTouchTarget, 48);
       expect(RelioSizes.fieldHeight, 56);
-      expect(RelioSizes.fieldRadius, 12);
+      expect(RelioRadius.card, 12);
+      // Barre basse à trois onglets.
+      expect(RelioSizes.bottomNavHeight, 56);
+    });
+
+    test('échelle d’espacements et de rayons conforme', () {
+      expect(
+        <double>[
+          RelioSpacing.xs,
+          RelioSpacing.sm,
+          RelioSpacing.md,
+          RelioSpacing.lg,
+          RelioSpacing.xl,
+          RelioSpacing.xxl,
+          RelioSpacing.xxxl,
+        ],
+        <double>[4, 8, 12, 16, 20, 24, 32],
+      );
+      expect(RelioRadius.small, 8);
+      expect(RelioRadius.card, 12);
+      expect(RelioRadius.banner, 16);
+      expect(RelioRadius.pill, 999);
     });
 
     testWidgets('polices et tailles conformes', (tester) async {
@@ -216,6 +257,7 @@ void main() {
       registerTestDatabase(db);
 
       await pumpOnSmallPhone(tester, RelioApp(database: db));
+      await openS1(tester);
 
       final text = tester.widget<Text>(find.text(RelioStrings.chapterTitle));
       expect(text.style?.fontSize, 28);

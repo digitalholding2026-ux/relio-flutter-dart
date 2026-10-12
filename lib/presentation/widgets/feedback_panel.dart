@@ -30,12 +30,14 @@ class FeedbackPanelView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = RelioPaletteScope.of(context);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(RelioSpacing.cardInner),
       decoration: BoxDecoration(
-        color: _background,
-        borderRadius: BorderRadius.circular(RelioSizes.cardRadius),
+        color: _background(palette),
+        borderRadius: RelioRadius.cardAll,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -47,7 +49,7 @@ class FeedbackPanelView extends StatelessWidget {
                 fontSize: 17,
                 fontWeight: FontWeight.w600,
                 fontFamily: RelioTheme.fontFamily,
-                color: _foreground,
+                color: _foreground(palette),
               ),
             ),
             const SizedBox(height: 6),
@@ -58,7 +60,7 @@ class FeedbackPanelView extends StatelessWidget {
               fontSize: 16,
               height: 1.45,
               fontFamily: RelioTheme.fontFamily,
-              color: selection.title.isEmpty ? RelioColors.text : _foreground,
+              color: selection.title.isEmpty ? palette.textPrimary : _foreground(palette),
             ),
           ),
           if (selection.showRetry ||
@@ -78,21 +80,18 @@ class FeedbackPanelView extends StatelessWidget {
     if (selection.showRetry) {
       buttons.add(FilledButton(
         onPressed: onRetry,
-        style: RelioButtons.primary(),
         child: const Text(RelioStrings.retry),
       ));
     }
     if (selection.showNext) {
       buttons.add(OutlinedButton(
         onPressed: onNext,
-        style: RelioButtons.secondary(),
         child: const Text(RelioStrings.nextExercise),
       ));
     }
     if (selection.showContinue) {
       buttons.add(OutlinedButton(
         onPressed: onContinue,
-        style: RelioButtons.secondary(),
         child: const Text(RelioStrings.continueLabel),
       ));
     }
@@ -108,17 +107,17 @@ class FeedbackPanelView extends StatelessWidget {
     );
   }
 
-  Color get _background => switch (selection.panel) {
-        FeedbackPanel.successAutonomous => RelioColors.successBackground,
-        FeedbackPanel.successAssisted => RelioColors.hintBackground,
-        FeedbackPanel.noInformation => RelioColors.background,
-        FeedbackPanel.notRecognised => RelioColors.background,
-        FeedbackPanel.inconclusive => RelioColors.background,
+  Color _background(RelioPalette p) => switch (selection.panel) {
+        FeedbackPanel.successAutonomous => p.successBackground,
+        FeedbackPanel.successAssisted => p.hintBackground,
+        FeedbackPanel.noInformation => p.background,
+        FeedbackPanel.notRecognised => p.background,
+        FeedbackPanel.inconclusive => p.background,
       };
 
-  Color get _foreground => switch (selection.panel) {
-        FeedbackPanel.successAutonomous => RelioColors.successText,
-        FeedbackPanel.successAssisted => RelioColors.hintText,
-        _ => RelioColors.text,
+  Color _foreground(RelioPalette p) => switch (selection.panel) {
+        FeedbackPanel.successAutonomous => p.successText,
+        FeedbackPanel.successAssisted => p.hintText,
+        _ => p.textPrimary,
       };
 }

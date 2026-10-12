@@ -66,6 +66,7 @@ class ExercisePage extends StatefulWidget {
     required this.onExit,
     required this.onGoToNext,
     this.requestFocusOnOpen = false,
+    this.onFullscreenChanged,
   });
 
   final Chapter1Service service;
@@ -89,6 +90,16 @@ class ExercisePage extends StatefulWidget {
   /// lorsque le brouillon restaure un panneau — le clavier ne doit pas
   /// s'ouvrir tout seul sur un champ verrouille.
   final bool requestFocusOnOpen;
+
+  /// Signale que S2 occupe tout l'espace, barre de navigation basse masquée.
+  ///
+  /// S2 est un espace dédié à l'exercice : la barre d'action fixe
+  /// (champ + « Valider ») doit rester seule, sans barre d'onglets en dessous.
+  ///
+  /// L'écran lève le signal à son ouverture et le rend à sa fermeture. Sans ce
+  /// paramètre, aucun masquage n'est demandé — l'écran reste utilisable seul,
+  /// ce qui permet de le tester isolément.
+  final ValueChanged<bool>? onFullscreenChanged;
 
   @override
   State<ExercisePage> createState() => _ExercisePageState();
@@ -121,6 +132,15 @@ class _ExercisePageState extends State<ExercisePage> {
     _focusNode = FocusNode();
     _scrollController = ScrollController();
 
+    // S2 occupe tout l'espace : la barre basse est masquée dès l'ouverture.
+    //
+    // NOTIFICATION DIFFÉRÉE : `initState` s'exécute pendant la phase de
+    // construction. Notifier un `ValueNotifier` à cet instant rebuild est
+    // interdit : la notification part donc en post-frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onFullscreenChanged?.call(true);
+    });
+
     // La cle de tentative existe des l'ouverture de S2 : les indices doivent
     // pouvoir y etre rattaches avant toute soumission.
     _draft = widget.drafts[widget.exercise.id] ??
@@ -144,6 +164,19 @@ class _ExercisePageState extends State<ExercisePage> {
     // Derniere sauvegarde : garantit la saisie meme si `onChanged` n'a pas
     // ete declenche (controle programme, restauration de session).
     _draft.answer = _controller.text;
+
+    // La barre basse revient des que l'on quitte l'exercice.
+    //
+    // `dispose` peut s'exécuter pendant une reconstruction : la notification
+    // est donc reportée elle aussi, sinon elle déclencherait un rebuild
+    // interdit.
+    final onFullscreenChanged = widget.onFullscreenChanged;
+    if (onFullscreenChanged != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        onFullscreenChanged(false);
+      });
+    }
+
     _controller.dispose();
     _focusNode.dispose();
     _scrollController.dispose();
@@ -271,6 +304,7 @@ class _ExercisePageState extends State<ExercisePage> {
   @override
   Widget build(BuildContext context) {
     final exercise = widget.exercise;
+    final palette = RelioPaletteScope.of(context);
     final keyboard = V1ScreenRules.keyboardFor(exercise.id);
     final transparency = V1ScreenRules.transparencyNote(exercise.id);
     final canAskHint =
@@ -301,11 +335,11 @@ class _ExercisePageState extends State<ExercisePage> {
           exercise.lesson.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w600,
             fontFamily: RelioTheme.fontFamily,
-            color: RelioColors.text,
+            color: palette.textPrimary,
           ),
         ),
       ),
@@ -355,17 +389,16 @@ class _ExercisePageState extends State<ExercisePage> {
   }
 
   Widget _statementCard(String statement) {
+    final palette = RelioPaletteScope.of(context);
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(RelioSpacing.cardInner),
         child: MathText(
           text: statement,
-          style: const TextStyle(
-            fontSize: 16,
-            height: 1.5,
-            fontFamily: RelioTheme.fontFamily,
-            color: RelioColors.text,
-          ),
+          // Le formateur ne change que l'italique et les chiffres : la
+          // hauteur de ligne reste celle du corps de texte.
+          style: RelioType.body(palette).copyWith(height: 1.5),
         ),
       ),
     );
@@ -373,15 +406,11 @@ class _ExercisePageState extends State<ExercisePage> {
 
   /// Mention de transparence : Caption, secondaire, sans icone ni encadre.
   Widget _transparencyNote(String text) {
+    final palette = RelioPaletteScope.of(context);
+
     return Text(
       text,
-      style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w500,
-        height: 1.4,
-        fontFamily: RelioTheme.fontFamily,
-        color: RelioColors.textSecondary,
-      ),
+      style: RelioType.caption(palette).copyWith(height: 1.4),
     );
   }
 
@@ -390,11 +419,13 @@ class _ExercisePageState extends State<ExercisePage> {
   /// Hors de la zone defilante : le champ reste visible au-dessus du
   /// clavier et « Valider » n'est jamais masque.
   Widget _bottomBar(AnswerKeyboard keyboard, {required bool canAskHint}) {
+    final palette = RelioPaletteScope.of(context);
+
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: palette.surface,
         border: Border(
-          top: BorderSide(color: RelioColors.border, width: 1),
+          top: BorderSide(color: palette.outline, width: 1),
         ),
       ),
       padding: const EdgeInsets.fromLTRB(
@@ -441,7 +472,6 @@ class _ExercisePageState extends State<ExercisePage> {
               // modifierait la hauteur de la barre d'action apres chaque
               // reponse, ce qui serait plus derangeant qu'un bouton inactif.
               onPressed: _locked ? null : _askForHint,
-              style: RelioButtons.text(),
               child: const Text(RelioStrings.askHint),
             ),
           ],
@@ -453,7 +483,6 @@ class _ExercisePageState extends State<ExercisePage> {
             // peut plus etre nettoye. Repasser par « Réessayer » est la
             // seule voie pour soumettre une nouvelle tentative.
             onPressed: (_submitting || _feedback != null) ? null : _submit,
-            style: RelioButtons.primary(),
             child: _submitting
                 ? const SizedBox(
                     height: 20,
@@ -481,17 +510,19 @@ class _ExercisePageState extends State<ExercisePage> {
 
   /// Bannière dismissible d'erreur d'envoi.
   Widget _errorBanner() {
+    final palette = RelioPaletteScope.of(context);
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: RelioColors.errorBackground,
-        borderRadius: BorderRadius.circular(RelioSizes.fieldRadius),
+        color: palette.errorBackground,
+        borderRadius: BorderRadius.circular(RelioRadius.card),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Icon(Icons.error_outline,
-              color: RelioColors.errorText, size: 20),
+          Icon(Icons.error_outline,
+              color: palette.errorText, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -499,19 +530,19 @@ class _ExercisePageState extends State<ExercisePage> {
               children: <Widget>[
                 Text(
                   RelioStrings.submitErrorBanner,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     height: 1.4,
                     fontFamily: RelioTheme.fontFamily,
-                    color: RelioColors.errorText,
+                    color: palette.errorText,
                   ),
                 ),
                 const SizedBox(height: 4),
                 TextButton(
                   onPressed: _submit,
-                  style: RelioButtons.text().copyWith(
-                    foregroundColor: WidgetStatePropertyAll(RelioColors.errorText),
-                    minimumSize: const WidgetStatePropertyAll(Size.fromHeight(36)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: palette.errorText,
+                    minimumSize: const Size.fromHeight(36),
                   ),
                   child: const Text(RelioStrings.retry),
                 ),
@@ -521,7 +552,7 @@ class _ExercisePageState extends State<ExercisePage> {
           IconButton(
             onPressed: () => setState(() => _showSubmitError = false),
             icon: const Icon(Icons.close, size: 18),
-            color: RelioColors.errorText,
+            color: palette.errorText,
             tooltip: 'Fermer',
             constraints: const BoxConstraints(
               minWidth: 36,
@@ -534,15 +565,17 @@ class _ExercisePageState extends State<ExercisePage> {
   }
 
   Widget _inlineMessage() {
+    final palette = RelioPaletteScope.of(context);
+
     return Semantics(
       liveRegion: true,
       child: Text(
         RelioStrings.emptyAnswerInline,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w500,
           fontFamily: RelioTheme.fontFamily,
-          color: RelioColors.errorText,
+          color: palette.errorText,
         ),
       ),
     );

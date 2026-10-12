@@ -30,6 +30,13 @@ Future<AppDatabase> openFirstExercise(WidgetTester tester) async {
     RelioApp(database: db),
   );
   await tester.pumpAndSettle();
+
+  // L'application ouvre sur ACCUEIL : S1 s'atteint par l'onglet Apprendre.
+  await tester.tap(find.text(RelioStrings.tabLearn).last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Chapitre 1'));
+  await tester.pumpAndSettle();
+
   await tester.tap(find.byType(LessonCard).at(0));
   await tester.pumpAndSettle();
   return db;

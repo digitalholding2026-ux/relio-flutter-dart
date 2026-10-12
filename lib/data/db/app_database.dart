@@ -37,7 +37,9 @@ part 'app_database.g.dart';
 ///    libres d'événement.
 ///  - v2 : ajoute `learning_events.metadata_json` et la table
 ///    `offered_hints`, et renforce les clés étrangères.
-const int kSchemaVersion = 2;
+///  - v3 : ajoute la table `app_settings` (préférences d'affichage et prénom).
+///    Aucune donnée d'apprentissage n'est touchée.
+const int kSchemaVersion = 3;
 
 @DriftDatabase(
   tables: [
@@ -50,6 +52,7 @@ const int kSchemaVersion = 2;
     ExerciseAttempts,
     ObservedErrors,
     OfferedHints,
+    AppSettings,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -137,6 +140,28 @@ class AppDatabase extends _$AppDatabase {
       // v1 -> v2 : enrichissement du schéma SANS toucher à l'historique.
       await _migratedV1ToV2();
     }
+    if (from < 3) {
+      // v2 -> v3 : préférences d'affichage et identité de l'élève.
+      await _migratedV2ToV3();
+    }
+  }
+
+  /// Migration v2 -> v3.
+  ///
+  /// Ajoute la SEULE table `app_settings`, qui ne contient aucun fait
+  /// d'apprentissage : elle ne fait qu'accueillir les préférences locales de
+  /// l'interface (prénom, échelle de texte, contraste, animations).
+  ///
+  /// Aucune ligne existante n'est lue, modifiée ni supprimée : l'historique
+  /// d'apprentissage v2 est intégralement conservé.
+  Future<void> _migratedV2ToV3() async {
+    // `IF NOT EXISTS` rend l'opération rejouable sans effet de bord.
+    await customStatement(
+      'CREATE TABLE IF NOT EXISTS app_settings ('
+      ' key TEXT NOT NULL PRIMARY KEY,'
+      ' value TEXT NULL'
+      ');',
+    );
   }
 
   /// Migration v1 -> v2.

@@ -43,34 +43,36 @@ class _HintTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = RelioPaletteScope.of(context);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(RelioSpacing.cardInner),
       decoration: BoxDecoration(
-        color: RelioColors.hintBackground,
-        borderRadius: BorderRadius.circular(RelioSizes.cardRadius),
+        color: palette.hintBackground,
+        borderRadius: RelioRadius.cardAll,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
             RelioStrings.hintLabel(hint.order),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
               fontFamily: RelioTheme.fontFamily,
-              color: RelioColors.hintText,
+              color: palette.hintText,
             ),
           ),
           const SizedBox(height: 6),
           MathText(
             text: hint.text,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w400,
               height: 1.45,
               fontFamily: RelioTheme.fontFamily,
-              color: RelioColors.text,
+              color: palette.textPrimary,
             ),
           ),
         ],

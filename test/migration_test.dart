@@ -18,6 +18,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:relio/data/db/app_database.dart';
 import 'package:relio/domain/learning/learning_event_repository.dart';
+import 'package:relio/domain/settings/learner_settings.dart';
 
 import 'helpers/event_factory.dart';
 
@@ -60,10 +61,10 @@ void main() {
   }
 
   group('Schema et migrations', () {
-    test('la version courante du schema est bien 2', () {
+    test('la version courante du schema est bien 3', () {
       final db = openRaw();
       expect(db.schemaVersion, kSchemaVersion);
-      expect(kSchemaVersion, 2);
+      expect(kSchemaVersion, 3);
     });
 
     test('cree toutes les tables attendues sur une base neuve', () async {
@@ -284,6 +285,190 @@ void main() {
       expect(await reopened.count(), 2);
       expect(await reopened.findById('legacy-1'), isNotNull);
       expect(await reopened.findById('neuf-1'), isNotNull);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // v2 -> v3 : preferences d'affichage et identite de l'eleve
+  // -------------------------------------------------------------------------
+
+  group('Migration v2 -> v3 (preferences)', () {
+    /// Base deja en v2 : schema complet, historique rempli.
+    ///
+    /// Simule une installation ayant deja servi : les preferences sont
+    /// absentes, les evenements d'apprentissage sont la.
+    Future<void> seedV2Database() async {
+      final raw = await rawConnection();
+      await raw.runCustom(
+        'CREATE TABLE learning_events ('
+        ' id TEXT NOT NULL PRIMARY KEY,'
+        ' type TEXT NOT NULL,'
+        ' occurred_at TEXT NOT NULL,'
+        ' context_json TEXT NULL,'
+        " metadata_json TEXT NOT NULL DEFAULT '{}',"
+        ' recorded_at TEXT NOT NULL);',
+      );
+      await raw.runCustom(
+        'CREATE TABLE exercise_attempts ('
+        ' event_id TEXT NOT NULL PRIMARY KEY'
+        ' REFERENCES learning_events (id) ON DELETE CASCADE,'
+        ' exercise_id TEXT NOT NULL,'
+        ' started_at TEXT NOT NULL,'
+        ' submitted_at TEXT NULL,'
+        " outcome TEXT NOT NULL DEFAULT 'notEvaluated',"
+        ' answer_id TEXT NULL,'
+        ' answer_raw TEXT NULL,'
+        ' answer_normalized TEXT NULL,'
+        ' answer_empty INTEGER NOT NULL DEFAULT 0,'
+        ' duration_ms INTEGER NULL);',
+      );
+      await raw.runCustom(
+        'CREATE TABLE event_notions ('
+        ' event_id TEXT NOT NULL'
+        ' REFERENCES learning_events (id) ON DELETE CASCADE,'
+        ' notion_id TEXT NOT NULL,'
+        ' PRIMARY KEY (event_id, notion_id));',
+      );
+      await raw.runCustom(
+        'CREATE TABLE observed_errors ('
+        ' id TEXT NOT NULL PRIMARY KEY,'
+        ' event_id TEXT NOT NULL'
+        ' REFERENCES learning_events (id) ON DELETE CASCADE,'
+        ' occurred_at TEXT NOT NULL,'
+        ' error_type TEXT NULL,'
+        ' description TEXT NULL,'
+        ' located_at TEXT NULL);',
+      );
+      await raw.runCustom(
+        'CREATE TABLE offered_hints ('
+        ' id TEXT NOT NULL PRIMARY KEY,'
+        ' event_id TEXT NOT NULL'
+        ' REFERENCES learning_events (id) ON DELETE CASCADE,'
+        ' offered_at TEXT NOT NULL,'
+        ' hint_id TEXT NULL,'
+        ' kind TEXT NULL,'
+        ' content TEXT NULL);',
+      );
+
+      final ts = kTestInstant;
+      await raw.runCustom(
+        "INSERT INTO learning_events "
+        "(id, type, occurred_at, context_json, metadata_json, recorded_at) "
+        "VALUES ('event-v2', 'exercise_attempt', '$ts', NULL, '{}', '$ts');",
+      );
+      await raw.runCustom(
+        'INSERT INTO exercise_attempts '
+        '(event_id, exercise_id, started_at, submitted_at, outcome, '
+        ' answer_id, answer_raw, answer_normalized, answer_empty, duration_ms) '
+        "VALUES ('event-v2', 'ex-v2', '$ts', NULL, 'correct', "
+        "'a-v2', '42', '42', 0, 900);",
+      );
+
+      await raw.runCustom('PRAGMA user_version = 2');
+      await raw.close();
+    }
+
+    test('une base v2 migre vers v3', () async {
+      await seedV2Database();
+      final db = openRaw();
+      await LearningEventRepository(db).count();
+
+      expect(await db.readUserVersionForTesting(), 3);
+    });
+
+    test('la table des preferences est creee', () async {
+      await seedV2Database();
+      final db = openRaw();
+      await LearningEventRepository(db).count();
+
+      final rows = await db
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type = 'table' "
+            "AND name = 'app_settings'",
+          )
+          .get();
+      expect(rows, hasLength(1));
+    });
+
+    test('AUCUN evenement d apprentissage n est perdu ni reecrit', () async {
+      await seedV2Database();
+      final db = openRaw();
+      final repo = LearningEventRepository(db);
+      await repo.count();
+
+      final migrated = await repo.findById('event-v2');
+
+      expect(migrated, isNotNull, reason: 'AUCUNE perte de donnees');
+      expect(migrated!.type, 'exercise_attempt');
+      expect(migrated.occurredAt, kTestInstant);
+
+      final attempt = migrated.attempt!;
+      expect(attempt.exerciseId, 'ex-v2');
+      expect(attempt.answer!.rawText, '42');
+      expect(attempt.durationMs, 900);
+      expect(await repo.count(), 1);
+    });
+
+    test('les preferences par defaut sappliquent apres migration', () async {
+      await seedV2Database();
+      final db = openRaw();
+      await LearningEventRepository(db).count();
+
+      final settings = await SettingsRepository(db).load();
+
+      expect(settings.name, isEmpty);
+      expect(settings.textScale, TextScalePreference.normal);
+      expect(settings.highContrast, isFalse);
+      expect(settings.reduceAnimations, isFalse);
+    });
+
+    test('les preferences ecrites sont relues', () async {
+      await seedV2Database();
+      final db = openRaw();
+      await LearningEventRepository(db).count();
+
+      final repository = SettingsRepository(db);
+      await repository.setName('Camille');
+      await repository.setTextScale(TextScalePreference.tresGrand);
+      await repository.setHighContrast(true);
+      await repository.setReduceAnimations(true);
+
+      final reloaded = await repository.load();
+      expect(reloaded.name, 'Camille');
+      expect(reloaded.textScale, TextScalePreference.tresGrand);
+      expect(reloaded.highContrast, isTrue);
+      expect(reloaded.reduceAnimations, isTrue);
+
+      // Réécrire la même clé ne crée pas de doublon.
+      await repository.setName('Camille');
+      expect((await repository.load()).name, 'Camille');
+    });
+
+    test('le schema ne contient aucun champ de maitrise', () async {
+      await seedV2Database();
+      final db = openRaw();
+      await LearningEventRepository(db).count();
+
+      final rows = await db
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type = 'table'",
+          )
+          .get();
+      final tables = rows
+          .map((r) => r.read<String>('name'))
+          .join(' ')
+          .toLowerCase();
+
+      // Règle 5 : ni score, ni niveau, ni progression dans le schéma.
+      for (final interdit in <String>[
+        'maitrise',
+        'score',
+        'niveau',
+        'progression',
+        'moyenne',
+      ]) {
+        expect(tables.contains(interdit), isFalse);
+      }
     });
   });
 }
