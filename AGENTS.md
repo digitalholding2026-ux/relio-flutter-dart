@@ -270,6 +270,58 @@ discrète.
 
 ---
 
+## Règle 10 — L'écran d'entrée est une spécification temporelle figée
+
+> **La séquence dure 5,3 secondes. Jamais plus.**
+
+La chronologie de l'écran d'entrée (première ouverture) est **figée** :
+
+| Temps | Ce qui se passe |
+|---|---|
+| 0 s | Le personnage apparaît : fondu + scale 0,9 → 1,0, sur 300 ms |
+| 1,5 s | « Salut. Je suis Relio. » — fondu 250 ms |
+| 3 s | « Je t'accompagne en maths, à ton rythme. » |
+| 5 s | « On commence ? » — le personnage se redresse |
+| 5,3 s | Bouton « Commencer » — fondu + glissement de 8 dp |
+
+### Ce qu'il ne faut PAS faire
+
+- **Allonger la séquence** pour compenser un appareil lent. La mission 2
+  l'interdit explicitement. Sur un appareil lent, la sequence doit **sauter des
+  étapes** — c'est ce que fait le tap d'accélération — pas durer plus longtemps.
+- **Ajouter un mouvement** au personnage. Il y en a exactement trois :
+  le grand point respire, le petit point pulse décalé, la courbe ondule.
+  Un mouvement qui ne se décrit pas en une phrase simple est un mouvement de
+  trop.
+- **Donner un visage, des membres ou une couleur au personnage.** Le
+  personnage *est* le mark : deux points et une courbe, en `#F56207`.
+
+### Le tap n'accélère qu'avant le bouton
+
+Un tap n'importe où saute vers le bouton **tant que la séquence n'est pas
+terminée**. Une fois le bouton visible, le tap ne fait strictement rien, et le
+bouton n'est **pas** dans l'arbre avant 5,3 s : il ne doit jamais être
+atteignable au toucher trop tôt.
+
+### Tests
+
+```bash
+flutter test test/presentation/intro_sequence_test.dart    # chronologie
+flutter test test/presentation/intro_page_test.dart        # comportement
+flutter test test/branding/relio_character_test.dart       # rétention
+flutter test test/presentation/intro_accessibility_test.dart
+```
+
+La chronologie est testée **sans rendu** : `IntroSequenceState.at(durée)` est
+une fonction pure. Tester la sequence via `pumpAndSettle` serait lent et
+fragile — l'animation du personnage ne se stabilise jamais.
+
+> `RelioApp` prend `showIntro: false` dans les tests d'interface. Sans ce
+> drapeau, chaque test d'ecran attendrait 5,3 s et `pumpAndSettle`
+> expirerait, puisque l'animation du personnage tourne en boucle.
+
+---
+
 ## État du dépôt
 
 | Élément | Valeur |
@@ -280,7 +332,8 @@ discrète.
 | NDK requis | 28.2.13676358 |
 | Persistance | Drift / SQLite, schéma v2 |
 | Marque | `assets/branding/` — voir [règle 9](#règle-9--la-marque-est-générée-pas-dessinée) |
-| Tests | 439 (400 applicatifs + 39 marque) |
+| Tests | 512 (400 applicatifs + 39 marque + 73 écran d'entrée) |
+| Écran d'entrée | 5,3 s, première ouverture uniquement — voir règle 10 |
 
 ### Branches
 

@@ -33,7 +33,7 @@ import '../helpers/test_database.dart';
 Future<AppDatabase> ouvrirParcours(WidgetTester tester) async {
   final db = await openTestDatabase();
   registerTestDatabase(db);
-  await tester.pumpWidget(RelioApp(database: db));
+  await tester.pumpWidget(RelioApp(database: db, showIntro: false));
   await tester.pumpAndSettle();
 
   await tester.tap(find.text(RelioStrings.tabLearn).last);

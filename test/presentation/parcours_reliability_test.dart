@@ -27,7 +27,7 @@ Future<AppDatabase> openFirstExercise(WidgetTester tester) async {
   final db = await openTestDatabase();
   registerTestDatabase(db);
   await tester.pumpWidget(
-    RelioApp(database: db),
+    RelioApp(database: db, showIntro: false),
   );
   await tester.pumpAndSettle();
 

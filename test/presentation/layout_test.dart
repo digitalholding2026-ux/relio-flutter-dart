@@ -47,7 +47,7 @@ void main() {
       final db = await openTestDatabase();
       registerTestDatabase(db);
 
-      await pumpOnSmallPhone(tester, RelioApp(database: db));
+      await pumpOnSmallPhone(tester, RelioApp(database: db, showIntro: false));
       await openS1(tester);
 
       expect(find.byType(ChapterAccessPage), findsOneWidget);
@@ -62,7 +62,7 @@ void main() {
       final db = await openTestDatabase();
       registerTestDatabase(db);
 
-      await pumpOnSmallPhone(tester, RelioApp(database: db));
+      await pumpOnSmallPhone(tester, RelioApp(database: db, showIntro: false));
       await openS1(tester);
 
       await tester.scrollUntilVisible(
@@ -82,7 +82,7 @@ void main() {
       final db = await openTestDatabase();
       registerTestDatabase(db);
 
-      await pumpOnSmallPhone(tester, RelioApp(database: db));
+      await pumpOnSmallPhone(tester, RelioApp(database: db, showIntro: false));
       await openS1(tester);
       await tester.tap(find.byType(LessonCard).at(0));
       await tester.pumpAndSettle();
@@ -138,7 +138,7 @@ void main() {
       await tester.pumpWidget(
         MediaQuery(
           data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),
-          child: RelioApp(database: db),
+          child: RelioApp(database: db, showIntro: false),
         ),
       );
       await tester.pumpAndSettle();
@@ -179,7 +179,7 @@ void main() {
       final db = await openTestDatabase();
       registerTestDatabase(db);
 
-      await pumpOnSmallPhone(tester, RelioApp(database: db));
+      await pumpOnSmallPhone(tester, RelioApp(database: db, showIntro: false));
       await openS1(tester);
       await tester.tap(find.byType(LessonCard).at(0));
       await tester.pumpAndSettle();
@@ -192,7 +192,7 @@ void main() {
       final db = await openTestDatabase();
       registerTestDatabase(db);
 
-      await pumpOnSmallPhone(tester, RelioApp(database: db));
+      await pumpOnSmallPhone(tester, RelioApp(database: db, showIntro: false));
       await openS1(tester);
       await tester.tap(find.byType(LessonCard).at(0));
       await tester.pumpAndSettle();
@@ -256,7 +256,7 @@ void main() {
       final db = await openTestDatabase();
       registerTestDatabase(db);
 
-      await pumpOnSmallPhone(tester, RelioApp(database: db));
+      await pumpOnSmallPhone(tester, RelioApp(database: db, showIntro: false));
       await openS1(tester);
 
       final text = tester.widget<Text>(find.text(RelioStrings.chapterTitle));

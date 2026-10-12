@@ -24,12 +24,19 @@ import 'presentation/screens/app_shell_nav.dart';
 import 'presentation/screens/chapter_access_page.dart';
 import 'presentation/screens/exercise_page.dart';
 import 'presentation/screens/home_page.dart';
+import 'presentation/screens/intro/intro_page.dart';
+import 'presentation/screens/intro/intro_preloader.dart';
 import 'presentation/screens/learn_page.dart';
 import 'presentation/screens/profile_page.dart';
 import 'presentation/theme/relio_theme.dart';
 
 class RelioApp extends StatefulWidget {
-  const RelioApp({super.key, required this.database, this.settingsController});
+  const RelioApp({
+    super.key,
+    required this.database,
+    this.settingsController,
+    this.showIntro = true,
+  });
 
   final AppDatabase database;
 
@@ -39,6 +46,14 @@ class RelioApp extends StatefulWidget {
   /// contrôleur et lit les préférences depuis la base.
   final SettingsController? settingsController;
 
+  /// L'écran d'entrée doit-il être proposé ?
+  ///
+  /// `false` pour les tests qui portent sur l'interface : sinon chaque test
+  /// d'écran devrait attendre 5,3 s de séquence. La décision
+  /// première-ouverture / ouvertures suivantes est prise par ailleurs, dans
+  /// [_RelioAppState], à partir du drapeau persisté.
+  final bool showIntro;
+
   @override
   State<RelioApp> createState() => _RelioAppState();
 }
@@ -47,13 +62,46 @@ class _RelioAppState extends State<RelioApp> {
   late final SettingsController _controller;
   late final bool _ownsController;
 
+  late final SettingsRepository _repository;
+
+  /// L'écran d'entrée doit-il s'afficher ?
+  ///
+  /// `null` tant que la question n'est pas tranchée. On ne suppose jamais
+  /// « première ouverture » par defaut : afficher par erreur l'écran d'entrée a
+  /// un élève déjà habitué serait une faute, et le cacher a un nouvel élève en
+  /// serait une autre.
+  bool? _showIntro;
+
   @override
   void initState() {
     super.initState();
+    _repository = SettingsRepository(widget.database);
+
     final provided = widget.settingsController;
     _ownsController = provided == null;
-    _controller = provided ?? SettingsController(SettingsRepository(widget.database));
+    _controller = provided ?? SettingsController(_repository);
     if (_ownsController) _controller.load();
+
+    if (!widget.showIntro) {
+      _showIntro = false;
+    } else {
+      _resolveFirstLaunch();
+    }
+  }
+
+  /// Tranche : premiere ouverture, ou retour ?
+  ///
+  /// Une lecture en echec vaut « pas première ouverture » : mieux vaut laisser
+  /// l'eleve directement a l'accueil que bloquer l'application sur une
+  /// preference illisible.
+  Future<void> _resolveFirstLaunch() async {
+    var completed = true;
+    try {
+      completed = await _repository.hasCompletedFirstLaunch();
+    } catch (_) {
+      completed = true;
+    }
+    if (mounted) setState(() => _showIntro = !completed);
   }
 
   @override
@@ -62,6 +110,23 @@ class _RelioAppState extends State<RelioApp> {
     // parent reste la responsabilité de son propriétaire.
     if (_ownsController) _controller.dispose();
     super.dispose();
+  }
+
+  /// L'écran d'entrée est terminé : on marque le drapeau et on passe à l'accueil.
+  ///
+  /// Appelé par le bouton « Commencer » ET par le bouton retour Android — la
+  /// specification veut que les deux marquent `firstLaunchCompleted`.
+  ///
+  /// L'écriture du drapeau est tolerante : si elle echoue, l'eleve va quand
+  /// meme a l'accueil. Refuser d'entrer dans l'application parce qu'une
+  /// preference n'a pas pu etre ecrite serait disproportionne.
+  Future<void> _completeFirstLaunch() async {
+    try {
+      await _repository.markFirstLaunchCompleted();
+    } catch (_) {
+      // Silencieux, par design.
+    }
+    if (mounted) setState(() => _showIntro = false);
   }
 
   @override
@@ -94,17 +159,41 @@ class _RelioAppState extends State<RelioApp> {
               title: 'Relio',
               debugShowCheckedModeBanner: false,
               theme: RelioTheme.build(settings: settings),
-              home: _RelioShell(
-                database: widget.database,
-                settings: settings,
-                controller: _controller,
-              ),
+              // Tant que la question premiere-ouverture n'est pas tranchee,
+              // on n'affiche ni l'accueil ni l'ecran d'entree : afficher un
+              // ecran puis le remplacer ferait un clignotement.
+              home: _showIntro == null
+                  ? const _SplashGate()
+                  : _showIntro!
+                      ? IntroPage(
+                          reduceAnimations: settings.reduceAnimations,
+                          preload: IntroPreloader(widget.database).run,
+                          onFinished: _completeFirstLaunch,
+                        )
+                      : _RelioShell(
+                          database: widget.database,
+                          settings: settings,
+                          controller: _controller,
+                        ),
             ),
           ),
         );
       },
     );
   }
+}
+
+/// Ecran de garde, affiche le temps de lire le drapeau.
+///
+/// Blanc, sans rien : ce n'est pas un chargement annonce, c'est le temps d'une
+/// lecture de base qui prend quelques millisecondes.
+class _SplashGate extends StatelessWidget {
+  const _SplashGate();
+
+  @override
+  Widget build(BuildContext context) => const Scaffold(
+        backgroundColor: Color(0xFFFFFFFF),
+      );
 }
 
 /// Coquille des trois onglets, avec la navigation du chapitre.

@@ -33,7 +33,7 @@ import '../helpers/test_database.dart';
 Future<AppDatabase> pumpApp(WidgetTester tester) async {
   final db = await openTestDatabase();
   registerTestDatabase(db);
-  await tester.pumpWidget(RelioApp(database: db));
+  await tester.pumpWidget(RelioApp(database: db, showIntro: false));
   await tester.pumpAndSettle();
   return db;
 }
@@ -215,7 +215,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        RelioApp(database: db, settingsController: controller),
+        RelioApp(database: db, settingsController: controller, showIntro: false),
       );
       await tester.pumpAndSettle();
 
@@ -380,7 +380,7 @@ void main() {
       final controller = SettingsController(SettingsRepository(db));
 
       await tester.pumpWidget(
-        RelioApp(database: db, settingsController: controller),
+        RelioApp(database: db, settingsController: controller, showIntro: false),
       );
       await tester.pumpAndSettle();
       await goToTab(tester, RelioTab.profile);
@@ -403,7 +403,7 @@ void main() {
       final controller = SettingsController(repository);
 
       await tester.pumpWidget(
-        RelioApp(database: db, settingsController: controller),
+        RelioApp(database: db, settingsController: controller, showIntro: false),
       );
       await tester.pumpAndSettle();
       await goToTab(tester, RelioTab.profile);
@@ -438,7 +438,7 @@ void main() {
       final controller = SettingsController(SettingsRepository(db));
 
       await tester.pumpWidget(
-        RelioApp(database: db, settingsController: controller),
+        RelioApp(database: db, settingsController: controller, showIntro: false),
       );
       await tester.pumpAndSettle();
 
@@ -460,7 +460,7 @@ void main() {
       final controller = SettingsController(repository);
 
       await tester.pumpWidget(
-        RelioApp(database: db, settingsController: controller),
+        RelioApp(database: db, settingsController: controller, showIntro: false),
       );
       await tester.pumpAndSettle();
       await goToTab(tester, RelioTab.profile);

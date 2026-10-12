@@ -40,7 +40,7 @@ Future<Harness> pumpApp(WidgetTester tester) async {
 /// la carte du chapitre 1 — le parcours réel, pas un raccourci de test.
 Future<Harness> pumpChapter(WidgetTester tester) async {
   final harness = await pumpApp(tester);
-  await tester.pumpWidget(RelioApp(database: harness.db));
+  await tester.pumpWidget(RelioApp(database: harness.db, showIntro: false));
   await tester.pumpAndSettle();
 
   await tester.tap(find.text(RelioStrings.tabLearn).last);

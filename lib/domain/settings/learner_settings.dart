@@ -93,6 +93,12 @@ abstract final class _Keys {
   static const String textScale = 'display.text_scale';
   static const String highContrast = 'display.high_contrast';
   static const String reduceAnimations = 'a11y.reduce_animations';
+
+  /// Drapeau « l'écran d'entrée a déjà été vu ».
+  ///
+  /// Volontairement hors de [LearnerSettings] : c'est un état de
+  /// l'application, pas un réglage de confort de l'élève.
+  static const String firstLaunchCompleted = 'app.first_launch_completed';
 }
 
 /// Lecture et écriture des préférences.
@@ -106,6 +112,28 @@ class SettingsRepository {
   SettingsRepository(this._db);
 
   final AppDatabase _db;
+
+  /// L'écran d'entrée a-t-il déjà été vu ?
+  ///
+  /// Drapeau d'ÉTAT DE L'APPLICATION, pas une préférence de confort : il vit
+  /// ici — dans la même table clé/valeur — mais délibérément HORS de
+  /// [LearnerSettings], qui ne décrit que le confort de l'élève (règle 5).
+  ///
+  /// Sa lecture n'échoue jamais : une valeur absente ou illisible vaut
+  /// « première ouverture », donc l'écran d'entrée s'affiche plutôt que de
+  /// bloquer l'application sur une donnée corrompue.
+  Future<bool> hasCompletedFirstLaunch() async {
+    final row = await (_db.select(_db.appSettings)
+          ..where((t) => t.key.equals(_Keys.firstLaunchCompleted)))
+        .getSingleOrNull();
+    return row?.value == 'true';
+  }
+
+  /// Marque l'écran d'entrée comme vu : il ne sera plus rejoué.
+  ///
+  /// Appelé par le bouton « Commencer » ET par le bouton retour Android.
+  Future<void> markFirstLaunchCompleted() =>
+      _write(_Keys.firstLaunchCompleted, 'true');
 
   /// Charge toutes les préférences, en appliquant les défauts manquantes.
   Future<LearnerSettings> load() async {
