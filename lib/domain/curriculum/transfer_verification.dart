@@ -80,6 +80,14 @@ enum TransferEvidence {
   /// La formule est ACCEPTÉE, jamais EXIGÉE : répondre « 30 » seul reste
   /// accepté. La relation peut donc être utilisée, elle n'est pas vérifiée.
   finalValueOrEquivalentFormula,
+
+  /// L'écriture doit DÉMONTRER l'application de la relation.
+  ///
+  /// La valeur seule n'est plus acceptée : seul un calcul écrit
+  /// comportant la division est évalué, et il doit donner le résultat
+  /// attendu. C'est le seul niveau qui autorise à dire que la relation a été
+  /// appliquée.
+  relationApplied,
 }
 
 /// La méthode de résolution est-elle contrôlable ?
@@ -109,6 +117,13 @@ class TransferCheckProfile {
 
   /// La méthode de résolution est-elle contrôlée ?
   final bool methodIsEvaluable;
+
+  /// La relation PPCM–PGCD est-elle RÉELLEMENT contrôlée ?
+  ///
+  /// Vrai uniquement pour une tâche porteuse d'un contrat
+  /// [PpcmRelation] : l'évaluateur y refuse une valeur seule et exige un
+  /// calcul écrit comportant la division.
+  bool get provesRelation => scope == TransferEvidence.relationApplied;
 
   /// Le résultat de la tâche permet-il d'affirmer que la MÉTHODE a été
   /// appliquée ?
@@ -224,6 +239,16 @@ abstract final class TransferVerification {
     }
 
     final criterion = task.correction;
+
+    // Contrat de relation : l'évaluateur va réellement contrôler
+    // l'application de la relation. C'est déduit de la donnée, pas déclaré.
+    if (criterion.ppcmRelation != null) {
+      return const TransferCheckProfile(
+        scope: TransferEvidence.relationApplied,
+        methodIsEvaluable: kTransferMethodIsEvaluable,
+      );
+    }
+
     final expectedValue = criterion.acceptedValues.isEmpty
         ? null
         : '${criterion.acceptedValues.first}';

@@ -16,6 +16,7 @@ library;
 
 import '../../core/clock.dart';
 import 'answer_normalization.dart';
+import 'arithmetic_expression.dart';
 import '../../core/id.dart';
 import '../learning/exercise_attempt.dart';
 import '../learning/learning_event.dart';
@@ -121,6 +122,15 @@ CorrectionResult correct(Exercise exercise, String rawInput) {
 
   final criterion = exercise.correction;
 
+  // Contrat « relation appliquée » : la valeur seule ne suffit pas.
+  //
+  // La tâche exige une DÉMONSTRATION écrite. On évalue donc ce que l'élève a
+  // écrit, et rien d'autre : jamais son raisonnement, jamais sa méthode.
+  final relation = criterion.ppcmRelation;
+  if (relation != null) {
+    return _correcterParRelation(relation, raw);
+  }
+
   // Expression textuelle normalisÃ©e (ex. Â« ppcm = produit / pgcd Â»).
   if (criterion.acceptsExpression(raw)) {
     return CorrectionResult(
@@ -160,6 +170,58 @@ CorrectionResult correct(Exercise exercise, String rawInput) {
     isCorrect: matches,
     isEvaluated: true,
     matchedValue: matches ? parsed : null,
+  );
+}
+
+/// Corrige une réponse face à un contrat de relation PPCM–PGCD.
+///
+/// QUATRE issues, jamais confondues :
+///
+///  - **réussite** : une division est écrite, elle s'évalue au PPCM attendu
+///    et le membre de droite de l'égalité, s'il y en a un, est correct ;
+///  - **échec évalvable** : le calcul est écrit et cohérent, mais il donne
+///    une autre valeur. L'élève s'est trompé de calcul : c'est un fait ;
+///  - **non évaluable** : un nombre seul (`30`), une expression sans
+///    division (`6*5`), ou une écriture incompréhensible. Dans ce cas on ne
+///    conclut RIEN : conclure « faux » à partir de `30` serait exactement
+///    le faux négatif que ce contrat doit éviter.
+CorrectionResult _correcterParRelation(PpcmRelation relation, String raw) {
+  final evaluation = evaluateArithmetic(raw);
+
+  // Nombre seul : le bon résultat, sans aucune démonstration.
+  if (evaluation.isBareNumber) {
+    return const CorrectionResult(
+      isCorrect: false,
+      isEvaluated: false,
+      matchedValue: null,
+    );
+  }
+
+  // Expression incompréhensible : aucune conclusion possible.
+  if (!evaluation.isEvaluable) {
+    return const CorrectionResult(
+      isCorrect: false,
+      isEvaluated: false,
+      matchedValue: null,
+    );
+  }
+
+  // Pas de division : le calcul est peut-être juste, mais la relation n'est
+  // pas montrée. « 6*5 = 30 » ne dit rien de la relation PPCM–PGCD.
+  if (!evaluation.usedDivision) {
+    return const CorrectionResult(
+      isCorrect: false,
+      isEvaluated: false,
+      matchedValue: null,
+    );
+  }
+
+  final correcte = evaluation.equalityHolds &&
+      evaluation.value!.round() == relation.result;
+  return CorrectionResult(
+    isCorrect: correcte,
+    isEvaluated: true,
+    matchedValue: correcte ? relation.result : null,
   );
 }
 

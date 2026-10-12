@@ -226,7 +226,7 @@ Une valeur mathématique ajoutée (tâche de vérification, réponse attendue) d
 | Flutter | 3.47.7 |
 | NDK requis | 28.2.13676358 |
 | Persistance | Drift / SQLite, schéma v2 |
-| Tests | 332 (50 socle + 87 moteur ch.1 + 134 fiabilisation, verrouillage, vérification, typographie) |
+| Tests | 362 (50 socle + 87 moteur ch.1 + 164 fiabilisation, verrouillage, vérification, typographie, relation) |
 
 ### Branches
 
@@ -240,4 +240,5 @@ Une valeur mathématique ajoutée (tâche de vérification, réponse attendue) d
 <https://github.com/digitalholding2026-ux/relio-flutter-dart/tree/apk-build/apk>
 
 Détail complet dans `docs/ARCHITECTURE.md` et `docs/BUILD.md`.
+
 

@@ -480,8 +480,26 @@ class Chapter1Bank {
       lesson: ArithmeticLesson.lesson3PpcmPgcdRelation,
       statement: 'PPCM de 10 et 15, avec PGCD 5.',
       correction: CorrectionCriterion(
-        acceptedValues: <int>[30],
-        acceptedExpressions: <String>['30', '(10*15)/5', '150/5'],
+        // CONTRAT « RELATION APPLIQUÉE ».
+        //
+        // Auparavant, `acceptedValues: [30]` suffisait : l'élève pouvait
+        // écrire 30, obtenir le bon résultat, et l'application retirer que
+        // la relation avait été comprise. C'était une sur-promission.
+        //
+        // `acceptedValues` est donc VIDE : une valeur numérique seule n'est
+        // plus acceptée. Seule une écriture montrant la division
+        // produit ÷ PGCD est évaluée.
+        //
+        // `acceptedExpressions` reste vide : l'évaluateur ne compare plus à
+        // une liste de chaînes, il ÉVALUE le calcul écrit. C'est ce qui
+        // permet d'accepter 10*15/5, (10*15)/5, 150/5, 150 ÷ 5 et
+        // 10*15/5 = 30 sans les énumérer.
+        ppcmRelation: PpcmRelation(
+          first: 10,
+          second: 15,
+          divisor: 5,
+          result: 30,
+        ),
         explanation: 'PPCM = (10 × 15) ÷ 5 = 30.',
       ),
     ),

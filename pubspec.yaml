@@ -1,7 +1,7 @@
 name: relio
 description: "Relio - tuteur personnel de mathématiques."
 publish_to: 'none'
-version: 0.3.3+5
+version: 0.3.4+6
 
 environment:
   sdk: ^3.13.0

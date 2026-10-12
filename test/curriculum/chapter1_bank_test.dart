@@ -110,7 +110,10 @@ void main() {
     });
 
     test('les tâches de vérification portent des valeurs exactes', () {
-      const expected = <String, int>{
+      // La valeur ATTENDUE de chaque tâche. Elle n'est pas forcément
+      // ACCEPTÉE telle quelle : la tâche PPCM exige désormais une
+      // démonstration de la relation, pas le seul résultat.
+      const attendu = <String, int>{
         ExerciseIds.verifyPgcd16And12: 4, // PGCD(16, 12)
         ExerciseIds.verifyPgcd14And7: 7, //  PGCD(14, 7)
         ExerciseIds.verifyPgcd24And16: 8, // PGCD(24, 16)
@@ -119,11 +122,18 @@ void main() {
         ExerciseIds.verifyPpcm6And8: 24, //   PPCM(6, 8)
       };
 
-      expected.forEach((id, value) {
-        final task = Chapter1Bank.findExercise(id);
-        expect(task, isNotNull, reason: 'tâche $id absente');
-        expect(task!.kind, BankElementKind.verificationTask);
-        expect(task.correction.accepts(value), isTrue, reason: '$id / $value');
+      attendu.forEach((id, value) {
+        final tache = Chapter1Bank.findExercise(id);
+        expect(tache, isNotNull, reason: 'tâche $id absente');
+        expect(tache!.kind, BankElementKind.verificationTask);
+
+        final relation = tache.correction.ppcmRelation;
+        if (relation != null) {
+          expect(relation.result, value, reason: '$id : résultat du contrat');
+          expect(relation.isCoherent, isTrue, reason: '$id : contrat cohérent');
+        } else {
+          expect(tache.correction.accepts(value), isTrue, reason: '$id / $value');
+        }
       });
     });
 

@@ -263,22 +263,32 @@ void main() {
       expect(TransferVerification.taskFor(ExerciseIds.ex5), isNull);
     });
 
-    test('C — exercice 8 → PPCM de 10 et 15 : association NON activée', () {
+    test('C — exercice 8 → PPCM de 10 et 15 : la relation est MAINTENANT contrôlée',
+        () {
       final tache = ex(ExerciseIds.verifyPpcm10And15);
       final exercice = ex(ExerciseIds.ex8);
 
-      // La valeur finale seule est acceptée : la relation n'est pas exigée.
-      expect(tache.correction.acceptedValues, contains(30));
-      expect(tache.correction.acceptedExpressions, contains('30'));
-      // Une formule est acceptée, jamais requise.
-      expect(tache.correction.acceptedExpressions, contains('150/5'));
+      // L'évaluation contrôle RÉELLEMENT la relation : la valeur seule n'est
+      // plus acceptée, une division écrite est exigée.
+      final relation = tache.correction.ppcmRelation;
+      expect(relation, isNotNull);
+      expect(relation!.isCoherent, isTrue);
+      expect(relation.result, 30);
+      expect(tache.correction.acceptedValues, isEmpty,
+          reason: 'aucune valeur nue ne doit être acceptée');
 
-      // La tâche est liée à D5, dont le fait est une division inversée.
+      // Le profil le confirme.
+      final profile = TransferVerification.profileOf(tache.id);
+      expect(profile.scope, TransferEvidence.relationApplied);
+      expect(profile.provesRelation, isTrue);
+
+      // La tâche reste liée à D5, dont le fait est une division inversée.
       final casD5 = Chapter1Bank.findCase('D5')!;
       expect(casD5.followUp.exerciseId, ExerciseIds.verifyPpcm10And15);
       expect(casD5.observations, contains('pgcd_correct_ppcm_faux'));
 
-      // Conclusion : association laissée inactive.
+      // L'ASSOCIATION reste inactive : la condition technique est remplie,
+      // mais son activation est une décision pédagogique du fondateur.
       expect(exercice.followUpTask, isNull);
       expect(TransferVerification.taskFor(ExerciseIds.ex8), isNull);
     });
@@ -341,16 +351,22 @@ void main() {
   // =====================================================================
   group('7. La tâche PPCM ne prétend vérifier la relation que si elle le fait',
       () {
-    test('le profil PPCM est « valeur ou formule », jamais « relation exigée»',
-        () {
+    test('le profil PPCM est « relation appliquée », et le contrat le mérite', () {
       final profile =
           TransferVerification.profileOf(ExerciseIds.verifyPpcm10And15);
 
-      // Une formule EST acceptée...
-      expect(profile.scope, TransferEvidence.finalValueOrEquivalentFormula);
-      // ...mais la valeur seule l'est aussi : la relation n'est pas vérifiée.
-      expect(correct(ex(ExerciseIds.verifyPpcm10And15), '30').isCorrect, isTrue);
+      expect(profile.scope, TransferEvidence.relationApplied);
+      expect(profile.provesRelation, isTrue);
+
+      // Le profil ne SUR-PROMET PAS : dire que la relation ne signifie pas que
+      // la méthode de raisonnement a été observée.
+      expect(profile.provesMethod, isFalse);
+      expect(profile.methodIsEvaluable, isFalse);
+
+      // Une démonstration est acceptée, une valeur seule ne l'est pas.
       expect(correct(ex(ExerciseIds.verifyPpcm10And15), '150/5').isCorrect, isTrue);
+      expect(correct(ex(ExerciseIds.verifyPpcm10And15), '30').isCorrect, isFalse);
+      expect(correct(ex(ExerciseIds.verifyPpcm10And15), '30').isEvaluated, isFalse);
     });
 
     test('la tâche D6, elle, exige de nommer les deux notions', () {

@@ -57,7 +57,7 @@ flutter build apk --release
 
 ## Tests
 
-`flutter test` exécute **332 tests**.
+`flutter test` exécute **362 tests**.
 
 | Domaine | Tests |
 |---|---|
@@ -80,8 +80,8 @@ Vérification du APK de release :
 | Attribut | Valeur |
 |---|---|
 | `applicationId` | `com.relio.relio` |
-| `versionName` | `0.3.3` |
-| `versionCode` | `5` |
+| `versionName` | `0.3.4` |
+| `versionCode` | `6` |
 | `minSdk` | 24 |
 | Bibliothèques natives | `libsqlite3.so` (arm64-v8a, armeabi-v7a, x86_64), `libapp.so`, `libflutter.so` |
 
@@ -115,5 +115,7 @@ La configuration `release` utilise la clé de **debug**
 scaffold Flutter. Elle est signalée en commentaire dans
 `android/app/build.gradle.kts` et listée comme point à arbitrer dans
 `ARCHITECTURE.md`. Aucune diffusion réelle ne doit se faire en l'état.
+
+
 
 

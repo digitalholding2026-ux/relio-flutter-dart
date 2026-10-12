@@ -54,12 +54,19 @@ Deux raisons, cumulatives :
    du cas **D4**, déclenché par le fait `arret_avec_reste_non_nul` — un
    problème de **critère d'arrêt**, pas un transfert de méthode.
 
-### C — inactive : la relation n'est pas vérifiée
+### C — la relation est désormais vérifiée, association inactive
 
-La tâche accepte `30`, `(10*15)/5` **et** `150/5`. La relation est donc
-*acceptée*, jamais *exigée* : un élève qui écrit seulement `30` passe.
-Vérifier « l'utilisation de la relation » reviendrait à sur-promettre. Elle
-est de plus le contrôle du cas **D5** (`pgcd_correct_ppcm_faux`).
+La tâche porte un contrat `PpcmRelation` : `acceptedValues` est vide, donc
+`30` seul n'est plus accepté. Un calcul écrit comportant la division est
+exigé, évalué, et doit donner 30. Détail dans
+`RAPPORT_PPCM_RELATION.md`.
+
+`TransferEvidence.relationApplied` et `provesRelation == true` le confirment
+au moteur.
+
+L'**association reste inactive** : la condition technique est remplie, mais
+son activation est une décision pédagogique du fondateur, pas une conséquence
+du code.
 
 ## 3. Ce que l'évaluateur contrôle réellement
 
@@ -136,12 +143,13 @@ Classés par taille d'extension, du plus petit au plus grand.
    comparer à `expectedSteps`. * Nécessite une interface de saisie — hors
    périmètre de cette mission.*
 
-### 7.2 Pour activer C — vérifier la relation
+### 7.2 Pour activer C — FAIT sur le plan technique
 
-Modifier le critère de `verify-ppcm-10-15` pour que la valeur seule **ne
-suffise plus** : exiger une réponse exprimant le produit divisé par le
-PGCD. Impact assumé : `30` seul deviendrait non accepté. **Décision
-pédagogique requise.**
+La valeur seule ne suffit plus : le contrat `PpcmRelation` exige un calcul
+écrit comportant la division, et l'évaluateur le calcule. **Reste à
+décider** si l'association exercice 8 → cette tâche est activée, compte
+tenu du fait qu'elle reste le contrôle du cas **D5**
+(`pgcd_correct_ppcm_faux`).
 
 ### 7.3 Pour une consolidation ciblée
 

@@ -110,6 +110,50 @@ class SolutionStep {
 /// Sépare nettement :
 ///  - ce que l'élève SAISIT (fait) ;
 ///  - ce qui est ATTENDU (référence de correction).
+/// Contrat « la relation PPCM–PGCD a été APPLIQUÉE ».
+///
+/// Différent d'un simple critère de valeur : ici, une réponse correcte sans
+/// trace du calcul ne vaut PAS preuve. `30` seul est le bon résultat, mais il
+/// ne démontre rien.
+///
+/// Ce que le moteur contrôle, et seulement cela : ce que l'élève a ÉCRIT.
+/// L'évaluateur vérifie que la réponse contient une division, qu'elle
+/// s'évalue au PPCM attendu, et qu'elle n'est pas un nombre seul. Il ne
+/// pretend observer ni le raisonnement, ni la méthode employée ailleurs.
+class PpcmRelation {
+  const PpcmRelation({
+    required this.first,
+    required this.second,
+    required this.divisor,
+    required this.result,
+  });
+
+  /// Le PGCD réel de [first] et [second].
+  ///
+  /// Permet de vérifier qu'un contrat n'est pas installé sur des données
+  /// fausses — un test le fait sur toute la banque.
+  bool get isCoherent =>
+      divisor == _pgcd(first, second) && result == first * second ~/ divisor;
+
+  static int _pgcd(int a, int b) => b == 0 ? a : _pgcd(b, a % b);
+
+  /// Premier entier de la relation.
+  final int first;
+
+  /// Second entier de la relation.
+  final int second;
+
+  /// Le PGCD, qui divise le produit.
+  final int divisor;
+
+  /// Le PPCM attendu.
+  final int result;
+
+  @override
+  String toString() =>
+      'PpcmRelation(PPCM($first, $second) = $first*$second/$divisor = $result)';
+}
+
 class CorrectionCriterion {
   const CorrectionCriterion({
     this.acceptedValues = const <int>[],
@@ -117,7 +161,15 @@ class CorrectionCriterion {
     this.expectsJustification = false,
     this.expectsComparison = false,
     this.explanation = '',
+    this.ppcmRelation,
   });
+
+  /// Contrat de relation PPCM–PGCD, ou `null` si le critère ne porte que
+  /// sur la valeur.
+  ///
+  /// Quand il est présent, une valeur numérique seule N'EST PAS acceptée :
+  /// le résultat correct ne prouve pas que la relation a été utilisée.
+  final PpcmRelation? ppcmRelation;
 
   /// Valeurs numériques acceptées.
   final List<int> acceptedValues;

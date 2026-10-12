@@ -94,18 +94,20 @@ void main() {
       });
     });
 
-    test('les six tâches de vérification acceptent leur valeur attendue', () {
-      const attendu = <String, int>{
-        ExerciseIds.verifyPgcd16And12: 4,
-        ExerciseIds.verifyPgcd14And7: 7,
-        ExerciseIds.verifyPgcd24And16: 8,
-        ExerciseIds.verifyPgcd35And20: 5,
-        ExerciseIds.verifyPpcm10And15: 30,
-        ExerciseIds.verifyPpcm6And8: 24,
+    test('les six tâches de vérification acceptent une réponse conforme', () {
+      // Réponse attendue pour chacune. Pour la tâche PPCM, la valeur seule
+      // ne suffit PLUS : c'est désormais le contrat de relation qui compte.
+      const conforme = <String, String>{
+        ExerciseIds.verifyPgcd16And12: '4',
+        ExerciseIds.verifyPgcd14And7: '7',
+        ExerciseIds.verifyPgcd24And16: '8',
+        ExerciseIds.verifyPgcd35And20: '5',
+        ExerciseIds.verifyPpcm10And15: '150/5',
+        ExerciseIds.verifyPpcm6And8: '24',
       };
 
-      attendu.forEach((id, value) {
-        expect(correct(ex(id), '$value').isCorrect, isTrue, reason: id);
+      conforme.forEach((id, reponse) {
+        expect(correct(ex(id), reponse).isCorrect, isTrue, reason: id);
       });
     });
 
