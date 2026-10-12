@@ -65,11 +65,23 @@ abstract final class V1ScreenRules {
 
   /// Clavier a afficher pour [exerciseId].
   ///
-  /// REGLE V1 : positions 1 a 9 → numerique, 10 et 11 → alphanumerique.
+  /// Le clavier n'est plus choisi par la POSITION de l'exercice dans la
+  /// banque, mais par le TYPE DE REPONSE ATTENDU, deduit des criteres de
+  /// correction (cf. [CorrectionCriterion.answerType]).
+  ///
+  /// Consequence : la repartition obtenue reste identique a la regle V1
+  /// precedente — exercices 1 a 9 numeriques, 10 et 11 alphanumeriques —
+  /// mais elle n'est plus une convention a maintenir a la main. Un
+  /// exercice dont le critere changerait voit son clavier suivre, sans
+  /// qu'une divergence soit possible.
   static AnswerKeyboard keyboardFor(String exerciseId) {
-    final position = positionOf(exerciseId);
-    if (position == null) return AnswerKeyboard.alphanumeric;
-    return position <= 9 ? AnswerKeyboard.numeric : AnswerKeyboard.alphanumeric;
+    final exercise = Chapter1Bank.findExercise(exerciseId);
+    // Exercice inconnu : on ouvre le clavier texte, plus permissif, plutot
+    // que de refuser la saisie.
+    if (exercise == null) return AnswerKeyboard.alphanumeric;
+    return exercise.correction.answerType == AnswerType.integer
+        ? AnswerKeyboard.numeric
+        : AnswerKeyboard.alphanumeric;
   }
 
   /// L'exercice attend-il une redaction non evaluee de facon fiable ?

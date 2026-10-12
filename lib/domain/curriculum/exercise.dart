@@ -8,6 +8,8 @@
 /// du document pédagogique validé : il n'est jamais inventé ici.
 library;
 
+import 'answer_normalization.dart';
+
 /// Leçon du chapitre 1 « Arithmétique ».
 ///
 /// Les intitulés reprennent ceux du document validé. La leçon 2 porte le
@@ -136,12 +138,56 @@ class CorrectionCriterion {
   bool accepts(int value) => acceptedValues.contains(value);
 
   /// Le critère accepte-t-il l'expression normalisée [expression] ?
-  bool acceptsExpression(String expression) =>
-      acceptedExpressions.contains(expression);
+  ///
+  /// Comparaison faite forme normalisée contre forme normalisée : une même
+  /// réponse écrite de deux façons ne doit pas être rejetée.
+  bool acceptsExpression(String expression) {
+    final needle = normalizeAnswer(expression);
+    return acceptedExpressions.any((e) => normalizeAnswer(e) == needle);
+  }
+
+  /// Nature de la réponse attendue, DÉDUITE des critères ci-dessus.
+  ///
+  /// Règle, purement structurelle :
+  ///  - aucune valeur numérique acceptée → réponse rédigée ;
+  ///  - une variante purement textuelle acceptée (« verifie », « oui »)
+  ///    → réponse rédigée, car un entier seul ne suffirait pas ;
+  ///  - sinon → entier.
+  ///
+  /// Sur la banque du chapitre 1, cela donne exactement : exercices 1 à 9
+  /// `integer`, exercices 10 et 11 `text`. Le test
+  /// `answer_type_test.dart` verrouille ce résultat.
+  AnswerType get answerType {
+    if (acceptedValues.isEmpty) return AnswerType.text;
+    final hasTextualForm = acceptedExpressions
+        .any((expression) => !looksNumeric(expression));
+    return hasTextualForm ? AnswerType.text : AnswerType.integer;
+  }
+
+  /// Le critère ne peut-il juger QUE du texte ?
+  ///
+  /// Vrai pour l'exercice 11 : aucune valeur entière n'y est acceptée. Une
+  /// saisie numérique y est alors **non évaluable**, et ne doit en aucun cas
+  /// être enregistrée comme fausse.
+  bool get isTextOnly => acceptedValues.isEmpty;
 
   @override
   String toString() =>
       'CorrectionCriterion($acceptedValues, expr=$acceptedExpressions)';
+}
+
+/// Nature de la réponse attendue par un exercice.
+///
+/// CONTRAT TECHNIQUE, déduit des critères de correction, jamais posé à la
+/// main : le risque d'une divergence entre le clavier affiché et la correction
+/// devient nul, puisque les deux lisent la même donnée.
+enum AnswerType {
+  /// Un entier : le clavier numérique suffit.
+  integer,
+
+  /// Une rédaction ou une expression en mots : le clavier alphanumérique est
+  /// nécessaire.
+  text,
 }
 
 /// Un indice consultable, proposé progressivement.

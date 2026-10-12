@@ -46,6 +46,7 @@ class FeedbackPanelView extends StatelessWidget {
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w600,
+                fontVariations: RelioTheme.w600,
                 fontFamily: RelioTheme.fontFamily,
                 color: _foreground,
               ),

@@ -52,6 +52,7 @@ class LessonCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
+                      fontVariations: RelioTheme.w600,
                       height: 1.3,
                       fontFamily: RelioTheme.fontFamily,
                       color: RelioColors.text,
@@ -101,6 +102,7 @@ class ChapterAccessPage extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
+                fontVariations: RelioTheme.w500,
                 fontFamily: RelioTheme.fontFamily,
                 color: RelioColors.textSecondary,
               ),
@@ -111,6 +113,7 @@ class ChapterAccessPage extends StatelessWidget {
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
+                fontVariations: RelioTheme.w700,
                 height: 1.2,
                 fontFamily: RelioTheme.fontFamily,
                 color: RelioColors.text,

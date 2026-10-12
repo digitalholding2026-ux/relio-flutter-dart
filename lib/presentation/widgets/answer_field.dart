@@ -57,6 +57,7 @@ class _AnswerFieldState extends State<AnswerField> {
         style: const TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w500,
+          fontVariations: RelioTheme.w500,
           fontFamily: RelioTheme.fontFamily,
           // Chiffres tabulaires : les valeurs s'alignent verticalement.
           fontFeatures: <FontFeature>[FontFeature.tabularFigures()],

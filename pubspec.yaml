@@ -1,7 +1,7 @@
 name: relio
 description: "Relio - tuteur personnel de mathématiques."
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.3.0+2
 
 environment:
   sdk: ^3.13.0
@@ -28,3 +28,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    # Inter, police variable (axes opsz et wght), licence SIL OFL 1.1
+    # embarquée dans assets/fonts/Inter-OFL.txt.
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf

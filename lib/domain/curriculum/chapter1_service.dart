@@ -1,4 +1,4 @@
-﻿/// Service d'intÃ©gration : relie la banque du chapitre 1 aux Ã©vÃ©nements
+/// Service d'intÃ©gration : relie la banque du chapitre 1 aux Ã©vÃ©nements
 /// d'apprentissage existants.
 ///
 /// Ce service NE REFAIT PAS la persistance : il utilise
@@ -15,6 +15,7 @@
 library;
 
 import '../../core/clock.dart';
+import 'answer_normalization.dart';
 import '../../core/id.dart';
 import '../learning/exercise_attempt.dart';
 import '../learning/learning_event.dart';
@@ -121,8 +122,7 @@ CorrectionResult correct(Exercise exercise, String rawInput) {
   final criterion = exercise.correction;
 
   // Expression textuelle normalisÃ©e (ex. Â« ppcm = produit / pgcd Â»).
-  final normalized = _normalizeExpression(raw);
-  if (criterion.acceptsExpression(normalized)) {
+  if (criterion.acceptsExpression(raw)) {
     return CorrectionResult(
       isCorrect: true,
       isEvaluated: true,
@@ -133,9 +133,21 @@ CorrectionResult correct(Exercise exercise, String rawInput) {
   }
 
   // Valeur numÃ©rique.
-  final parsed = _parseNumber(raw);
+  final parsed = parseInteger(raw);
   if (parsed == null) {
     // Format non reconnu : distinct d'une rÃ©ponse fausse.
+    return const CorrectionResult(
+      isCorrect: false,
+      isEvaluated: false,
+      matchedValue: null,
+    );
+  }
+
+  // Text-only criterion (exercise 11): no integer value is accepted, a
+  // written relation is expected. An integer entered there proves neither
+  // right nor wrong. Marking it "false" would be a false NEGATIVE, and the
+  // verdict would be written DEFINITIVELY into the append-only history.
+  if (criterion.isTextOnly) {
     return const CorrectionResult(
       isCorrect: false,
       isEvaluated: false,
@@ -151,20 +163,10 @@ CorrectionResult correct(Exercise exercise, String rawInput) {
   );
 }
 
-/// Analyse une saisie numÃ©rique en tolÃ©rant les espaces et la virgule.
-int? _parseNumber(String raw) {
-  final cleaned = raw.replaceAll(RegExp(r'\s'), '').replaceAll(',', '.');
-  return int.tryParse(cleaned);
-}
+// Number parsing and answer normalization now live in
+// `answer_normalization.dart`, shared with the exercise model so that the
+// keyboard contract and the correction contract cannot diverge.
 
-/// Normalise une expression pour comparaison textuelle.
-String _normalizeExpression(String raw) {
-  return raw
-      .toLowerCase()
-      .replaceAll(RegExp(r'\s+'), ' ')
-      .replaceAll('*', 'Ã—')
-      .trim();
-}
 
 /// Service d'intÃ©gration de la banque du chapitre 1.
 class Chapter1Service {

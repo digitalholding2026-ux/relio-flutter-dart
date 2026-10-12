@@ -57,6 +57,7 @@ class _HintTile extends StatelessWidget {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
+              fontVariations: RelioTheme.w500,
               fontFamily: RelioTheme.fontFamily,
               color: RelioColors.hintText,
             ),
@@ -67,6 +68,7 @@ class _HintTile extends StatelessWidget {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w400,
+              fontVariations: RelioTheme.w400,
               height: 1.45,
               fontFamily: RelioTheme.fontFamily,
               color: RelioColors.text,

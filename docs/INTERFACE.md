@@ -77,10 +77,18 @@ l'exigent les critères d'acceptation.
 | 1 à 9 | numérique | chiffres et `-` uniquement |
 | 10 et 11 | alphanumérique | texte libre |
 
-> **Cette répartition est une règle d'interface V1**, définie dans
-> `presentation/rules/v1_screen_rules.dart`. Elle ne provient d'aucune donnée
-> du moteur, qui n'expose pas de type de réponse. Le filtre numérique est
-> effectif : `abc` est refusé à la saisie.
+> **Depuis la mission de fiabilisation**, cette répartition n'est plus une
+> convention d'interface : le clavier est déduit de
+> `CorrectionCriterion.answerType`, lui-même déduit des critères de
+> correction (`acceptedValues` et nature des expressions acceptées). Le
+> résultat est identique — exercices 1 à 9 numériques, 10 et 11
+> alphanumériques — mais une divergence entre clavier et correction devient
+> désormais impossible. Le filtre numérique reste effectif : `abc` est
+> refusé à la saisie.
+
+> **Attention, la tâche de contrôle D6** (`ch1-verify-ppcm-6-8`) attend
+> elle aussi du texte : la banque exige de nommer les deux valeurs
+> (`ppcm=24;pgcd=2`). Le contrat la classe correctement en `text`.
 
 ### Mention de transparence
 
@@ -101,6 +109,12 @@ Affichée **uniquement** sur les exercices 3, 7 et 11, en Caption
 |---|---|---|---|---|---|
 | **A** | correct, 0 indice | vert | Bonne réponse. | Tu as réussi cet exercice sans aide. | Exercice suivant |
 | **B** | correct, ≥ 1 indice | ambre | Bonne réponse. | Tu as réussi cet exercice avec de l'aide. | Exercice suivant |
+
+> **Depuis la mission de fiabilisation :** une fois le panneau affiché,
+> « Valider » est **neutralisé**. Sans cela, un élève pressé pouvait
+> empiler plusieurs tentatives identiques dans un historique append-only,
+> donc inrattrapable. « Réessayer » et « Exercice suivant » restent les
+> seules voies vers une nouvelle tentative.
 | **E** | faux,pas de diagnostic | neutre | — | Pas encore. Je n'arrive pas à voir où ça bloque. Essaie encore, je regarde. | Réessayer |
 | **non évaluable** | `isEvaluated == false` | neutre | — | Je n'ai pas reconnu ta réponse. Vérifie qu'elle est bien écrite. | Réessayer |
 | **non concluant** | exercice 11, non reconnu | neutre | — | Je ne peux pas encore vérifier cette formulation avec certitude. Relis ta réponse, ou essaie une autre formulation. | Réessayer, Continuer |
@@ -150,22 +164,35 @@ Aucun bouton « Vérifier ma maîtrise ». La banque n'expose aucune association
 exercice ↔ tâche de vérification : les tâches sont rattachées aux diagnostics
 D1–D6, pas au parcours nominal.
 
+> **Depuis la mission de fiabilisation**, la règle d'ouverture est
+> *écrite et testée* dans `domain/curriculum/transfer_verification.dart` :
+> réussite **ET** autonomie **ET** tâche associée. Le bouton reste fermé
+> faute de la troisième condition — et s'ouvrira seul le jour où la banque
+> déclarera un suivi vers une tâche de contrôle, sans nouvelle ligne de code.
+> Les associations candidates à arbitrer sont listées dans
+> `docs/VERIFICATION.md`.
+
 ---
 
 ## 9. Tests
 
-**180 tests**, dont **46** nouveaux pour l'interface.
+**249 tests** après la mission de fiabilisation (180 auparavant).
 
 | Fichier | Tests | Couvre |
 |---|---|---|
+| `test/curriculum/correction_test.dart` | 32 | Réponses exactes, variantes équivalentes, erreurs, non évaluables, contrat clavier |
+| `test/presentation/parcours_reliability_test.dart` | 13 | Double soumission, clavier ouvert, erreur technique, navigation |
+| `test/presentation/typography_test.dart` | 10 | Police embarquée, licence, axe `wght`, rendu d'énoncé |
+| `test/curriculum/transfer_and_observations_test.dart` | 14 | Observations réellement productibles, associations de vérification |
 | `test/presentation/learner_flow_test.dart` | 34 | Parcours S1→S2, indices, panneaux, brouillon, navigation |
 | `test/presentation/layout_test.dart` | 12 | 360×640, textScale 1.3, cibles tactiles, thème |
+| Autres (socle, moteur, persistance) | 134 | inchangés |
 
 Résultats réels :
 
 ```
 flutter analyze  → No issues found!
-flutter test     → 00:16 +180: All tests passed!
+flutter test     → 00:36 +249: All tests passed!
 ```
 
 ### Deux vrais défauts trouvés par ces tests
@@ -180,22 +207,44 @@ flutter test     → 00:16 +180: All tests passed!
 
 ## 10. Limites restantes
 
-1. **Police Inter non embarquée.** `fontFamily: 'Inter'` est déclaré, mais le
-   fichier de police n'est pas dans le dépôt : Flutter bascule sur la police
-   par défaut. La conformité typographique n'est donc pas visuelle.
+> État **après** la mission de fiabilisation (chapitre 1). Les points
+> résolus sont signalés ; ils restent listés pour la traçabilité.
 
-2. **Aucun rendu mathématique.** `statement` est du texte brut. `÷` et `×`
-   s'affichent tels quels, et les variables (`a = 8`) ne sont pas en italique,
-   faute de parseur d'énoncé.
+1. ~~**Police Inter non embarquée.**~~ **RÉSOLU.** Le fichier
+   `assets/fonts/Inter-Regular.ttf` est dans le dépôt, avec sa licence SIL
+   OFL 1.1 (`assets/fonts/Inter-OFL.txt`). Inter étant une police
+   **variable**, chaque style déclare l'axe `wght` : sans cela Flutter rend
+   tout en 400 et simule les graisses.
+
+2. ~~**Aucun rendu mathématique.**~~ **PARTIELLEMENT RÉSOLU.** Un rendu
+   léger met en italique les variables d'affectation (`a = 8`, `b = 12`).
+   `÷`, `×` et `−` s'affichent déjà correctement en texte brut. **Aucune
+   dépendance ajoutée** : ni MathJax, ni KaTeX, ni parseur d'expression.
+   Voir `presentation/widgets/math_statement.dart`.
 
 3. **Saisie non évaluable rare.** Sur les 9 exercices à clavier numérique, le
    filtre empêche toute saisie non reconnue.
 
 4. **Panneaux C et D absents**, faute de moteur. Le cas E sera le cas le plus
-   fréquent en conditions réelles.
+   fréquent en conditions réelles. Voir `docs/VERIFICATION.md`, § 4 : une
+   seule observation (`reussite_apres_indice`) est réellement productible.
 
 5. **Pas de tests d'interruption réelle** (background/foreground) : vérifié par
    construction uniquement.
+
+6. **Aucune validation sur appareil Android réel.** Les tests sont
+   automatisés et s'exécutent sur un moteur de test hors écran. `adb devices`
+   ne retourne aucun appareil et aucun émulateur n'est installé dans cet
+   environnement. Les vérifications « clavier ouvert » simulent un clavier de
+   300 px via `MediaQuery.viewInsets`, ce qui ne reproduit pas fidèlement le
+   comportement d'un clavier système (animation, Suggestions, hauteur réelle
+   selon l'appareil). Une relecture sur téléphone reste nécessaire.
+
+7. **Réponses hors nomenclature non évaluables.** Le moteur ne calcule pas :
+   `96/6` sur l'exercice 9 vaut 16 (faux), mais comme cette expression n'est
+   pas transcrite dans la banque, elle est classée **non évaluable** plutôt
+   que fausse. C'est la bonne prudence, mais l'élève reçoit alors « Je n'ai
+   pas reconnu ta réponse » sur une réponse qui est bel et bien fausse.
 
 ---
 
