@@ -7,7 +7,8 @@ télécharger et l'installer sur un téléphone.
 
 | Fichier | Taille | Contenu |
 |---|---|---|
-| `apk/relio-socle-v0.3.4-relation-ppcm.apk` | ~21,7 Mo | **Dernier build.** Contrat « relation PPCM–PGCD appliquée » |
+| `apk/relio-socle-v0.3.4-navigation.apk` | ~21,9 Mo | **Dernier build.** Navigation à trois onglets, Accueil, Apprendre, Profil |
+| `apk/relio-socle-v0.3.4-relation-ppcm.apk` | ~21,7 Mo | Contrat « relation PPCM–PGCD appliquée » |
 | `apk/relio-socle-v0.3.3-typographie.apk` | ~21,7 Mo | Police Inter + formateur typographique |
 | `apk/relio-socle-v0.3.2-verification-transfert.apk` | ~21,9 Mo | Cœur de la vérification de transfert |
 | `apk/relio-socle-v0.3.1-verrouillage.apk` | ~21,9 Mo | Verrouillage du champ après validation |
@@ -51,6 +52,35 @@ publication réelle reste à créer (voir `docs/ARCHITECTURE.md`, point à
 arbitrer n° 6).
 
 ## Contenu du dernier build
+
+`relio-socle-v0.3.4-navigation.apk` — navigation globale et écrans
+d'accueil, d'apprentissage et de profil :
+
+- **trois onglets permanents** en barre basse : Accueil, Apprendre, Profil.
+  Aucun autre onglet, même grisé ;
+- l'application **ouvre sur Accueil**, plus sur S1 ;
+- **piles indépendantes** : changer d'onglet ne réinitialise pas la pile de
+  l'onglet quitté — le brouillon de saisie, les indices et la position de
+  défilement sont restaurés au retour ;
+- **Accueil** : en-tête « Bonjour » (+ prénom), carte « Commence ici » qui
+  ouvre S1, carte « Programme de 3e » qui bascule sur Apprendre ;
+- **Apprendre** : chapitre 1 actif, chapitres suivants « Bientôt
+  disponible » et non cliquables ;
+- **Profil** : identité (nom, classe), affichage (taille de texte, contraste
+  renforcé), accessibilité (réduire les animations). Préférences persistées
+  **localement**, sans compte ni synchronisation ;
+- **S1** est atteinte depuis Apprendre : sa flèche de retour ramène à
+  l'écran Apprendre ;
+- **S2 masque la barre de navigation** : l'exercice occupe l'espace, sa barre
+  d'action fixe reste seule ;
+- schéma de stockage passé en **version 3** (préférences), sans perte
+  d'historique d'apprentissage.
+
+Aucun pourcentage, aucun score, aucun badge, aucune progression, aucun code
+diagnostique interne, aucun compte, aucune mécanique de jeu. La taille de texte
+choisée dans le profil ne réduit jamais celle réglée dans le système.
+
+### Précédent build
 
 `relio-socle-v0.3.4-relation-ppcm.apk` — la tâche de vérification
 `PPCM de 10 et 15, avec PGCD 5` vérifie désormais réellement l'**application
