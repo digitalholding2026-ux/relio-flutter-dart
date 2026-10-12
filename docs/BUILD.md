@@ -55,6 +55,17 @@ flutter build apk --debug
 flutter build apk --release
 ```
 
+## Tests
+
+`flutter test` exécute **317 tests**.
+
+| Domaine | Tests |
+|---|---|
+| Socle (persistance, événements, migrations) | 50 |
+| Moteur pédagogique chapitre 1 | 87 |
+| Interface S1/S2 et verrouillage du champ | 112 |
+| Fiabilisation, correction, vérification de transfert | 68 |
+
 ## Résultats obtenus
 
 | Cible | Résultat |
@@ -69,8 +80,8 @@ Vérification du APK de release :
 | Attribut | Valeur |
 |---|---|
 | `applicationId` | `com.relio.relio` |
-| `versionName` | `0.3.1` |
-| `versionCode` | `3` |
+| `versionName` | `0.3.2` |
+| `versionCode` | `4` |
 | `minSdk` | 24 |
 | Bibliothèques natives | `libsqlite3.so` (arm64-v8a, armeabi-v7a, x86_64), `libapp.so`, `libflutter.so` |
 

@@ -94,6 +94,11 @@ class Chapter1Bank {
         expectedAnswer:
             'Lorsque les deux nombres sont égaux ; cette valeur est le PGCD.',
       ),
+    // Association de transfert VALIDEE par le fondateur : verifier le
+      // calcul du PGCD sur un couple different (18,12) -> (16,12).
+      // La tache cible se trouve dans la section verificationTasks plus bas :
+      // meme nature, et sa correction ne compare QUE la valeur finale.
+      followUpTask: ExerciseIds.verifyPgcd16And12,
     ),
     Exercise(
       id: ExerciseIds.ex2,

@@ -1,115 +1,158 @@
-# Vérification de transfert — modèle et associations manquantes
+# Vérification de transfert — modèle, état et décisions en attente
 
-**Objet :** pourquoi l'écran S4 (« Vérifier ma maîtrise ») reste fermé, ce
-qu'il faudrait pour l'ouvrir, et ce qui doit être décidé par le responsable
-pédagogique avant de le faire.
+**Objet :** où en est la logique métier de la vérification de transfert du
+chapitre 1, ce qui est activé, ce qui ne l'est pas, et ce qu'il faut trancher.
 
-Ce document ne décrit pas une fonctionnalité. Il décrit une **décision en
-attente**, et les données qui la bloquent.
+Périmètre : moteur pédagogique, banque, associations, règles de
+déclenchement, traitement des résultats. L'interface n'est pas traitée ici.
 
 ---
 
-## 1. La règle, fixée dès aujourd'hui
+## 1. Les règles de déclenchement
 
-Le code de `lib/domain/curriculum/transfer_verification.dart` applique déjà
-les conditions d'affichage. Elles sont cumulatives, et vérifiées dans cet
-ordre :
+Écrites dans `lib/domain/curriculum/transfer_verification.dart`, cumulatives,
+vérifiées dans cet ordre :
 
-| Ordre | Condition | Sinon |
+| Ordre | Condition | Motif de refus |
 |---|---|---|
-| 1 | La tentative a **réussi** | refus : `notSuccessful` |
-| 2 | La réussite est **autonome** (aucun indice consulté) | refus : `notAutonomous` |
-| 3 | Une **tâche de vérification** est associée à l'exercice | refus : `noLinkedTask` |
+| 1 | La tentative a **réussi** | `notSuccessful` |
+| 2 | La réussite est **autonome** (aucun indice) | `notAutonomous` |
+| 3 | Une **tâche de vérification** est liée à l'exercice | `noLinkedTask` |
 
-Deux consequences non négociables :
+- Une réussite **avec aide** reste un progrès accompagné. Elle n'ouvre
+  jamais la vérification : la classification est déduite de la trajectoire
+  des indices, donc recalculée au rechargement, jamais stockée.
+- **Aucune réussite, même autonome, ne conclut à une maîtrise générale.**
+  Une tâche porte sur un couple, pas sur une leçon.
 
-- **Une réussite obtenue avec un indice ne peut jamais ouvrir S4.** Le
-  classement `assistedSuccess` est déduit de la trajectoire des indices, il
-  n'est pas stocké : la garantie est structurelle, pas une convention
-  d'écran.
-- **Une réussite sur un seul exercice ne authorizes aucune conclusion
-  générale.** S4 porterait sur une tâche de contrôle distincte, jamais sur
-  le chapitre entier.
+## 2. Associations — une active sur trois
 
-## 2. Pourquoi S4 est fermé aujourd'hui
+Les trois associations proposées par le fondateur ont été confrontées au
+**contenu réel** des tâches cibles. Résultat :
 
-`TransferVerification.taskFor` lit le champ `followUpTask` de la banque, et
-ne l'accepte que si la cible est de nature `verificationTask`.
-
-**Or, dans la banque actuelle, aucune cible ne l'est.** État vérifié :
-
-| Exercice | `followUpTask` | Nature de la cible |
+| | Association | Décision |
 |---|---|---|
-| `ch1-ex-2-...` | `ch1-ex-4-...` | exercice du parcours |
-| `ch1-ex-7-...` | `ch1-ex-4-...` | exercice du parcours |
-| `ch1-ex-9-...` | `ch1-ex-8-...` | exercice du parcours |
+| **A** | ex1 `PGCD(18,12)` → `PGCD(16,12)` par soustractions | ✅ **ACTIVÉE** |
+| **B** | ex5 `PGCD(30,18)` Euclide → `PGCD(35,20)` | ❌ **INACTIVE** |
+| **C** | ex8 `PPCM(12,18)` → `PPCM de 10 et 15, PGCD 5` | ❌ **INACTIVE** |
 
-Les six tâches de vérification existent, mais ne sont rattachées qu'aux cas
-de diagnostic :
+### A — activée
 
-| Cas | Tâche de contrôle |
-|---|---|
-| D1 | `ch1-verify-pgcd-16-12` |
-| D2 | `ch1-verify-pgcd-14-7` |
-| D3 | `ch1-verify-pgcd-24-16` |
-| D4 | `ch1-verify-pgcd-35-20` |
-| D5 | `ch1-verify-ppcm-10-15` |
-| D6 | `ch1-verify-ppcm-6-8` |
+L'exercice 1 demande le PGCD par soustractions successives ; la tâche cible
+annonce « PGCD(16, 12) **par soustractions successives** », porte sur un
+**couple différent**, est de même leçon, et sa correction compare la valeur
+attendue (PGCD(16,12) = 4, vérifié arithmétiquement). Elle est
+autonome : elle ne dépend d'aucun diagnostic.
 
-Or ces cas ne se déclenchent qu'avec des observations que l'interface ne
-produit pas (voir `AUDIT_MOTEUR.md`, § 5.1, et le § 4 ci-dessous). Le
-parcours nominal n'atteint donc **jamais** une tâche de contrôle.
+### B — inactive : la méthode n'est pas vérifiable
 
-## 3. Associations candidates — À VALIDER
+Deux raisons, cumulatives :
 
-Les six lignes ci-dessous sont des **candidats proposés pour arbitrage**, pas
-des associations. Aucune n'est implémentée. Les rattacher automatiquement
-serait précisément ce que la mission interdit : deux éléments qui
-« concernent le même chapitre » ne sont pas, par cela, une paire de
-vérification.
+1. **L'énoncé ne demande pas la méthode.** Il dit « PGCD(35, 20) », sans
+   mention d'Euclide. Répondre `5` ne prouve aucune procédure.
+2. **La tâche a un autre sens dans le document validé.** Elle est le contrôle
+   du cas **D4**, déclenché par le fait `arret_avec_reste_non_nul` — un
+   problème de **critère d'arrêt**, pas un transfert de méthode.
 
-| Exercice | Tâche candidate | Argument possible | Ce qu'il faudrait confirmer |
-|---|---|---|---|
-| `ex1` PGCD(18,12) soustractions | `verifyPgcd16And12` | même méthode, couple différent | le contrôle de D1 vaut-il aussi pour l'exercice guidé ? |
-| `ex2` PGCD(15,10) soustractions | `verifyPgcd14And7` | critère d'arrêt isolé (D2) | pertinent seulement si l'élève maîtrise le critère d'arrêt |
-| `ex4` PGCD(20,12) soustractions | `verifyPgcd24And16` | contrôle après remediations D1/D3 | le « quelques exercices plus tard » de l'énoncé est-il une temporalité de contrôle ? |
-| `ex5` PGCD(30,18) Euclide | `verifyPgcd35And20` | contrôle de l'algorithme (D4) | quel moment du parcours ? |
-| `ex6` PGCD(42,30) Euclide | `verifyPpcm6And8` | — | aucun argument : ne pas rattacher |
-| `ex8` PPCM(12,18) | `verifyPpcm10And15` | relation PPCM/PGCD isolée (D5) | le contrôle porte-t-il sur l'isolement ou sur la distinction des notions ? |
+### C — inactive : la relation n'est pas vérifiée
 
-**Règle retenue :** tant que ces six lignes ne sont pas validées une à une,
-`taskFor` renvoie `null` et S4 reste fermé. Aucune ligne de code ne devra
-être écrite le jour de la validation : la règle lira la donnée et
-s'ouvrira d'elle-même.
+La tâche accepte `30`, `(10*15)/5` **et** `150/5`. La relation est donc
+*acceptée*, jamais *exigée* : un élève qui écrit seulement `30` passe.
+Vérifier « l'utilisation de la relation » reviendrait à sur-promettre. Elle
+est de plus le contrôle du cas **D5** (`pgcd_correct_ppcm_faux`).
 
-## 4. Pourquoi les observations manquent toujours
+## 3. Ce que l'évaluateur contrôle réellement
 
-| Observation attendue | Produced ? | Raison |
+`TransferCheckProfile` expose deux faits, sans interprétation :
+
+| Propriété | Valeur | Lecture |
 |---|---|---|
-| `reussite_apres_indice` | ✅ oui | déduite de la trajectoire des indices |
-| `soustraction_fausse` | ❌ non | exigerait le pas-à-pas ; l'élève ne saisit qu'un résultat final |
-| `poursuit_apres_valeurs_egales` | ❌ non | idem |
-| `mauvais_couple_repris` | ❌ non | idem |
-| `arret_avec_reste_non_nul` | ❌ non | idem |
-| `pgcd_correct_ppcm_faux` | ❌ non | exigerait deux réponses distinctes sur un même couple |
-| `confusion_pgcd_ppcm` | ❌ non | exigerait le nommage explicite des deux notions |
-| `reponse_correcte_sans_demarche` | ❌ non | l'interface ne capture aucune démarche |
+| `scope` | `finalValueOnly` | seule la valeur finale est comparée |
+| `methodIsEvaluable` | **toujours `false`** | la méthode n'est jamais contrôlée |
 
-`lib/domain/curriculum/observation_collector.dart` ne produit que le premier
-fait. C'est délibéré : `PGCD(18, 12) = 6` est vrai, mais le chemin qui y mène
-peut être juste ou faux, et **les données ne le distinguent pas**. En déduire
-une cause serait inventer le raisonnement de l'élève.
+**Pourquoi la méthode n'est pas vérifiable.** Le modèle contient
+`Exercise.expectedSteps`, mais ce sont des étapes **attendues**, pas
+**recueillies** : l'élève ne saisit qu'un résultat final. `PGCD(35,20) = 5`
+est vrai que l'élève ait utilisé Euclide, énuméré les diviseurs, ou deviné.
+Affirmer « la méthode est vérifiée » serait attribuer au moteur une capacité
+qu'il n'a pas.
 
-## 5. Ce qu'il faudrait pour ouvrir S4
+## 4. Traitement du résultat
 
-1. **Valider les associations du § 3** — décision pédagogique.
-2. **Ajouter `followUpTask` pointant sur une tâche de contrôle** dans
-   `chapter1_bank.dart` — transcription du document validé.
-3. **Décider le comportement en cas d'échec de la tâche de contrôle** :
-   quelle consolidation proposer, et avec quel contenu ? La banque ne
-   fournit aujourd'hui que des questions d'intervention, jamais de contenu
-   de remédiation.
-4. **Définir le résultat indéterminé et l'erreur technique** : dans ces deux
-   cas, aucun panneau pédagogique ne doit s'afficher, au même titre qu'en S2.
+`TransferOutcomePolicy.assess` sépare quatre issues **disjointes** :
 
-Aucune de ces quatre étapes n'est du ressort du code seul.
+| Issue | Signification | Conclusion pédagogique |
+|---|---|---|
+| `success` | réponse conforme | oui, sur la tâche observée |
+| `evaluableFailure` | évaluée et non conforme | oui |
+| `indeterminate` | non évaluable, ou abandon | **non** |
+| `technicalError` | évaluation impossible | **non** |
+
+`indeterminate` et `technicalError` ne produisent **ni conclusion, ni
+remédiation, ni vérification de remplacement**. Une erreur technique ne
+sername jamais de difficulté pédagogique.
+
+## 5. Après un échec
+
+`TransferRecovery` :
+
+| Situation | Choix | Contenu |
+|---|---|---|
+| Un fait étaye une difficulté **et** la banque fournit la consolidation | `targetedConsolidation` | *inatteignable aujourd'hui* |
+| Sinon | `guidedReview` | *aucun* |
+
+La consolidation ciblée est **écrite mais inatteignable** : aucune
+observation du parcours nominal n'identifie une difficulté (voir § 6), et
+aucune activité de remédiation n'existe dans la banque. Les deux conditions
+ne sont réunies ni l'une ni l'autre.
+
+`nextVerification` est également `null` : aucune tâche distincte n'est
+déclarée. Refaire la tâche échouée ne serait pas une seconde vérification.
+
+## 6. Observations toujours non produites
+
+`observation_collector.dart` ne produit que `reussite_apres_indice`, et
+uniquement sur une **réussite**. Aucune des sept autres n'est déductible
+d'un résultat final seul :
+
+`soustraction_fausse`, `poursuit_apres_valeurs_egales`,
+`mauvais_couple_repris`, `arret_avec_reste_non_nul`,
+`pgcd_correct_ppcm_faux`, `confusion_pgcd_ppcm`,
+`reponse_correcte_sans_demarche`.
+
+## 7. Contenus et décisions encore nécessaires
+
+Classés par taille d'extension, du plus petit au plus grand.
+
+### 7.1 Pour activer B — vérifier la méthode (3 paliers)
+
+1. **Le plus petit** : reformuler l'énoncé de la tâche pour qu'il **exige**
+   les divisions euclidiennes, et accepter les divisions comme réponses.
+   *Ne contrôle toujours pas la méthode réellement employée.*
+2. **Intermédiaire** : autoriser une réponse en deux lignes
+   (`35=20x1+15 ; 15=5x3+0`) via `acceptedExpressions`. *Contrôle une
+   trace écrite, pas le raisonnement.*
+3. **Le seul complet** : capter le raisonnement (liste d'étapes) et le
+   comparer à `expectedSteps`. * Nécessite une interface de saisie — hors
+   périmètre de cette mission.*
+
+### 7.2 Pour activer C — vérifier la relation
+
+Modifier le critère de `verify-ppcm-10-15` pour que la valeur seule **ne
+suffise plus** : exiger une réponse exprimant le produit divisé par le
+PGCD. Impact assumé : `30` seul deviendrait non accepté. **Décision
+pédagogique requise.**
+
+### 7.3 Pour une consolidation ciblée
+
+Trois éléments manquent, dans cet ordre : un **type de difficulté**,
+une **activité de consolidation**, une **tâche de vérification distincte**.
+Aucun n'existe dans la banque. Le moteur signale
+`MissingContent.consolidationActivity` et
+`MissingContent.distinctVerificationTask` plutôt que de combler le vide.
+
+### 7.4 Fait relevé au passage
+
+`recordAttempt` ne produit jamais `AnswerOutcome.abandoned` : une soumission
+vide est évaluée, donc classée `incorrect`. Seule l'interface empêche
+ce cas d'arriver. La branche `abandoned` de `assess` reste donc défensive.

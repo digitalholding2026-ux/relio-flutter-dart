@@ -196,20 +196,35 @@ void main() {
   });
 
   group('Vérification de transfert — associations réelles', () {
-    test('AUCUN exercice du parcours n\'a de tâche de vérification', () async {
+    test('seul l\'exercice 1 a une tâche de vérification active', () async {
+      const actifs = <String>{ExerciseIds.ex1};
+
       for (final exercise in Chapter1Bank.exercises) {
-        expect(
-          TransferVerification.taskFor(exercise.id),
-          isNull,
-          reason: '${exercise.id} : aucune tâche de contrôle ne lui est '
-              'rattachée dans la banque',
-        );
+        final tache = TransferVerification.taskFor(exercise.id);
+        if (!actifs.contains(exercise.id)) {
+          expect(tache, isNull,
+              reason: '${exercise.id} : aucune tâche de contrôle validée');
+        } else {
+          expect(tache, isNotNull, reason: '${exercise.id} : association active');
+          expect(tache!.kind, BankElementKind.verificationTask);
+        }
       }
     });
 
-    test('les suivis déclarés pointent tous vers un EXERCICE, pas une tâche', () {
+    test('la tâche associée à l\'exercice 1 est bien PGCD(16, 12)', () {
+      final tache = TransferVerification.taskFor(ExerciseIds.ex1)!;
+
+      expect(tache.id, ExerciseIds.verifyPgcd16And12);
+      expect(tache.statement, contains('16'));
+      expect(tache.statement, contains('12'));
+      // Couple DIFFERENT de celui de l'exercice 1 (18, 12) : sans quoi il
+      // n'y aurait aucun transfert a verifier.
+      expect(tache.statement, isNot(contains('18')));
+    });
+
+    test('les autres suivis déclarés pointent vers un EXERCICE', () {
       final avecSuivi = Chapter1Bank.exercises
-          .where((e) => e.followUpTask != null)
+          .where((e) => e.followUpTask != null && e.id != ExerciseIds.ex1)
           .toList();
 
       expect(avecSuivi, isNotEmpty, reason: 'la banque déclare bien des suivis');
@@ -240,14 +255,25 @@ void main() {
           .whereType<String>()
           .toSet();
 
+      // Seul PGCD(16, 12) est aussi une verification de transfert : c'est
+      // l'association validee par le fondateur. Les cinq autres restent
+      // reservees aux cas de diagnostic, qui leur donnent leur sens.
+      const aussiTransfert = <String>{ExerciseIds.verifyPgcd16And12};
+
       for (final id in viaDiagnostic) {
+        if (aussiTransfert.contains(id)) continue;
         expect(viaSuiviExercice, isNot(contains(id)),
             reason: '$id ne doit pas être atteignable par le parcours');
+      }
+
+      for (final id in viaDiagnostic) {
         expect(
           Chapter1Bank.findExercise(id)!.kind,
           BankElementKind.verificationTask,
         );
       }
+
+      expect(viaSuiviExercice.intersection(aussiTransfert), aussiTransfert);
 
       // Elles sont bien déclarées par les cas de diagnostic D1 à D6.
       // D7 et D8 font exception : leur suivi est un EXERCICE du parcours
@@ -281,9 +307,10 @@ void main() {
     test('une réussite autonome reste SANS vérification faute de liaison',
         () async {
       final s = await serviceFrais();
+      // L'exercice 2 n'a pas de tâche de contrôle associée.
       final record = await s.recordAttempt(
-        exercise: Chapter1Bank.findExercise(ExerciseIds.ex1)!,
-        rawAnswer: '6',
+        exercise: Chapter1Bank.findExercise(ExerciseIds.ex2)!,
+        rawAnswer: '5',
       );
 
       final decision = TransferVerification.decide(record);
@@ -325,19 +352,21 @@ void main() {
       expect(decision.reason, TransferUnavailable.notSuccessful);
     });
 
-    test('aucun bouton de vérification n\'est affiché sur les 11 exercices',
-        () async {
+    test('la vérification n\'est proposée que sur l\'exercice 1', () async {
       final s = await serviceFrais();
+      final attendus = <String>{ExerciseIds.ex1};
+
       for (final exercise in Chapter1Bank.exercises) {
         final reponse = exercise.correction.acceptedValues.isEmpty
             ? 'ppcm = produit / pgcd'
             : '${exercise.correction.acceptedValues.first}';
-        final record = await s.recordAttempt(exercise: exercise, rawAnswer: reponse);
+        final record =
+            await s.recordAttempt(exercise: exercise, rawAnswer: reponse);
 
         expect(
           TransferVerification.decide(record).available,
-          isFalse,
-          reason: '${exercise.id} : aucune vérification ne doit être proposée',
+          attendus.contains(exercise.id),
+          reason: exercise.id,
         );
       }
     });

@@ -22,6 +22,7 @@
 library;
 
 import '../../domain/learning/exercise_attempt.dart';
+import 'answer_normalization.dart';
 import 'chapter1_bank.dart';
 import 'chapter1_service.dart';
 import 'exercise.dart';
@@ -60,6 +61,87 @@ class TransferDecision {
   @override
   String toString() =>
       'TransferDecision(available: $available, reason: ${reason?.name})';
+}
+
+/// Ce que l'évaluateur contrôle RÉELLEMENT sur une tâche de vérification.
+///
+/// Point central de ce fichier. Une tâche de vérification peut être
+/// (« 16, 12 » et « PGCD = 4 ») alors que l'évaluateur ne compare que la
+/// VALEUR FINALE. Confondre les deux reviendrait à annoncer qu'une méthode a
+/// été vérifiée : c'est exactement l'affirmation que la mission interdit.
+enum TransferEvidence {
+  /// Seule la valeur finale est comparée à la réponse attendue.
+  ///
+  /// Un élève peut répondre « 4 » sans jamais avoir fait de soustraction.
+  finalValueOnly,
+
+  /// La valeur finale OU une formule équivalente est acceptée.
+  ///
+  /// La formule est ACCEPTÉE, jamais EXIGÉE : répondre « 30 » seul reste
+  /// accepté. La relation peut donc être utilisée, elle n'est pas vérifiée.
+  finalValueOrEquivalentFormula,
+}
+
+/// La méthode de résolution est-elle contrôlable ?
+///
+/// Réponse constante, et assumée : **NON**, pour toutes les tâches de la
+/// banque.
+///
+/// Le modèle contient bien [Exercise.expectedSteps], mais ce sont des étapes
+/// ATTENDUES, pas des étapes RECUEILLIES. L'élève ne saisit qu'un résultat
+/// final : aucune capture de raisonnement n'existe dans le parcours nominal.
+///
+/// Raison de fond : `PGCD(35, 20) = 5` est vrai, que l'élève ait utilisé
+/// Euclide, énuméré les diviseurs, ou deviné. Conclure « la méthode est
+/// vérifiée » attribuerait au moteur une capacité qu'il n'a pas — et
+/// affirming une procédure jamais observée.
+const bool kTransferMethodIsEvaluable = false;
+
+/// Ce que la vérification d'une tâche prouve, exactement.
+class TransferCheckProfile {
+  const TransferCheckProfile({
+    required this.scope,
+    required this.methodIsEvaluable,
+  });
+
+  /// Nature de ce qui est effectivement comparé.
+  final TransferEvidence scope;
+
+  /// La méthode de résolution est-elle contrôlée ?
+  final bool methodIsEvaluable;
+
+  /// Le résultat de la tâche permet-il d'affirmer que la MÉTHODE a été
+  /// appliquée ?
+  ///
+  /// today : jamais. Cette valeur est celle qu'une interface doit lire pour
+  /// ne pas sur-promettre.
+  bool get provesMethod => methodIsEvaluable;
+
+  @override
+  String toString() =>
+      'TransferCheckProfile(${scope.name}, method=$methodIsEvaluable)';
+}
+
+/// Résultat d'une vérification de transfert.
+///
+/// Les quatre états sont distincts et NON interchangeables : confondre
+/// « non évaluable » avec « échec » fabriquerait une difficulté qui n'existe
+/// pas, et déclencherait une remédiation injustifiée.
+enum TransferOutcome {
+  /// L'élève a produit la réponse attendue.
+  success,
+
+  /// La réponse a pu être évaluée et n'est pas conforme.
+  evaluableFailure,
+
+  /// La réponse n'a pas pu être évaluée (format non reconnu, ou critère
+  /// purement textuel sur une saisie numérique).
+  ///
+  /// N'est PAS un échec : aucune conclusion pédagogique n'est possible.
+  indeterminate,
+
+  /// L'évaluation n'a pas pu avoir lieu (erreur technique).
+  technicalError,
 }
 
 /// Règles de la vérification de transfert.
@@ -123,6 +205,38 @@ abstract final class TransferVerification {
       true,
       null,
       task,
+    );
+  }
+
+  /// Ce que la tâche [taskId] contrôle réellement.
+  ///
+  /// Lecture des critères, sans interprétation :
+  /// si la seule expression acceptée est la valeur attendue, rien d'autre
+  /// n'est comparé. Dès qu'une formule différente de la valeur est acceptée,
+  /// la formule devient une voie possible — sans devenir obligatoire.
+  static TransferCheckProfile profileOf(String taskId) {
+    final task = Chapter1Bank.findExercise(taskId);
+    if (task == null) {
+      return const TransferCheckProfile(
+        scope: TransferEvidence.finalValueOnly,
+        methodIsEvaluable: kTransferMethodIsEvaluable,
+      );
+    }
+
+    final criterion = task.correction;
+    final expectedValue = criterion.acceptedValues.isEmpty
+        ? null
+        : '${criterion.acceptedValues.first}';
+
+    final accepteUneFormule = criterion.acceptedExpressions.any(
+      (expression) => normalizeAnswer(expression) != expectedValue,
+    );
+
+    return TransferCheckProfile(
+      scope: accepteUneFormule
+          ? TransferEvidence.finalValueOrEquivalentFormula
+          : TransferEvidence.finalValueOnly,
+      methodIsEvaluable: kTransferMethodIsEvaluable,
     );
   }
 }
