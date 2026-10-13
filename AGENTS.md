@@ -60,10 +60,18 @@ est préféré pour l'installation sur téléphone.
 
 ---
 
-## Règle 2 — Publier l'APK sur la branche `apk-build`
+## Règle 2 — Publier l'APK sur `apk-build` (automatique)
 
-> **Après tout build réussi, versionner l'APK sur la branche `apk-build`,
-> séparément de `main`.**
+> **À la fin de tout travail, publier l'APK sur la branche `apk-build`.**
+>
+> Cette publication est **autorisée d'office**, sans demande explicite de
+> l'utilisateur, et **ne doit jamais être retardée** en attendant une
+> confirmation. C'est la seule action `git push` que l'agent effectue de
+> sa propre initiative.
+
+Cette publication ne dispense pas de la règle 1 : le build reste obligatoire
+avant publication. En résumé, à la fin de chaque tâche : build → tests verts →
+publication sur `apk-build` → retour sur `main`.
 
 ### Répartition des rôles
 
@@ -181,21 +189,35 @@ migration.
 
 ## Règle 7 — Qui commite et pousse quoi
 
-L'utilisateur contrôle le code : **ne jamais commiter ni pousser le code
-source sur `main` sans demande claire.**
-
-En revanche, la **règle 2 prime** : après tout build réussi, l'APK doit être
-versionné et poussé sur `apk-build`. C'est le seul cas où un `git push` est
-effectué sans demande explicite, précisément parce que l'utilisateur a demandé
-que ce soit automatique.
-
-Résumé :
+Deux périmètres nettement séparés. Ne pas les confondre.
 
 | Action | Autorisation |
 |---|---|
-| Commit de code sur `main` | ⛔ Sur demande explicite uniquement |
-| Commit + push de l'APK sur `apk-build` | ✅ Automatique après tout build (règle 2) |
+| Commit de **code source** sur `main` | ⛔ Sur demande explicite uniquement |
+| Commit + push de l'**APK** sur `apk-build` | ✅ **Automatique, en fin de travail** (règle 2) |
 | Suppression d'un APK déjà publié | ⛔ Sur demande explicite |
+
+### Le code ne bouge pas sans demande
+
+`main` est sous le contrôle de l'utilisateur : **ne jamais commiter ni
+pousser le code source** sans qu'il l'ait demandé.
+
+### L'APK, si, se publie tout seul
+
+C'est l'**exception unique et permanente**. À la fin de chaque tâche, une fois
+`flutter analyze` et `flutter test` verts et l'APK construit :
+
+1. commiter et pousser l'APK sur `apk-build` **sans attendre de confirmation** ;
+2. revenir sur `main`.
+
+Ne pas demander « dois-je pousser l'APK ? ». La question est déjà tranchée.
+
+### Versionner l'APK
+
+`versionCode` doit **progresser à chaque build** (le `+N` de `pubspec.yaml`).
+Android refuse d'installer un APK dont le `versionCode` est égal ou inférieur
+à celui déjà installé : sans incrément, l'APK paraîtrait ne pas s'installer
+et donnerait l'impression que la correction n'a pas été appliquée.
 
 ---
 
@@ -340,7 +362,7 @@ fragile — l'animation du personnage ne se stabilise jamais.
 | Branche | Rôle | Poussée |
 |---|---|---|
 | `main` | Code source, tests, documentation | Sur demande explicite |
-| `apk-build` | APK de distribution dans `apk/` | Automatique après build (règle 2) |
+| `apk-build` | APK de distribution dans `apk/` | **Automatique en fin de travail** (règle 2) |
 
 ### Récupérer l'APK depuis GitHub
 
