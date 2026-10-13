@@ -61,6 +61,13 @@ class IntroPageState extends State<IntroPage>
     duration: const Duration(milliseconds: kTimelineSpanMs),
   );
 
+  /// Instant final du temps narratif : le bouton est entierement opaque.
+  ///
+  /// Ce n'est PAS [IntroTiming.ready]. A 5,3 s le bouton vient d'etre
+  /// construit et sa transition de 250 ms n'a pas encore commence : le temps
+  /// narratif doit donc continuer jusqu'a 5,55 s pour que le fondu se deroule.
+  static final Duration _finalTime = IntroTiming.ready + IntroTiming.buttonIn;
+
   /// Instant de depart de la sequence.
   Duration _elapsed = Duration.zero;
 
@@ -102,11 +109,18 @@ class IntroPageState extends State<IntroPage>
     // Le temps narratif ne recule JAMAIS.
     if (next < _elapsed) next = _elapsed;
 
-    // Il ne depasse pas non plus la fin de la sequence : au-dela de 5,3 s,
-    // l'etat est fige sur son etat final. C'est la garantie explicite que
-    // rien — un controller qui repartirait, une frame rejouee — ne peut
-    // provoquer un retour a T = 0.
-    if (next > IntroTiming.ready) next = IntroTiming.ready;
+    // Il ne depasse pas non plus la FIN DE LA TRANSITION DU BOUTON, pas
+    // seulement son apparition : au-dela, l'etat est fige sur son etat final.
+    // C'est la garantie explicite que rien - un controller qui repartirait,
+    // une frame rejouee - ne peut provoquer un retour a T = 0.
+    //
+    // Le plafond vaut `ready + buttonIn` et NON `ready`. Plafonner a 5,3 s
+    // laissait `_elapsed` bloque sur l'instant exact ou le bouton apparait :
+    // son opacite, calculee sur `elapsed - ready`, restait donc a 0 DEFINITIVE.
+    // Le bouton etait bien construit, mais transparent - l'eleve ne le
+    // voyait pas. Laisser le temps narratif parcourir ses 250 ms laisse le
+    // fondu se derouler, puis l'etat se fige sur `ready + buttonIn`.
+    if (next > _finalTime) next = _finalTime;
 
     if (next != _elapsed && mounted) {
       setState(() => _elapsed = next);

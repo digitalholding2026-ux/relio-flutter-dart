@@ -106,6 +106,46 @@ void main() {
     expect(termine, isTrue, reason: 'le bouton doit confirmer');
   });
 
+  testWidgets('REGRESSION : en sequence NORMALE, le bouton devient visible',
+      (WidgetTester tester) async {
+    await monterIntro(tester);
+    await tester.pump();
+
+    // On laisse la sequence se jouer seule : aucun tap.
+    await tester.pump(IntroTiming.ready);
+    await tester.pump(IntroTiming.buttonIn);
+
+    // Le bouton doit etre CONSTRUIT et entierement OPAQUE.
+    //
+    // Regression : le temps narratif etait plafonne a 5,3 s, instant exact de
+    // l'apparition du bouton. Son opacite, calculee sur `elapsed - ready`,
+    // restait donc a 0 DEFINITIVEMENT : le bouton etait dans l'arbre mais
+    // totalement transparent, et l'eleve n'avait aucune action disponible.
+    final Finder opaciteFinder = find.ancestor(
+      of: find.text(IntroTexts.startButton),
+      matching: find.byType(Opacity),
+    );
+    expect(opaciteFinder, findsOneWidget,
+        reason: 'le bouton doit etre construit a 5,3 s');
+    expect(tester.widget<Opacity>(opaciteFinder.first).opacity, greaterThan(0.9),
+        reason: 'le bouton doit etre visible, pas transparent');
+  });
+
+  testWidgets('REGRESSION : le bouton normal est actionnable',
+      (WidgetTester tester) async {
+    var termine = false;
+    await monterIntro(tester, onFinished: () async => termine = true);
+    await tester.pump();
+
+    await tester.pump(IntroTiming.ready);
+    await tester.pump(IntroTiming.buttonIn);
+
+    await tester.tap(find.byType(FilledButton));
+    await tester.pump();
+    expect(termine, isTrue,
+        reason: 'l\'eleve doit pouvoir lancer l\'application apres la sequence');
+  });
+
   testWidgets('le bouton retour Android termine aussi l\'ecran',
       (WidgetTester tester) async {
     var termine = false;
