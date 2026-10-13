@@ -94,11 +94,33 @@ abstract final class _Keys {
   static const String highContrast = 'display.high_contrast';
   static const String reduceAnimations = 'a11y.reduce_animations';
 
-  /// Drapeau « l'écran d'entrée a déjà été vu ».
+  /// Drapeau « le parcours d'onboarding a été mené à son terme ».
   ///
   /// Volontairement hors de [LearnerSettings] : c'est un état de
   /// l'application, pas un réglage de confort de l'élève.
+  ///
+  /// ATTENTION — ne signifie PAS « l'écran d'entrée a été vu », mais
+  /// « l'élève a terminé le test d'entrée ». Les deux événements sont
+  /// distincts, et c'est la distinction qui permet de reprendre un test
+  /// interrompu : un écran d'entrée déjà vu n'a pas soldé le parcours.
   static const String firstLaunchCompleted = 'app.first_launch_completed';
+
+  /// Drapeau « l'écran d'entrée a déjà été présenté à l'élève ».
+  ///
+  /// DISTINCT de [firstLaunchCompleted], et plus précoce.
+  ///
+  /// Il enregistre un seul fait observable : l'écran a été vu. Il ne
+  /// contient AUCUNE décision pédagogique et n'en authorize aucune :
+  ///
+  ///  - il ne contourne jamais une session de test d'entrée inachevée ;
+  ///  - il ne réinitialise et ne relance aucune session ;
+  ///  - il ne se substitue pas à [firstLaunchCompleted] ;
+  ///  - il n'est lu que par l'orchestrateur d'onboarding.
+  ///
+  /// Un élève qui a vu l'écran mais abandonné son test à la question 2 se
+  /// trouve dans le cas `entryScreenSeen == true` ET
+  /// `firstLaunchCompleted == false` : c'est exactement l'état de reprise.
+  static const String entryScreenSeen = 'entry.screen.seen';
 
   /// Identifiant de la session de test d'entrée en cours.
   ///
@@ -136,11 +158,34 @@ class SettingsRepository {
     return row?.value == 'true';
   }
 
-  /// Marque l'écran d'entrée comme vu : il ne sera plus rejoué.
+  /// Marque le parcours d'onboarding comme mené à son terme.
   ///
-  /// Appelé par le bouton « Commencer » ET par le bouton retour Android.
+  /// Appelé par la FIN RÉELLE du parcours, via
+  /// `EntryTestOnboarding.finishSession()`. Jamais au simple affichage de
+  /// l'écran d'entrée : l'écrire plus tôt empêcherait la reprise d'un test
+  /// interrompu.
   Future<void> markFirstLaunchCompleted() =>
       _write(_Keys.firstLaunchCompleted, 'true');
+
+/// L'écran d'entrée a-t-il déjà été présenté à l'élève ?
+  ///
+  /// Vrai si l'écran a déjà été vu, quel que soit le devenir du parcours.
+  /// Ne signifie en aucun cas que le parcours est terminé.
+  ///
+  /// L'absence de valeur vaut « pas encore vu » : l'écran s'affichera donc,
+  /// plutôt que de laisser l'élève devant une application bloquée.
+  Future<bool> hasSeenEntryScreen() async {
+    final row = await (_db.select(_db.appSettings)
+          ..where((t) => t.key.equals(_Keys.entryScreenSeen)))
+        .getSingleOrNull();
+    return row?.value == 'true';
+  }
+
+  /// Marque l'écran d'entrée comme déjà vu.
+  ///
+  /// N'écrit RIEN d'autre : ni session, ni `firstLaunchCompleted`. Le
+  /// parcours reste ouvert.
+  Future<void> markEntryScreenSeen() => _write(_Keys.entryScreenSeen, 'true');
 
   /// Charge toutes les préférences, en appliquant les défauts manquantes.
   Future<LearnerSettings> load() async {

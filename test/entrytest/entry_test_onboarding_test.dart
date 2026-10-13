@@ -389,4 +389,286 @@ void main() {
       );
     });
   });
+
+  // =====================================================================
+  // Les deux marqueurs du parcours.
+  //
+  // `entryScreenSeen` (« l'ecran d'entree a ete vu ») et
+  // `firstLaunchCompleted` (« le parcours est termine ») sont DEUX faits
+  // distincts. Les confondre ferait perdre un test d'entree interrompu :
+  // l'eleve a bien vu l'ecran, mais son parcours n'est pas solde.
+  // =====================================================================
+
+  group('Marqueurs — (a) indépendance des deux marqueurs', () {
+    test('entryScreenSeen ne modifie pas firstLaunchCompleted', () async {
+      await onboarding.markEntryScreenSeen();
+
+      expect(await onboarding.hasSeenEntryScreen(), isTrue);
+      expect(
+        await onboarding.hasCompletedFirstLaunch(),
+        isFalse,
+        reason: 'voir l\'ecran ne solde pas le parcours',
+      );
+    });
+
+    test('firstLaunchCompleted ne modifie pas entryScreenSeen', () async {
+      await onboarding.markFirstLaunchCompleted();
+
+      expect(await onboarding.hasCompletedFirstLaunch(), isTrue);
+      expect(
+        await onboarding.hasSeenEntryScreen(),
+        isFalse,
+        reason: 'le parcours ne se declenche pas de l\'ecran d\'entree',
+      );
+    });
+
+    test('les deux marqueurs se lisent independamment', () async {
+      // Les quatre etats significatifs doivent etre atteignables sans
+      // qu'un marqueur implique l'autre.
+      expect(await onboarding.hasSeenEntryScreen(), isFalse);
+      expect(await onboarding.hasCompletedFirstLaunch(), isFalse);
+
+      await onboarding.markEntryScreenSeen();
+      expect(await onboarding.hasSeenEntryScreen(), isTrue);
+      expect(await onboarding.hasCompletedFirstLaunch(), isFalse);
+
+      await onboarding.markFirstLaunchCompleted();
+      expect(await onboarding.hasSeenEntryScreen(), isTrue);
+      expect(await onboarding.hasCompletedFirstLaunch(), isTrue);
+    });
+
+    test('marquer l\'ecran ne relance ni ne reinitialise aucune session',
+        () async {
+      final EntryTestSession session = await onboarding.openSession();
+
+      await onboarding.markEntryScreenSeen();
+
+      // Le parcours n'est pas solde, donc le test reste ouvert.
+      expect(await onboarding.hasCompletedFirstLaunch(), isFalse);
+      final EntryTestSession relue = await onboarding.openSession();
+      expect(relue.sessionId, session.sessionId);
+      expect(relue.isCompleted, isFalse);
+      expect(relue.nextQuestion?.id, 'entry-q1');
+    });
+  });
+
+  group('Marqueurs — (b) aucune écriture prématurée au démarrage', () {
+    test('le tap sur Commencer marque l\'écran et NE solde pas le parcours',
+        () async {
+      // Ce que fait l'interface au tap sur « Commencer » : uniquement le
+      // marqueur d'ecran.
+      await onboarding.markEntryScreenSeen();
+
+      expect(await onboarding.hasSeenEntryScreen(), isTrue);
+      expect(
+        await onboarding.hasCompletedFirstLaunch(),
+        isFalse,
+        reason: 'le parcours ne peut pas etre solde avant le test',
+      );
+    });
+
+    test('aucune écriture de firstLaunchCompleted dans ce flux', () async {
+      // Parcours complet de l'ecran d'entree, SANS la cloture.
+      await onboarding.markEntryScreenSeen();
+      final EntryTestSession session = await onboarding.openSession();
+
+      EntryTestSession courante = session;
+      for (final EntryTestQuestion q in <EntryTestQuestion>[
+        EntryTestBank.q1,
+        EntryTestBank.q2,
+      ]) {
+        courante = courante.withAnswer(
+          await onboarding.submitAnswer(
+            session: courante,
+            question: q,
+            rawAnswer: q.expectedValue,
+          ),
+        );
+      }
+
+      // Apres avoir vu l'ecran ET demarre le test, rien n'est solde.
+      expect(
+        await onboarding.hasCompletedFirstLaunch(),
+        isFalse,
+        reason: 'aucun appel a markFirstLaunchCompleted dans ce flux',
+      );
+    });
+
+    test('marquer l\'écran ne crée aucune session de test', () async {
+      await onboarding.markEntryScreenSeen();
+
+      // L'ecran vu ne vaut pas session demarree : le parcours decide.
+      expect(await settings.entryTestSessionId(), isNull);
+    });
+  });
+
+  group('Marqueurs — (c) finalisation au clic final uniquement', () {
+    test('firstLaunchCompleted ne passe à true qu\'à la clôture', () async {
+      final EntryTestSession session = await onboarding.openSession();
+
+      await onboarding.markEntryScreenSeen();
+      expect(
+        await onboarding.hasCompletedFirstLaunch(),
+        isFalse,
+        reason: 'le clic sur Commencer ne solde pas',
+      );
+
+      EntryTestSession courante = session;
+      for (final EntryTestQuestion q in EntryTestBank.questions.take(4)) {
+        courante = courante.withAnswer(
+          await onboarding.submitAnswer(
+            session: courante,
+            question: q,
+            rawAnswer: q.expectedValue,
+          ),
+        );
+      }
+
+      expect(
+        await onboarding.hasCompletedFirstLaunch(),
+        isFalse,
+        reason: 'quatre reponses sur cinq ne soldent rien',
+      );
+
+      // Cinquieme reponse : le test est complet, mais PAS encore termine.
+      courante = courante.withAnswer(
+        await onboarding.submitAnswer(
+          session: courante,
+          question: EntryTestBank.q5,
+          rawAnswer: EntryTestBank.q5.expectedValue,
+        ),
+      );
+      expect(
+        await onboarding.hasCompletedFirstLaunch(),
+        isFalse,
+        reason: 'avoir repondu n\'est pas avoir cloture',
+      );
+
+      // Le tap sur « Decouvrir Relio ».
+      await onboarding.finishSession(courante);
+
+      expect(
+        await onboarding.hasCompletedFirstLaunch(),
+        isTrue,
+        reason: 'la cloture solde le parcours',
+      );
+    });
+
+    test('une fermeture avant le clic final laisse le parcours ouvert',
+        () async {
+      final EntryTestSession session = await onboarding.openSession();
+      await onboarding.markEntryScreenSeen();
+
+      EntryTestSession courante = session;
+      for (final EntryTestQuestion q in <EntryTestQuestion>[
+        EntryTestBank.q1,
+        EntryTestBank.q2,
+        EntryTestBank.q3,
+      ]) {
+        courante = courante.withAnswer(
+          await onboarding.submitAnswer(
+            session: courante,
+            question: q,
+            rawAnswer: q.expectedValue,
+          ),
+        );
+      }
+
+      // Fermeture : ni finishSession, ni aucune autre ecriture.
+      expect(await onboarding.hasCompletedFirstLaunch(), isFalse);
+      expect(await onboarding.hasSeenEntryScreen(), isTrue);
+
+      // Le test reste reprenable tel quel.
+      final EntryTestSession reouverte = await onboarding.openSession();
+      expect(reouverte.isCompleted, isFalse);
+      expect(reouverte.nextQuestion?.id, 'entry-q4');
+    });
+  });
+
+  group('Marqueurs — (d) reprise d\'une session inachevée', () {
+    test('la reprise survit à la fermeture, marqueurs compris', () async {
+      final Directory dossier = Directory.systemTemp.createTempSync('relio_mrq');
+      addTearDown(() => dossier.deleteSync(recursive: true));
+      final String chemin = '${dossier.path}/relio.sqlite';
+
+      driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
+      // --- Premiere ouverture : ecran vu, puis deux reponses. ---
+      AppDatabase base = AppDatabase.forTesting(NativeDatabase(File(chemin)));
+      await base.migrateForTesting();
+      EntryTestOnboarding parcours = EntryTestOnboarding(
+        EntryTestRepository(LearningEventRepository(base), clock: () => instant(1)),
+        SettingsRepository(base),
+        clock: () => instant(1),
+        idGenerator: prochainId,
+      );
+
+      // Tap sur « Commencer ».
+      await parcours.markEntryScreenSeen();
+
+      final EntryTestSession session = await parcours.openSession();
+      EntryTestSession courante = session;
+      for (final EntryTestQuestion q in <EntryTestQuestion>[
+        EntryTestBank.q1,
+        EntryTestBank.q2,
+      ]) {
+        courante = courante.withAnswer(
+          await parcours.submitAnswer(
+            session: courante,
+            question: q,
+            rawAnswer: q.expectedValue,
+          ),
+        );
+      }
+      await base.close();
+
+      // --- Reprise : nouvelle base, meme fichier. ---
+      base = AppDatabase.forTesting(NativeDatabase(File(chemin)));
+      await base.migrateForTesting();
+      registerTestDatabase(base);
+      parcours = EntryTestOnboarding(
+        EntryTestRepository(LearningEventRepository(base), clock: () => instant(1)),
+        SettingsRepository(base),
+        clock: () => instant(1),
+        idGenerator: prochainId,
+      );
+
+      // L'ecran d'entree ne doit plus etre rejoue…
+      expect(
+        await parcours.hasSeenEntryScreen(),
+        isTrue,
+        reason: 'l\'ecran d\'entree ne se rejoue pas',
+      );
+      // …mais le parcours n'est PAS termine.
+      expect(
+        await parcours.hasCompletedFirstLaunch(),
+        isFalse,
+        reason: 'le parcours reste ouvert tant que la cloture n\'a pas eu lieu',
+      );
+
+      final EntryTestSession reprise = await parcours.openSession();
+      expect(reprise.sessionId, session.sessionId);
+      expect(reprise.answeredCount, 2);
+      expect(
+        reprise.nextQuestion?.id,
+        'entry-q3',
+        reason: 'la reprise se fait a la question 3, pas au debut',
+      );
+
+      // Et le parcours peut encore etre solde.
+      EntryTestSession finie = reprise;
+      for (final EntryTestQuestion q in EntryTestBank.questions.skip(2)) {
+        finie = finie.withAnswer(
+          await parcours.submitAnswer(
+            session: finie,
+            question: q,
+            rawAnswer: q.expectedValue,
+          ),
+        );
+      }
+      await parcours.finishSession(finie);
+
+      expect(await parcours.hasCompletedFirstLaunch(), isTrue);
+    });
+  });
 }

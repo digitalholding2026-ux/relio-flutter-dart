@@ -52,6 +52,50 @@ class EntryTestOnboarding {
     return settings.name.trim();
   }
 
+  // ---------------------------------------------------------------------
+  // Marqueurs du parcours — PURS DELEGATES.
+  //
+  // Aucune logique métier ici : ces quatre méthodes relaient
+  // `SettingsRepository`. Leur seule raison d'être est de donner à
+  // l'interface UN SEUL point d'accès au parcours, afin qu'elle ne
+  // manipule jamais `SettingsRepository` directement pour l'onboarding.
+  //
+  // Les deux marqueurs sont INDÉPENDANTS et ne doivent jamais l'être :
+  // `entryScreenSeen` dit « l'écran a été vu », `firstLaunchCompleted`
+  // dit « le parcours est terminé ». Les confondre ferait perdre un test
+  // d'entrée interrompu.
+  // ---------------------------------------------------------------------
+
+  /// L'écran d'entrée a-t-il déjà été vu ?
+  ///
+  /// Vrai dès que l'écran a été présenté, même si le test d'entrée
+  /// commencé ensuite a été abandonné. Ne signifie PAS que le parcours
+  /// est terminé, et ne dispense jamais de reprendre une session
+  /// inachevée.
+  Future<bool> hasSeenEntryScreen() => _settings.hasSeenEntryScreen();
+
+  /// Marque l'écran d'entrée comme vu, sans solder le parcours.
+  ///
+  /// Appelé au tap sur « Commencer ». N'écrit ni session ni
+  /// `firstLaunchCompleted`.
+  Future<void> markEntryScreenSeen() => _settings.markEntryScreenSeen();
+
+  /// Le parcours d'onboarding a-t-il été mené à son terme ?
+  ///
+  /// Vrai seulement après la fin RÉELLE du test d'entrée, tel qu'écrit par
+  /// [finishSession].
+  Future<bool> hasCompletedFirstLaunch() =>
+      _settings.hasCompletedFirstLaunch();
+
+  /// Marque le parcours comme terminé.
+  ///
+  /// ⚠️ N'appelez pas cette méthode au simple passage de l'écran d'entrée :
+  /// elle est réservée à la clôture du parcours, déjà écrite par
+  /// [finishSession]. L'appeler au tap sur « Commencer » empêcherait
+  /// l'élève de reprendre un test interrompu.
+  Future<void> markFirstLaunchCompleted() =>
+      _settings.markFirstLaunchCompleted();
+
   /// Ouvre la session de test d'entrée : reprise si elle existe, création
   /// sinon.
   ///

@@ -112,20 +112,23 @@ class _RelioAppState extends State<RelioApp> {
     super.dispose();
   }
 
-  /// L'écran d'entrée est terminé : on marque le drapeau et on passe à l'accueil.
+  /// L'écran d'entrée est terminé : on passe à l'étape suivante.
   ///
-  /// Appelé par le bouton « Commencer » ET par le bouton retour Android — la
-  /// specification veut que les deux marquent `firstLaunchCompleted`.
+  /// Appelé par le bouton « Commencer » ET par le bouton retour Android.
   ///
-  /// L'écriture du drapeau est tolerante : si elle echoue, l'eleve va quand
-  /// meme a l'accueil. Refuser d'entrer dans l'application parce qu'une
-  /// preference n'a pas pu etre ecrite serait disproportionne.
+  /// ⚠️ AUCUN marqueur de fin de parcours n'est écrit ici. Le tap sur
+  /// « Commencer » signifie « j'ai vu l'écran d'entrée », rien de plus.
+  ///
+  /// `firstLaunchCompleted` n'est écrit QUE par la fin RÉELLE du parcours
+  /// d'onboarding, via `EntryTestOnboarding.finishSession()`. L'écrire ici
+  /// empêcherait la reprise : un élève ayant fermé l'application au milieu
+  /// du test d'entrée verrait son parcours définitivement soldé, et le test
+  /// ne pourrait plus être repris.
+  ///
+  /// L'écriture de `entryScreenSeen` est une simple bascule d'affichage et
+  /// appartient à la mission d'intégration UX/UI : cette classe ne dépend
+  /// que de `SettingsRepository`, pas de l'orchestrateur d'onboarding.
   Future<void> _completeFirstLaunch() async {
-    try {
-      await _repository.markFirstLaunchCompleted();
-    } catch (_) {
-      // Silencieux, par design.
-    }
     if (mounted) setState(() => _showIntro = false);
   }
 
