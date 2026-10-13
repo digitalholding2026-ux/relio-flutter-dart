@@ -99,6 +99,13 @@ abstract final class _Keys {
   /// Volontairement hors de [LearnerSettings] : c'est un état de
   /// l'application, pas un réglage de confort de l'élève.
   static const String firstLaunchCompleted = 'app.first_launch_completed';
+
+  /// Identifiant de la session de test d'entrée en cours.
+  ///
+  /// Rappel local du passage non terminé, pour le retrouver après une
+  /// fermeture de l'application. La V1 ne lance qu'une passation : cette clé
+  /// n'est donc écrite qu'une fois, à la création de la session.
+  static const String entryTestSessionId = 'entry_test.session_id';
 }
 
 /// Lecture et écriture des préférences.
@@ -166,6 +173,24 @@ class SettingsRepository {
   /// Enregistre la préférence de réduction des animations.
   Future<void> setReduceAnimations(bool value) =>
       _write(_Keys.reduceAnimations, value ? 'true' : 'false');
+
+  /// Identifiant de la session de test d'entrée, `null` s'il n'y en a pas.
+  ///
+  /// Une valeur absente ou illisible vaut « aucune session » : le test
+  /// d'entrée reprendra alors par une session neuve, ce qui vaut mieux
+  /// qu'une session de référence illisible qui bloquerait l'application.
+  Future<String?> entryTestSessionId() async {
+    final row = await (_db.select(_db.appSettings)
+          ..where((t) => t.key.equals(_Keys.entryTestSessionId)))
+        .getSingleOrNull();
+    final String? value = row?.value;
+    if (value == null || value.isEmpty) return null;
+    return value;
+  }
+
+  /// Mémorise la session de test d'entrée à reprendre.
+  Future<void> saveEntryTestSessionId(String sessionId) =>
+      _write(_Keys.entryTestSessionId, sessionId);
 
   Future<void> _write(String key, String value) async {
     await _db.into(_db.appSettings).insertOnConflictUpdate(
