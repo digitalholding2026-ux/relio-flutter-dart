@@ -16,6 +16,8 @@ import 'package:flutter/material.dart';
 import 'data/db/app_database.dart';
 import 'domain/curriculum/chapter1_service.dart';
 import 'domain/curriculum/exercise.dart';
+import 'domain/entrytest/entry_test_onboarding.dart';
+import 'domain/entrytest/entry_test_repository.dart';
 import 'domain/learning/learning_event_repository.dart';
 import 'domain/settings/learner_settings.dart';
 import 'presentation/rules/v1_screen_rules.dart';
@@ -27,6 +29,7 @@ import 'presentation/screens/home_page.dart';
 import 'presentation/screens/intro/intro_page.dart';
 import 'presentation/screens/intro/intro_preloader.dart';
 import 'presentation/screens/learn_page.dart';
+import 'presentation/screens/onboarding/onboarding_flow.dart';
 import 'presentation/screens/profile_page.dart';
 import 'presentation/theme/relio_theme.dart';
 
@@ -36,6 +39,7 @@ class RelioApp extends StatefulWidget {
     required this.database,
     this.settingsController,
     this.showIntro = true,
+    this.introDuration,
   });
 
   final AppDatabase database;
@@ -54,6 +58,17 @@ class RelioApp extends StatefulWidget {
   /// [_RelioAppState], à partir du drapeau persisté.
   final bool showIntro;
 
+  /// Durée de la séquence de l'écran d'entrée.
+  ///
+  /// `null` en production, ce qui vaut les 5,3 s FIGÉES par la spécification.
+  /// Injectable dans les tests, qui ne peuvent pas attendre ce délai.
+  ///
+  /// ⚠️ Ce paramètre existe pour les tests. Il ne doit JAMAIS être utilisé
+  /// pour raccourcir la séquence en production : la règle 10 d'`AGENTS.md`
+  /// interdit d'allonger la séquence, et la fixer est la seule façon de
+  /// garantir qu'elle ne se déforme pas.
+  final Duration? introDuration;
+
   @override
   State<RelioApp> createState() => _RelioAppState();
 }
@@ -64,6 +79,16 @@ class _RelioAppState extends State<RelioApp> {
 
   late final SettingsRepository _repository;
 
+  /// Passage du parcours d'entrée.
+  ///
+  /// L'interface d'onboarding passe UNIQUEMENT par cet objet : ni
+  /// `SettingsRepository`, ni `EntryTestRepository` ne sont touchés depuis un
+  /// écran. Un seul point d'entrée, donc une seule règle à vérifier.
+  late final EntryTestOnboarding _entryOnboarding = EntryTestOnboarding(
+    EntryTestRepository(LearningEventRepository(widget.database)),
+    _repository,
+  );
+
   /// L'écran d'entrée doit-il s'afficher ?
   ///
   /// `null` tant que la question n'est pas tranchée. On ne suppose jamais
@@ -71,6 +96,15 @@ class _RelioAppState extends State<RelioApp> {
   /// un élève déjà habitué serait une faute, et le cacher a un nouvel élève en
   /// serait une autre.
   bool? _showIntro;
+
+  /// Le parcours d'onboarding est-il en cours ?
+  ///
+  /// `false` au départ. Passe à `true` après l'écran d'entrée, tant que le
+  /// parcours — Prénom, test, clôture — n'est pas terminé.
+  ///
+  /// Le parcours est piloté par [OnboardingFlow] et non par cet écran : il a
+  /// ses propres étapes, ses propres états et sa propre reprise.
+  bool _inOnboarding = false;
 
   @override
   void initState() {
@@ -89,19 +123,46 @@ class _RelioAppState extends State<RelioApp> {
     }
   }
 
-  /// Tranche : premiere ouverture, ou retour ?
+  /// Tranche : l'écran d'entrée a-t-il déjà été vu ?
   ///
-  /// Une lecture en echec vaut « pas première ouverture » : mieux vaut laisser
-  /// l'eleve directement a l'accueil que bloquer l'application sur une
-  /// preference illisible.
+  /// La décision porte sur `entryScreenSeen`, et NON sur
+  /// `firstLaunchCompleted`. Les deux marqueurs sont distincts, et c'est leur
+  /// distinction qui permet de reprendre un test d'entrée interrompu :
+  ///
+  ///  - `entryScreenSeen` dit « l'écran a été présenté » ;
+  ///  - `firstLaunchCompleted` dit « le parcours est terminé ».
+  ///
+  /// Un élève qui a vu l'écran, puis refermé l'application au milieu du test,
+  /// se trouve avec `entryScreenSeen == true` et
+  /// `firstLaunchCompleted == false` : l'écran d'entrée est sauté, et le
+  /// parcours reprend directement à la bonne question. Fonder la décision
+  /// sur `hasCompletedFirstLaunch()` aurait rejoué cet écran une seconde fois,
+  /// et surtout aurait fait perdre la reprise du test.
+  ///
+  /// Une lecture en échec vaut « déjà vu » : mieux vaut laisser l'élève
+  /// directement à l'accueil que bloquer l'application sur une préférence
+  /// illisible.
   Future<void> _resolveFirstLaunch() async {
-    var completed = true;
+    var seen = true;
     try {
-      completed = await _repository.hasCompletedFirstLaunch();
+      seen = await _repository.hasSeenEntryScreen();
     } catch (_) {
-      completed = true;
+      seen = true;
     }
-    if (mounted) setState(() => _showIntro = !completed);
+    if (!mounted) return;
+    setState(() {
+      _showIntro = !seen;
+      // Écran d'entrée SAUTÉ : c'est précisément le cas où le parcours doit
+      // prendre le relais. Un élève ayant refermé l'application au milieu du
+      // test d'entrée doit y RETOMBER, pas à l'accueil.
+      //
+      // `OnboardingFlow` décide de l'étape de départ — Prénom, reprise à la
+      // bonne question, ou clôture si les cinq réponses sont déjà
+      // enregistrées. S'il constate que le parcours est DÉJÀ terminé, il
+      // rend la main immédiatement et l'accueil s'affiche : le parcours, et
+      // lui seul, connaît cette condition.
+      if (seen) _inOnboarding = true;
+    });
   }
 
   @override
@@ -125,11 +186,36 @@ class _RelioAppState extends State<RelioApp> {
   /// du test d'entrée verrait son parcours définitivement soldé, et le test
   /// ne pourrait plus être repris.
   ///
-  /// L'écriture de `entryScreenSeen` est une simple bascule d'affichage et
-  /// appartient à la mission d'intégration UX/UI : cette classe ne dépend
-  /// que de `SettingsRepository`, pas de l'orchestrateur d'onboarding.
+  /// `entryScreenSeen` EST écrit ici, et seulement ici : c'est le tap sur
+  /// « Commencer » qui vaut « j'ai vu cet écran », rien de plus.
   Future<void> _completeFirstLaunch() async {
-    if (mounted) setState(() => _showIntro = false);
+    // L'écriture précède le changement d'écran : si l'application est fermée
+    // juste après, l'écran d'entrée ne sera pas rejoué.
+    try {
+      await _entryOnboarding.markEntryScreenSeen();
+    } catch (_) {
+      // Échec de l'écriture : on enchaîne quand même. L'élève n'a rien à
+      // corriger, et l'écran d'entrée le reverra au prochain lancement.
+    }
+    if (!mounted) return;
+    setState(() {
+      _showIntro = false;
+      // L'écran d'entrée est passé : le parcours d'onboarding commence.
+      //
+      // On n'affiche PAS encore l'accueil. Le parcours décide lui-même de
+      // l'étape de départ, en tenant compte du prénom déjà connu et d'une
+      // éventuelle session à reprendre.
+      _inOnboarding = true;
+    });
+  }
+
+  /// Le parcours d'onboarding est terminé : on bascule sur l'accueil.
+  ///
+  /// Appelé par [OnboardingFlow] APRÈS l'écriture CONFIRMÉE du marqueur de
+  /// fin. Tant qu'il n'est pas appelé, l'accueil n'est pas affiché : l'élève
+  /// ne doit pas pouvoir contourner la clôture en tombant dessus.
+  void _onOnboardingCompleted() {
+    if (mounted) setState(() => _inOnboarding = false);
   }
 
   @override
@@ -172,12 +258,19 @@ class _RelioAppState extends State<RelioApp> {
                           reduceAnimations: settings.reduceAnimations,
                           preload: IntroPreloader(widget.database).run,
                           onFinished: _completeFirstLaunch,
+                          duration: widget.introDuration,
                         )
-                      : _RelioShell(
-                          database: widget.database,
-                          settings: settings,
-                          controller: _controller,
-                        ),
+                      : _inOnboarding
+                          ? OnboardingFlow(
+                              onboarding: _entryOnboarding,
+                              reduceAnimations: settings.reduceAnimations,
+                              onCompleted: _onOnboardingCompleted,
+                            )
+                          : _RelioShell(
+                              database: widget.database,
+                              settings: settings,
+                              controller: _controller,
+                            ),
             ),
           ),
         );

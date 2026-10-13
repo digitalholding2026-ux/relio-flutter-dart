@@ -156,4 +156,51 @@ abstract final class RelioStrings {
   static const String textSizeLabel = 'Taille du texte';
   static const String highContrastLabel = 'Contraste renforcé';
   static const String reduceAnimationsLabel = 'Réduire les animations';
+
+  // ---------------------------------------------------------------------
+  // Onboarding — parcours d'entrée
+  //
+  // Aucun de ces libellés ne mentionne de score, de niveau ni de résultat :
+  // le test d'entrée enregistre des FAITS, et l'interface ne restitue aucun
+  // de ces faits à l'élève pendant le parcours.
+  // ---------------------------------------------------------------------
+
+  /// Étape Prénom — titre de l'écran.
+  static const String nameTitle = 'Comment tu t’appelles ?';
+
+  /// Étape Prénom — placeholder du champ.
+  static const String namePlaceholder = 'Ton prénom';
+
+  /// Étape Prénom — bouton de validation.
+  static const String nameContinue = 'Continuer';
+
+  /// Test d'entrée — progression : « N sur 5 ».
+  ///
+  /// SEULE information de progression visible pendant le test. Aucun score,
+  /// aucun pourcentage, aucun indice.
+  static String entryProgress(int current, int total) => '$current sur $total';
+
+  /// Test d'entrée — libellé du bouton, identique pour les cinq questions.
+  static const String entryContinue = 'Continuer';
+
+  /// Test d'entrée — échec d'enregistrement, bannière neutre.
+  ///
+  /// Volontairement NEUTRE : elle ne dit rien de la réponse, ni juste ni
+  /// fausse. L'élève doit pouvoir réessayer sans se sentir jugé.
+  static const String entrySaveError =
+      'Impossible d’enregistrer pour le moment. Réessaie.';
+
+  /// Test d'entrée — bouton de réessai après échec.
+  static const String entryRetry = 'Réessayer';
+
+  /// Test d'entrée — aucune question disponible (cas théorique).
+  static const String entryNoQuestion =
+      'Je n’ai pas de question à te proposer pour le moment.';
+
+  /// Clôture — texte d'accueil, prénom inséré au début.
+  static String closingMessage(String name) =>
+      'Merci $name. Je commence à te connaître.';
+
+  /// Clôture — bouton de sortie du parcours.
+  static const String closingDiscover = 'Découvrir Relio';
 }

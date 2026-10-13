@@ -52,6 +52,17 @@ class EntryTestOnboarding {
     return settings.name.trim();
   }
 
+  /// Enregistre le prénom de l'élève.
+  ///
+  /// PURE DELEGATE, comme [storedName] et [hasValidName] : aucune validation
+  /// de forme ici. Le cœur ne connaît pas les règles de saisie d'un clavier —
+  /// filtrage, capitalisation, longueur maximale — qui appartiennent à
+  /// l'interface. Il ne fait que recrire ce que l'élève a choisi.
+  ///
+  /// ⚠️ Ne jamais appeler cette méthode ailleurs qu'à l'étape Prénom du
+  /// parcours : elle modifierait le prénom d'un élève déjà enregistré.
+  Future<void> setName(String name) => _settings.setName(name);
+
   // ---------------------------------------------------------------------
   // Marqueurs du parcours — PURS DELEGATES.
   //

@@ -25,6 +25,7 @@ class IntroPage extends StatefulWidget {
     required this.onFinished,
     this.reduceAnimations = false,
     this.preload,
+    this.duration,
   });
 
   /// Appele quand l'eleve termine l'ecran (bouton ou retour Android).
@@ -44,6 +45,22 @@ class IntroPage extends StatefulWidget {
   /// d'accueil.
   final Future<void> Function()? preload;
 
+  /// Durée de la séquence, injectable pour les tests.
+  ///
+  /// `null` en production, ce qui vaut les 5,3 s FIGÉES de [IntroTiming].
+  /// Injecté, l'ensemble de la chronologie est COMPRESSÉ selon le même
+  /// facteur : les textes et le bouton apparaissent dans le même ordre, aux
+  /// mêmes PROPORTIONS. Aucun temps n'est ajouté ni retiré — seule l'échelle
+  /// change.
+  ///
+  /// C'est ce qui permet d'exercer le flux complet — y compris le bouton
+  /// « Commencer » — sans attendre 5,3 s réelles à chaque test.
+  ///
+  /// ⚠️ Ne JAMAIS fixer ce paramètre en production : la règle 10 d'`AGENTS.md`
+  /// interdit d'allonger la séquence, et son raccourcissement ferait
+  /// disparaître l'information qu'elle porte.
+  final Duration? duration;
+
   @override
   State<IntroPage> createState() => IntroPageState();
 }
@@ -56,9 +73,31 @@ class IntroPageState extends State<IntroPage>
   /// apres 5,3 s, la sequence est terminee et doit rester telle quelle.
   static const int kTimelineSpanMs = 6000;
 
+  /// Facteur de compression du temps narratif.
+  ///
+  /// `1.0` en production : la chronologie est celle de [IntroTiming], et sa
+  /// durée est FIGÉE. Injecté, le facteur vaut `duration / ready` : les
+  /// textes et le bouton apparaissent aux mêmes PROPORTIONS, donc dans le même
+  /// ordre et avec les mêmes relations entre eux. Aucun temps n'est ajouté ni
+  /// retiré — seule l'échelle change, et un test peut ainsi exercer le flux
+  /// complet sans attendre 5,3 s.
+  late final double _timeScale = _computeTimeScale();
+
+  double _computeTimeScale() {
+    final Duration? injected = widget.duration;
+    if (injected == null || injected <= Duration.zero) return 1;
+    return injected.inMicroseconds / IntroTiming.ready.inMicroseconds;
+  }
+
+  /// Portée du controller narratif, compression comprise.
+  int get _spanMs =>
+      widget.duration == null
+          ? kTimelineSpanMs
+          : (kTimelineSpanMs * _timeScale).round();
+
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: kTimelineSpanMs),
+    duration: Duration(milliseconds: _spanMs),
   );
 
   /// Instant final du temps narratif : le bouton est entierement opaque.
@@ -67,6 +106,13 @@ class IntroPageState extends State<IntroPage>
   /// construit et sa transition de 250 ms n'a pas encore commence : le temps
   /// narratif doit donc continuer jusqu'a 5,55 s pour que le fondu se deroule.
   static final Duration _finalTime = IntroTiming.ready + IntroTiming.buttonIn;
+
+  /// [IntroSequenceState.at] reçoit un temps narratif, il faut donc l'exprimer
+  /// à l'échelle de PRODUCTION : c'est [IntroSequenceState] qui porte la
+  /// chronologie figée, et lui passer un temps compressé court-circuiterait
+  /// cette règle.
+  Duration get _finalTimeScaled =>
+      Duration(microseconds: (_finalTime.inMicroseconds * _timeScale).round());
 
   /// Instant de depart de la sequence.
   Duration _elapsed = Duration.zero;
@@ -100,7 +146,7 @@ class IntroPageState extends State<IntroPage>
 
   void _tick() {
     final Duration total = Duration(
-      milliseconds: (_controller.value * kTimelineSpanMs).round(),
+      milliseconds: (_controller.value * _spanMs).round(),
     );
     final Duration? accel = _acceleratedAt;
 
@@ -120,7 +166,7 @@ class IntroPageState extends State<IntroPage>
     // Le bouton etait bien construit, mais transparent - l'eleve ne le
     // voyait pas. Laisser le temps narratif parcourir ses 250 ms laisse le
     // fondu se derouler, puis l'etat se fige sur `ready + buttonIn`.
-    if (next > _finalTime) next = _finalTime;
+    if (next > _finalTimeScaled) next = _finalTimeScaled;
 
     if (next != _elapsed && mounted) {
       setState(() => _elapsed = next);
@@ -136,11 +182,20 @@ class IntroPageState extends State<IntroPage>
   }
 
   /// Etat courant de la sequence.
+  ///
+  /// [_elapsed] est mesure a l'echelle REELLE de l'ecran ; il est remis a
+  /// l'echelle de production avant d'atteindre [IntroSequenceState], qui
+  /// porte la chronologie figee. La sequence ignore donc qu'une duree
+  /// injectee est en cours : elle se comporte comme si elle jouait toujours
+  /// ses 5,3 s, seule l'echelle de temps change.
   IntroSequenceState get _state {
+    final Duration scaled = Duration(
+      microseconds: (_elapsed.inMicroseconds / _timeScale).round(),
+    );
     final Duration? accel = _acceleratedAt;
     return accel == null
-        ? IntroSequenceState.at(_elapsed)
-        : IntroSequenceState.accelerated(_elapsed);
+        ? IntroSequenceState.at(scaled)
+        : IntroSequenceState.accelerated(scaled);
   }
 
   /// Un tap n'importe ou ACCELERE la sequence.
@@ -156,7 +211,7 @@ class IntroPageState extends State<IntroPage>
 
     setState(() {
       _acceleratedAt = Duration(
-        milliseconds: (_controller.value * kTimelineSpanMs).round(),
+        milliseconds: (_controller.value * _spanMs).round(),
       );
       _elapsed = Duration.zero;
     });

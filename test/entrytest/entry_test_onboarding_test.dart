@@ -90,6 +90,51 @@ void main() {
       await settings.setName('Awa');
       expect((await settings.load()).name, 'Awa');
     });
+
+    // -------------------------------------------------------------------
+    // Delegate d'ECRITURE — le seul des trois a avoir manque au premier
+    // tour : `storedName` et `hasValidName` existaient deja.
+    // -------------------------------------------------------------------
+
+    test('setName ecrit le prenom et le rend lisible', () async {
+      await onboarding.setName('Awa');
+
+      expect(await onboarding.storedName(), 'Awa');
+      expect(await onboarding.hasValidName(), isTrue);
+    });
+
+    test('un second prenom remplace le precedent', () async {
+      await onboarding.setName('Awa');
+      await onboarding.setName('Mariam');
+
+      expect(await onboarding.storedName(), 'Mariam');
+    });
+
+    test('setName accepte un prenom court comme un prenom long', () async {
+      // Aucune regle de forme : c'est la decision validee.
+      await onboarding.setName('Jo');
+      expect(await onboarding.storedName(), 'Jo');
+
+      await onboarding.setName('Jean-Baptiste');
+      expect(await onboarding.storedName(), 'Jean-Baptiste');
+    });
+
+    test('setName n\'ecrit aucun marqueur de parcours', () async {
+      await onboarding.setName('Awa');
+
+      // Le prenom n'est pas un etat du parcours : il ne solde ni l'ecran
+      // d'entree, ni le parcours.
+      expect(await onboarding.hasSeenEntryScreen(), isFalse);
+      expect(await onboarding.hasCompletedFirstLaunch(), isFalse);
+    });
+
+    test('un prenom vide redevient non valide', () async {
+      await onboarding.setName('Awa');
+      await onboarding.setName('   ');
+
+      expect(await onboarding.hasValidName(), isFalse,
+          reason: 'un prenom blanc doit pouvoir effacer le precedent');
+    });
   });
 
   group('Ouverture de session', () {
