@@ -439,6 +439,35 @@ abstract final class RelioTheme {
     return FilledButton.styleFrom(
       backgroundColor: p.primary,
       foregroundColor: Colors.white,
+      // ÉTAT DÉSACTIVÉ — deux défauts qu'il faut corriger ensemble.
+      //
+      // 1. Le FOND par défaut de Material est `onSurface` à 12 % d'alpha.
+      //    Sur un écran clair il donne un contraste de 1,1:1 : le bouton
+      //    devient une tache quasi invisible, et l'élève ne voit plus du tout
+      //    l'action qui l'attend.
+      // 2. Le TEXTE par défaut est `onSurface` à 38 % : 2,4:1 sur fond clair,
+      //    en dessous du seuil de 4,5:1 exigé pour du texte de 16 dp.
+      //
+      // On s'appuie donc sur des jetons EXISTANTS — `primaryContainer` et
+      // `textSecondary` — qui donnent plus de 4,5:1 dans les deux palettes.
+      // Un bouton désactivé doit rester identifiable : c'est lui qui dit à
+      // l'élève ce qu'il peut faire ensuite.
+      disabledBackgroundColor: p.primaryContainer,
+      disabledForegroundColor: p.textSecondary,
+      // Le fond désactivé (`primaryContainer`) et le fond d'écran ne se
+      // distinguent qu'à 1,19:1 : le bouton garde bien son libellé lisible,
+      // mais sa FORME disparaît. Une bordure, appliquée UNIQUEMENT dans cet
+      // état, redessine le contour du bouton sans toucher à l'apparence des
+      // boutons actifs.
+      side: WidgetStateBorderSide.resolveWith((Set<WidgetState> states) {
+        if (states.contains(WidgetState.disabled)) {
+          return BorderSide(
+            color: p.textSecondary,
+            width: RelioSizes.fieldBorderWidth,
+          );
+        }
+        return BorderSide.none;
+      }),
       minimumSize: const Size.fromHeight(RelioSizes.primaryButtonHeight),
       textStyle: RelioType.bodyStrong(p).copyWith(color: Colors.white),
       shape: const RoundedRectangleBorder(borderRadius: RelioRadius.cardAll),

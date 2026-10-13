@@ -62,7 +62,14 @@ abstract final class OnboardingMetrics {
   /// Écart entre deux cartes de choix.
   static const double choiceGap = 12;
 
-  /// Distance du personnage au haut de l'écran, en fraction de la hauteur.
+  /// Distance du personnage au haut de l'écran, en FRACTION DE LA HAUTEUR
+  /// DISPONIBLE.
+  ///
+  /// La spécification dit « ancré à ~15 % depuis le haut » : c'est une
+  /// position dans l'écran, pas dans le personnage. Appliquer ce ratio à la
+  /// TAILLE du personnage donnerait 12 px au lieu de ~15 % de l'écran — le
+  /// personnage serait collé en haut au lieu d'être posé dans le tiers
+  /// supérieur.
   static const double characterTopRatio = 0.15;
 
   // -------------------------------------------------------------------

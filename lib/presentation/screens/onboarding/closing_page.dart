@@ -163,24 +163,36 @@ class _ClosingPageState extends State<ClosingPage>
               end: to,
             ).evaluate(_grow);
 
-            return Stack(
+            // MISE EN PAGE EN COLONNE, et non en `Stack` superpose.
+            //
+            // Le `Stack` positionnait le personnage et le texte par des
+            // decalages ABSOLUS, chacun ignorant l'autre. Sur un petit ecran
+            // (360 x 640) avec la police a 1,3, la phrase de cloture occupe
+            // quatre lignes et venaiT CHEVAUCHER le personnage : les deux se
+            // trouvaient dans la meme bande verticale.
+            //
+            // La colonne rend ce defaut IMPOSSIBLE : chaque element recoit la
+            // place restante, et le texte ne peut pas remonter sur le
+            // personnage quel que soit le nombre de lignes.
+            return Column(
               children: <Widget>[
-                Align(
-                  alignment: const Alignment(0, -0.35),
+                Padding(
+                  padding: const EdgeInsets.only(top: RelioSpacing.xxl),
                   child: RelioCharacter(
                     size: size,
                     animate: !widget.reduceAnimations,
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: RelioSpacing.horizontal,
-                    vertical: RelioSpacing.xxl,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      Opacity(
+                // Le texte occupe toute la place restante et se centre dedans :
+                // il s'ecarte du personnage au lieu de le traverser.
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: RelioSpacing.horizontal,
+                        vertical: RelioSpacing.md,
+                      ),
+                      child: Opacity(
                         opacity: _text.value,
                         child: Text(
                           RelioStrings.closingMessage(
@@ -194,30 +206,29 @@ class _ClosingPageState extends State<ClosingPage>
                           style: RelioType.title(palette),
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: RelioSpacing.horizontal,
-                      vertical: RelioSpacing.xl,
-                    ),
-                    child: Opacity(
-                      opacity: _button.value,
-                      child: Transform.translate(
-                        // Glissement vertical de 8 dp à l'apparition.
-                        offset: Offset(
-                          0,
-                          OnboardingMetrics.slideOffset * (1 - _button.value),
-                        ),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: FilledButton(
-                            onPressed: _busy ? null : _confirm,
-                            child: const Text(RelioStrings.closingDiscover),
-                          ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    RelioSpacing.horizontal,
+                    RelioSpacing.md,
+                    RelioSpacing.horizontal,
+                    RelioSpacing.xl,
+                  ),
+                  child: Opacity(
+                    opacity: _button.value,
+                    child: Transform.translate(
+                      // Glissement vertical de 8 dp à l'apparition.
+                      offset: Offset(
+                        0,
+                        OnboardingMetrics.slideOffset * (1 - _button.value),
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: _busy ? null : _confirm,
+                          child: const Text(RelioStrings.closingDiscover),
                         ),
                       ),
                     ),

@@ -254,7 +254,13 @@ class _ClosingHost extends StatefulWidget {
 }
 
 class _ClosingHostState extends State<_ClosingHost> {
-  String _name = '';
+  /// Le prénom lu en base. `null` tant que la lecture n'a pas abouti.
+  ///
+  /// `null` et NON chaîne vide : avec une chaîne vide, l'écran s'afficherait
+  /// d'abord avec « Merci . Je commence à te connaître. » — un trou visible
+  /// dans la phrase, le temps que la lecture revienne. L'écran ne s'affiche
+  /// qu'une fois le prénom connu.
+  String? _name;
 
   @override
   void initState() {
@@ -263,10 +269,12 @@ class _ClosingHostState extends State<_ClosingHost> {
   }
 
   Future<void> _loadName() async {
-    String name = '';
+    String name;
     try {
       name = await widget.onboarding.storedName();
     } catch (_) {
+      // Lecture en échec : l'écran s'affiche sans prénom plutôt que de
+      // bloquer l'élève dessus.
       name = '';
     }
     if (!mounted) return;
@@ -275,8 +283,14 @@ class _ClosingHostState extends State<_ClosingHost> {
 
   @override
   Widget build(BuildContext context) {
+    final String? name = _name;
+    // Le prénom est inconnu : ni l'écran, ni sa chronologie ne démarrent.
+    // Démarrer la séquence maintenant ferait ensuite sauter les 1,5 s de
+    // pause du personnage une fois le prénom arrivé.
+    if (name == null) return const SizedBox.shrink();
+
     return ClosingPage(
-      name: _name,
+      name: name,
       reduceAnimations: widget.reduceAnimations,
       onConfirm: widget.onConfirm,
     );

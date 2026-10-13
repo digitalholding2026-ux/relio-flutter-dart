@@ -269,7 +269,12 @@ class _EntryTestPageState extends State<EntryTestPage>
                     ),
                     child: Column(
                       children: <Widget>[
-                        SizedBox(height: size * OnboardingMetrics.characterTopRatio),
+                        // Le personnage est ancré à ~15 % depuis le HAUT DE
+                        // L'ÉCRAN, pas à 15 % de sa propre taille.
+                        SizedBox(
+                          height: constraints.maxHeight *
+                              OnboardingMetrics.characterTopRatio,
+                        ),
                         RelioCharacter(
                           size: size,
                           animate: !widget.reduceAnimations,
