@@ -7,7 +7,8 @@ télécharger et l'installer sur un téléphone.
 
 | Fichier | Taille | Contenu |
 |---|---|---|
-| `apk/relio-socle-v0.3.9-marque.apk` | ~22,1 Mo | **Dernier build.** Nouveau mark, icône d'application et logo principal |
+| `apk/relio-socle-v0.4.0-parcours-entree.apk` | ~22,1 Mo | **Dernier build.** Parcours d'entrée complet en sept étapes |
+| `apk/relio-socle-v0.3.9-marque.apk` | ~22,1 Mo | Nouveau mark, icône d'application et logo principal |
 | `apk/relio-socle-v0.3.9-audit.apk` | ~22,1 Mo | Audit onboarding : trois corrections d'affichage |
 | `apk/relio-socle-v0.3.8-onboarding.apk` | ~22,1 Mo | Onboarding complet : prénom, test d'entrée, clôture |
 | `apk/relio-socle-v0.3.7-marqueurs-onboarding.apk` | ~21,9 Mo | Marqueurs d'onboarding |
@@ -61,6 +62,32 @@ publication réelle reste à créer (voir `docs/ARCHITECTURE.md`, point à
 arbitrer n° 6).
 
 ## Contenu du dernier build
+
+`relio-socle-v0.4.0-parcours-entree.apk` — **le parcours d'entrée, de la
+première ouverture à l'accueil**, désormais en sept étapes :
+
+1. **Ouverture** — le logo se révèle, sans bouton et sans attente. L'écran
+   enchaîne tout seul, et rien n'y est enregistré : si l'élève le quitte,
+   il le reverra.
+2. **Bienvenue** — « Salut, moi c'est Relio !… », bouton **Commencer**.
+3. **Introduction au questionnaire** — cinq pastilles qui promettent une
+   étape courte. **C'est le seul endroit où `entryScreenSeen` est écrit.**
+4. **Prénom** — 24 caractères maximum, lettres et espaces uniquement,
+   première lettre en majuscule.
+5. **Questionnaire** — cinq questions, sans indice, sans correction, sans
+   score ni diagnostic.
+6. **Conclusion** — « Merci {prénom} ! Je commence à mieux te connaître. »
+7. **Accueil**.
+
+Le parcours **reprend exactement où il s'était arrêté**. Abandonner au
+milieu du questionnaire ne le fait pas disparaître : les réponses déjà
+enregistrées sont conservées, et l'élève retrouve la question suivante.
+
+> Une réponse n'est enregistrée qu'une fois l'écriture **confirmée**. Si elle
+> échoue, l'élève reste sur la question, sa saisie n'est pas effacée et il
+> peut réessayer sans jamais créer de doublon.
+
+### Précédent build
 
 `relio-socle-v0.3.9-marque.apk` — **la marque Relio est entièrement
 remplacée** par les deux fichiers fournis, propagés à toute l'application :
