@@ -385,6 +385,33 @@ d'entrée n'a pas à être traversé pour tester un écran d'accueil.
 > jamais. On pompe donc un nombre fixe de fois, comme le fait
 > `laisserResoudre` dans `onboarding_entry_flow_test.dart`.
 
+## Règle 11 — Tester la visibilité, pas la présence
+
+> **Un `find.text(...)` qui passe ne prouve pas que l'écran est visible.**
+
+Un widget peint à `Opacity 0` reste dans l'arbre : les finders le trouvent,
+et tous les tests passent — sur un écran entièrement blanc. C'est
+exactement ce qui a masqué le blocage de démarrage décrit dans
+[`docs/RAPPORT_DEMARRAGE_BLOQUE.md`](docs/RAPPORT_DEMARRAGE_BLOQUE.md).
+
+### Ce qu'il faut faire
+
+- **Tester l'opacité.** `onboarding_visibility_test.dart` vérifie que
+  `min(opacity) == 1` sur chaque écran du parcours, une fois l'animation
+  terminée.
+- **Capturer le rendu.** `tool/capture_parcours_test.dart` écrit un PNG par
+  écran à 360 × 640. Une capture d'un écran bloqué est blanche — ce que
+  aucune assertion d'arbre ne peut voir.
+- **Abonner un écran animé à son animation.** Lire `controller.value` dans
+  `build()` est un bug **silencieux** : rien ne lève, aucun journal ne le
+  mentionne.
+- **Éviter `pumpAndSettle` sur un écran qui attend entre deux animations.**
+  Pendant un `Future.delayed` aucune frame n'est attendue : la boucle rend
+  la main avant que le contenu soit apparu.
+
+> Aucun écran du parcours ne doit être considéré vérifié tant qu'il n'a pas
+> été **vu**. Un test qui passe sur un écran vide est pire qu'aucun test.
+
 ---
 
 ## État du dépôt
@@ -397,7 +424,7 @@ d'entrée n'a pas à être traversé pour tester un écran d'accueil.
 | NDK requis | 28.2.13676358 |
 | Persistance | Drift / SQLite, schéma v2 |
 | Marque | `assets/branding/` — spécification dans `docs/brand/`, voir [règle 9](#règle-9--la-marque-est-générée-pas-dessinée) |
-| Tests | 674 (588 applicatifs + 86 marque) |
+| Tests | 688 (602 applicatifs + 86 marque) |
 | Écran d'entrée | 7 étapes, ~2 s d'ouverture sans bouton — voir règle 10 |
 
 ### Branches
