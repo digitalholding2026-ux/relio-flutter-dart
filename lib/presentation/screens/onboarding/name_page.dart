@@ -164,67 +164,80 @@ class _NamePageState extends State<NamePage>
             final double contentOpacity =
                 widget.reduceAnimations ? 1 : (1 - _exit.value);
 
-            return Stack(
+            // MISE EN PAGE EN COLONNE, et non en `Stack`.
+            //
+            // Le `Stack` superposait le personnage et le contenu : les deux
+            // enfants se partageaient le meme rectangle, et le titre venait
+            // CHEVAUCHER le personnage — 50 px de recouvrement mesure a
+            // 360 x 640. Aucun test ne l'avait vu : un `Stack` ne leve
+            // rien quand deux enfants se marchent dessus, seul un debordement
+            // de `Flex` signale.
+            //
+            // La colonne rend ce defaut IMPOSSIBLE : chaque element recoit la
+            // place restante. C'est la meme correction que celle deja appliquee
+            // a `closing_page.dart`, qui portait le meme commentaire.
+            return Column(
               children: <Widget>[
-                // Le personnage monte vers le haut pendant la réduction, et
-                // s'ancre en haut : il accompagne la question suivante.
-                Align(
-                  alignment: Alignment(
-                    0,
-                    -1 + 2 * (1 - _exit.value) * 0.35,
-                  ),
+                Padding(
+                  padding: const EdgeInsets.only(top: RelioSpacing.xxl),
                   child: RelioCharacter(
                     size: size,
                     animate: !widget.reduceAnimations,
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: RelioSpacing.horizontal,
-                    vertical: RelioSpacing.xl,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      Opacity(
-                        opacity: contentOpacity,
-                        child: Text(
-                          RelioStrings.nameTitle,
-                          textAlign: TextAlign.center,
-                          style: RelioType.title(palette),
-                        ),
+                // Le titre et le champ occupent toute la place restante et se
+                // centrent dedans : ils s'ecartent du personnage au lieu de
+                // le traverser.
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: RelioSpacing.horizontal,
+                        vertical: RelioSpacing.md,
                       ),
-                      const SizedBox(height: RelioSpacing.xxl),
-                      Opacity(
-                        opacity: contentOpacity,
-                        child: _NameField(
-                          controller: _controller,
-                          focusNode: _focus,
-                          formatter: _formatter,
-                          enabled: !_submitting,
-                        ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Opacity(
+                            opacity: contentOpacity,
+                            child: Text(
+                              RelioStrings.nameTitle,
+                              textAlign: TextAlign.center,
+                              style: RelioType.title(palette),
+                            ),
+                          ),
+                          const SizedBox(height: RelioSpacing.xxl),
+                          Opacity(
+                            opacity: contentOpacity,
+                            child: _NameField(
+                              controller: _controller,
+                              focusNode: _focus,
+                              formatter: _formatter,
+                              enabled: !_submitting,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: RelioSpacing.horizontal,
-                      vertical: RelioSpacing.xl,
-                    ),
-                    child: Opacity(
-                      opacity: contentOpacity,
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          // Le bouton est absent du geste tant que le champ
-                          // est vide : il ne s'agit pas de le « désactiver »,
-                          // mais de ne pas proposer une action sans effet.
-                          onPressed: _canSubmit && !_submitting ? _submit : null,
-                          child: const Text(RelioStrings.nameContinue),
-                        ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    RelioSpacing.horizontal,
+                    RelioSpacing.md,
+                    RelioSpacing.horizontal,
+                    RelioSpacing.xl,
+                  ),
+                  child: Opacity(
+                    opacity: contentOpacity,
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        // Le bouton est absent du geste tant que le champ
+                        // est vide : il ne s'agit pas de le « désactiver »,
+                        // mais de ne pas proposer une action sans effet.
+                        onPressed: _canSubmit && !_submitting ? _submit : null,
+                        child: const Text(RelioStrings.nameContinue),
                       ),
                     ),
                   ),

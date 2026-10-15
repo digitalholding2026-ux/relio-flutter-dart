@@ -188,7 +188,7 @@ d'arbre ne savent pas voir.
 |---|---|---|
 | `2-bienvenue.png` | Bienvenue | correct — lockup entier, texte, bouton |
 | `3-introduction.png` | Introduction au questionnaire | **correct — c'était l'écran bloqué** |
-| `4-prenom.png` | Prénom | **défaut de mise en page, voir § 5.4** |
+| `4-prenom.png` | Prénom | défaut trouvé, corrigé en `0.4.2` (§ 10) |
 | `6-cloture.png` | Clôture | correct — texte exact, bouton, aucun recouvrement |
 
 L'outil est ce qui a révélé le défaut de largeur du § 3.4. Il a aussi révélé
@@ -220,10 +220,34 @@ gardé le `Stack`.
 un chevauchement de `Stack` — seuls les débordements de `Flex` lèvent. Un
 `expect(tester.takeException(), isNull)` passe donc malgré le recouvrement.
 
-**Non corrigé ici**, le rapport se terminant sur le correctif de démarrage et
-la publication. La correction est connue : reprendre la disposition en
-colonne de `closing_page.dart`, ou ancrer le personnage dans le tiers
-supérieur comme le fait déjà `entry_test_page.dart`.
+**NON corrigé dans ce correctif**, mais **corrigé dans la version suivante**
+(`0.4.2`). Voir § 10.
+
+---
+
+## 10. Correctif suivant — chevauchement du titre et du personnage
+
+> Corrigé et publié en `0.4.2`, après la rédaction de ce rapport.
+
+**Cause :** `name_page.dart` composait l'écran avec un `Stack` — personnage
+`Align` d'un côté, contenu centré de l'autre. Les deux enfants se partageaient
+le même rectangle, et le titre venait recouvrir le personnage.
+
+**Correctif :** disposition en **colonne**, identique à celle déjà appliquée
+à `closing_page.dart` — qui portait précisément ce défaut avant d'être repris.
+Le personnage occupe le haut, le titre et le champ prennent la place
+restante, le bouton reste en bas. Aucun changement de design : c'est la même
+répartition, sans recouvrement.
+
+**Test ajouté :** `test/presentation/onboarding_overlap_test.dart`.
+
+Il compare **les rectangles** de deux éléments et échoue s'ils se touchent.
+C'est le seul contrôle qui voie un recouvrement : un `Stack` ne lève rien, un
+`débordement de Flex` ne le serait pas davantage, et `takeException()` reste
+nul dans les deux cas.
+
+Vérifié sur les trois écrans qui superposent une image et du texte — prénom,
+clôture, bienvenue — à 360 × 640 avec la police à 1,3.
 
 ---
 
@@ -246,9 +270,8 @@ possible : `HypervisorPlatform` est `Disabled`, et l'activer exigerait un
 redémarrage de la machine. Aucun test sur appareil n'a donc été réalisé.
 
 **Ce qui a été vérifié :** tests automatisés, et capture du rendu réel des
-**quatre écrans du parcours** à la résolution de référence. Trois des quatre
-sont visuellement corrects ; l'écran du prénom porte un défaut de mise en page
-distinct (§ 5.4), **présent dans l'APK publié**.
+**quatre écrans du parcours** à la résolution de référence. Le défaut de mise
+en page du prénom (§ 5.4) y a été trouvé, puis corrigé en `0.4.2` (§ 10).
 
 **Ce qui ne l'a pas été :**
 
