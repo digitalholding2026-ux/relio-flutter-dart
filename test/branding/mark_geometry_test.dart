@@ -1,162 +1,197 @@
 /// Coherence de la geometrie du mark Relio.
 ///
-/// Ces tests verrouillent les VALEURS de la specification. Toute derive
-/// entre la geometrie, le SVG genere et le rendu Flutter doit faire echouer la
-/// suite, pas passer inaperue sur un telephone.
+/// Ces tests verrouillent la STRUCTURE et les VALEURS de la specification.
+/// Toute derive entre la geometrie, le SVG genere et le rendu Flutter doit
+/// faire echouer la suite, pas passer inapercue sur un telephone.
+///
+/// Le mark n'est plus parametrique : il est decrit par des traces. Les tests
+/// ne verifient donc plus des rapports de cercles, mais que les traces lues
+/// par le generateur SVG et par le painter Flutter sont bien les memes, et que
+/// les SVG presents sur le disque correspondent a la geometrie actuelle.
 library;
 
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:relio/presentation/branding/relio_mark_geometry.dart';
+import 'package:relio/presentation/branding/relio_lockup.dart';
+import 'package:relio/presentation/branding/relio_mark.dart';
 
 /// Deux valeurs sont consideres egales si elles coincident a [epsilon].
 const double epsilon = 1e-9;
 
+/// Nombre de decimales employe par le generateur.
+String _n(double v) {
+  final double r = (v * 1000).roundToDouble() / 1000;
+  return r == r.roundToDouble() ? r.toStringAsFixed(1) : r.toString();
+}
+
+/// Reconstitue le `d` d'une trace depuis les noeuds de la geometrie.
+///
+/// REIMPLEMENTATION DELIBEREE du generateur : si les deux convergent sur la
+/// meme chaine, c'est qu'elles lisent la meme definition. Si elles divergeaient,
+/// ce test le verrait — ce que ne ferait pas un appel direct a la fonction du
+/// generateur, qui ne prouverait qu'elle est egale a elle-meme.
+String _attendu(List<RelioMarkNode> nodes) {
+  final StringBuffer out = StringBuffer();
+  for (final RelioMarkNode node in nodes) {
+    switch (node) {
+      case RelioMarkMoveTo(:final double x, :final double y):
+        out.write('M${_n(x)} ${_n(y)}');
+      case RelioMarkLineTo(:final double x, :final double y):
+        out.write('L${_n(x)} ${_n(y)}');
+      case RelioMarkQuadTo(
+          :final double cx,
+          :final double cy,
+          :final double x,
+          :final double y,
+        ):
+        out.write('Q${_n(cx)} ${_n(cy)} ${_n(x)} ${_n(y)}');
+      case RelioMarkClose():
+        out.write('Z');
+    }
+  }
+  return out.toString();
+}
+
+/// Lit un SVG de `assets/branding/` et echoue si le fichier est absent.
+String lire(String chemin) {
+  final File f = File(chemin);
+  expect(f.existsSync(), isTrue, reason: 'SVG manquant : $chemin');
+  return f.readAsStringSync();
+}
+
 void main() {
-  group('Cercles', () {
-    test('diametres conformes a la specification', () {
-      expect(RelioMarkGeometry.diameterRight, 28);
-      expect(RelioMarkGeometry.diameterLeft, closeTo(15.4, epsilon));
+  group('Structure du mark', () {
+    test('le mark est compose de trois traces et d\'un point', () {
+      expect(RelioMarkGeometry.parts, hasLength(3));
+      expect(
+        RelioMarkGeometry.parts.map((RelioMarkPart p) => p.id).toList(),
+        <String>['glyph', 'zigzag-accent', 'zigzag-secondary'],
+      );
+      expect(RelioMarkGeometry.dot.id, 'dot');
     });
 
-    test('le cercle gauche fait 55 % du cercle droit', () {
-      final double ratio =
-          RelioMarkGeometry.diameterLeft / RelioMarkGeometry.diameterRight;
-      expect(ratio, closeTo(0.55, 0.001));
+    test('les identifiants sont uniques : ils nomment les noeuds du SVG', () {
+      final Set<String> ids = <String>{
+        ...RelioMarkGeometry.parts.map((RelioMarkPart p) => p.id),
+        RelioMarkGeometry.dot.id,
+      };
+      expect(ids, hasLength(4));
     });
 
-    test('centres conformes a la specification', () {
-      expect(RelioMarkGeometry.centerRightX, 66);
-      expect(RelioMarkGeometry.centerRightY, 50);
-      expect(RelioMarkGeometry.centerLeftX, 24);
-      expect(RelioMarkGeometry.centerLeftY, 50);
+    test('les roles chromatiques sont répartis comme dans la specification', () {
+      expect(RelioMarkGeometry.glyph.role, RelioMarkRole.base);
+      expect(RelioMarkGeometry.zigzagSecondary.role, RelioMarkRole.base);
+      expect(RelioMarkGeometry.zigzagAccent.role, RelioMarkRole.accent);
+      expect(RelioMarkGeometry.dot.role, RelioMarkRole.accent);
     });
 
-    test('espacement entre centres de 42 unites', () {
-      expect(RelioMarkGeometry.centerSpacing, closeTo(42, epsilon));
-    });
-
-    test('les deux cercles sont alignes horizontalement', () {
-      expect(RelioMarkGeometry.centerRightY, RelioMarkGeometry.centerLeftY);
-    });
-
-    test('les deux cercles ne se touchent pas', () {
-      final double gap = RelioMarkGeometry.centerSpacing -
-          RelioMarkGeometry.radiusRight -
-          RelioMarkGeometry.radiusLeft;
-      expect(gap, greaterThan(0), reason: 'les cercles doivent rester distincts');
-    });
-  });
-
-  group('Courbe', () {
-    test('depart et arrivee sur les bords des cercles, a hauteur de centre', () {
-      expect(RelioMarkGeometry.curveStartX, closeTo(31.7, epsilon));
-      expect(RelioMarkGeometry.curveEndX, closeTo(52, epsilon));
-    });
-
-    test('portee horizontale de 20,3 unites', () {
-      expect(RelioMarkGeometry.curveSpan, closeTo(20.3, epsilon));
-    });
-
-    test('profondeur de 6 unites sous la ligne des centres', () {
-      expect(RelioMarkGeometry.curveDepth, closeTo(6, epsilon));
-      expect(RelioMarkGeometry.curveLowY, closeTo(56, epsilon));
-    });
-
-    test('rapport profondeur/portee conforme au 0,30', () {
-      final double ratio =
-          RelioMarkGeometry.curveDepth / RelioMarkGeometry.curveSpan;
-      // 6 / 20.3 = 0.2956 : la valeur mesuree, pas celle visee.
-      expect(ratio, closeTo(0.30, 0.005));
-    });
-
-    test('le point bas est centre sous la portee', () {
-      expect(RelioMarkGeometry.curveLowX, closeTo(41.85, epsilon));
-    });
-
-    test('la cubique atteint effectivement y = 56 au point bas', () {
-      // On CONFIRME la valeur par evaluation, on ne la reconduit pas.
-      expect(RelioMarkGeometry.curveY(0.5), closeTo(56, 1e-6));
-    });
-
-    test('la courbe reste dans les 6 unites de profondeur', () {
-      expect(RelioMarkGeometry.measuredDepth(), closeTo(6, 1e-3));
-    });
-
-    test('la courbe part et arrive exactement sur y = 50', () {
-      expect(RelioMarkGeometry.curveY(0), closeTo(50, 1e-9));
-      expect(RelioMarkGeometry.curveY(1), closeTo(50, 1e-9));
-    });
-
-    test('la courbe est symetrique autour de x = 41,85', () {
-      for (final double t in [0.1, 0.25, 0.4, 0.75, 0.9]) {
-        final double x1 = RelioMarkGeometry.curveX(t);
-        final double x2 = RelioMarkGeometry.curveX(1 - t);
-        expect((x1 + x2) / 2, closeTo(41.85, 1e-6),
-            reason: 'asymetrie a t=$t');
+    test('chaque trace est fermee', () {
+      for (final RelioMarkPart part in RelioMarkGeometry.parts) {
+        expect(part.nodes.last, isA<RelioMarkClose>(),
+            reason: '${part.id} doit finir par Z');
       }
     });
 
-    test('la courbe descend puis remonte, sans faire d\'aller-retour', () {
-      // Une courbe qui remonte avant son point bas deviendrait un Smiley.
-      bool descend = true;
-      double precedent = RelioMarkGeometry.curveY(0);
-      for (int i = 1; i <= 1000; i++) {
-        final double y = RelioMarkGeometry.curveY(i / 1000);
-        if (descend && y < precedent) descend = false;
-        expect(y, greaterThanOrEqualTo(50 - 1e-9),
-            reason: 'la courbe ne doit jamais remonter au-dessus de la ligne des centres');
-        precedent = y;
-      }
-      expect(descend, isFalse, reason: 'le point bas doit etre atteint');
+    test('le « R » est ajoure : deux contours dans une seule trace', () {
+      final int contours = RelioMarkGeometry.glyph.nodes
+          .whereType<RelioMarkMoveTo>()
+          .length;
+      expect(contours, 2, reason: 'le contre du « R » est un deuxieme contour');
     });
 
-    test('la courbe ne descend pas au-dela de y = 58', () {
-      for (int i = 0; i <= 1000; i++) {
-        expect(RelioMarkGeometry.curveY(i / 1000), lessThanOrEqualTo(56 + 1e-6));
+    test('aucune trace n\'est vide', () {
+      for (final RelioMarkPart part in RelioMarkGeometry.parts) {
+        expect(part.nodes, isNotEmpty, reason: part.id);
       }
-    });
-
-    test('les deux cercles restent les elements dominants', () {
-      // Le diametre du plus grand cercle doit rester nettement superieur a la
-      // profondeur de la courbe : sinon la courbe devient le sujet du mark.
-      expect(RelioMarkGeometry.radiusRight * 2,
-          greaterThan(RelioMarkGeometry.curveDepth * 3));
     });
   });
 
-  group('Variante compacte', () {
-    test('le seuil de bascule est 48 dp', () {
-      expect(RelioMarkGeometry.compactThresholdDp, 48);
+  group('Boite englobante', () {
+    test('elle se lit directement sur les parties', () {
+      double left = double.infinity;
+      double top = double.infinity;
+      double right = double.negativeInfinity;
+      double bottom = double.negativeInfinity;
+
+      void ajouter(RelioMarkPart p) {
+        left = p.box.left < left ? p.box.left : left;
+        top = p.box.top < top ? p.box.top : top;
+        right = p.box.right > right ? p.box.right : right;
+        bottom = p.box.bottom > bottom ? p.box.bottom : bottom;
+      }
+
+      for (final RelioMarkPart p in RelioMarkGeometry.parts) {
+        ajouter(p);
+      }
+
+      // Le point est un disque : sa boite vaut son centre +/- son rayon.
+      ajouter(RelioMarkPart(
+        id: 'dot',
+        role: RelioMarkRole.accent,
+        nodes: const <RelioMarkNode>[],
+        box: (
+          left: RelioMarkGeometry.dot.centerX - RelioMarkGeometry.dot.radius,
+          top: RelioMarkGeometry.dot.centerY - RelioMarkGeometry.dot.radius,
+          right: RelioMarkGeometry.dot.centerX + RelioMarkGeometry.dot.radius,
+          bottom: RelioMarkGeometry.dot.centerY + RelioMarkGeometry.dot.radius,
+        ),
+      ));
+
+      expect(RelioMarkGeometry.boundingBox.left, closeTo(left, 0.002));
+      expect(RelioMarkGeometry.boundingBox.top, closeTo(top, 0.002));
+      expect(RelioMarkGeometry.boundingBox.right, closeTo(right, 0.002));
+      expect(RelioMarkGeometry.boundingBox.bottom, closeTo(bottom, 0.002));
     });
 
-    test('la variante compacte s\'applique sous 48 dp', () {
-      expect(RelioMarkGeometry.strokeForSize(24), RelioMarkGeometry.strokeCompact);
-      expect(RelioMarkGeometry.strokeForSize(47.9), RelioMarkGeometry.strokeCompact);
-      expect(RelioMarkGeometry.strokeForSize(48), RelioMarkGeometry.strokePrimary);
-      expect(RelioMarkGeometry.strokeForSize(512), RelioMarkGeometry.strokePrimary);
+    test('le mark remplit la grille en hauteur et laisse de l\'air en largeur', () {
+      expect(RelioMarkGeometry.inkHeight, closeTo(100, 0.002));
+      expect(RelioMarkGeometry.inkWidth, closeTo(91.194, 0.002));
+      expect(RelioMarkGeometry.inkWidth, lessThan(100));
+      expect(RelioMarkGeometry.inkHeight, greaterThan(RelioMarkGeometry.inkWidth));
     });
 
-    test('la variante compacte ne change QUE le trait', () {
-      // Cercles et courbe sont identiques entre les deux variantes.
-      expect(RelioMarkGeometry.strokeCompact, isNot(RelioMarkGeometry.strokePrimary));
-      expect(RelioMarkGeometry.diameterRight, 28);
-      expect(RelioMarkGeometry.diameterLeft, closeTo(15.4, epsilon));
-      expect(RelioMarkGeometry.curveLowY, closeTo(56, epsilon));
+    test('le mark est centre horizontalement dans la grille', () {
+      expect(RelioMarkGeometry.inkCenterX, closeTo(50, 0.01));
+      expect(
+        100 - RelioMarkGeometry.boundingBox.right,
+        closeTo(RelioMarkGeometry.boundingBox.left, 0.01),
+        reason: 'les marges gauche et droite doivent etre egales',
+      );
     });
 
-    test('le trait reste visible a 24 dp en variante compacte', () {
-      // A 24 dp, un trait de 4 u fait 0.96 px : il disparait. La variante
-      // compacte doit le ramener au-dessus du pixel.
-      final double epaisseurCompacte = RelioMarkGeometry.strokeCompact * 24 / 100;
-      final double epaisseurPrincipale = RelioMarkGeometry.strokePrimary * 24 / 100;
-      expect(epaisseurPrincipale, lessThan(1.0));
-      expect(epaisseurCompacte, greaterThan(1.4));
+    test('aucune partie ne deborde de la grille', () {
+      for (final RelioMarkPart part in RelioMarkGeometry.parts) {
+        expect(part.box.left, greaterThanOrEqualTo(-epsilon), reason: part.id);
+        expect(part.box.top, greaterThanOrEqualTo(-epsilon), reason: part.id);
+        expect(part.box.right, lessThanOrEqualTo(100 + epsilon), reason: part.id);
+        expect(part.box.bottom, lessThanOrEqualTo(100 + epsilon), reason: part.id);
+      }
+      expect(
+        RelioMarkGeometry.dot.centerX + RelioMarkGeometry.dot.radius,
+        lessThanOrEqualTo(100 + epsilon),
+      );
     });
   });
 
-  group('Zone safe Android', () {
+  group('Point d\'accent', () {
+    test('il est en haut a droite, hors de la structure', () {
+      expect(RelioMarkGeometry.dot.centerX, greaterThan(60));
+      expect(RelioMarkGeometry.dot.centerY, lessThan(20));
+      expect(RelioMarkGeometry.dot.radius, greaterThan(4));
+      expect(RelioMarkGeometry.dot.radius, lessThan(10));
+    });
+
+    test('il ne touche pas le « R »', () {
+      final double distance = (RelioMarkGeometry.dot.centerX -
+              RelioMarkGeometry.glyph.box.right)
+          .abs();
+      expect(distance, greaterThan(0));
+    });
+  });
+
+  group('Zone sure Android', () {
     test('grille 108 dp et zone sure 66 dp', () {
       expect(RelioMarkGeometry.androidGridDp, 108);
       expect(RelioMarkGeometry.androidSafeZoneDp, 66);
@@ -165,164 +200,193 @@ void main() {
     test('le mark occupe environ 55 % de la zone sure', () {
       expect(RelioMarkGeometry.androidMarkFill, closeTo(0.55, epsilon));
       expect(RelioMarkGeometry.androidMarkSizeDp, closeTo(36.3, epsilon));
-    });
-
-    test('le mark tient entierement dans la zone sure', () {
       expect(RelioMarkGeometry.androidMarkSizeDp,
           lessThan(RelioMarkGeometry.androidSafeZoneDp));
     });
 
-    test('il reste de la respiration dans la zone sure', () {
-      final double marge =
-          (RelioMarkGeometry.androidSafeZoneDp - RelioMarkGeometry.androidMarkSizeDp) / 2;
-      expect(marge, greaterThan(0));
+    test('la hauteur du mark est plus grande que sa largeur', () {
+      // Le mark n'est pas carre : traiter 36,3 dp comme un cote de carre le
+      // ferait deborder de la zone sure en hauteur.
+      expect(RelioMarkGeometry.androidMarkHeightDp,
+          greaterThan(RelioMarkGeometry.androidMarkWidthDp));
+      expect(RelioMarkGeometry.androidMarkHeightDp,
+          lessThan(RelioMarkGeometry.androidSafeZoneDp));
     });
   });
 
-  group('Boite englobante et respiration', () {
-    test('le mark avec 14 unites de respiration tient dans la grille 100', () {
-      for (final double stroke in [
-        RelioMarkGeometry.strokePrimary,
-        RelioMarkGeometry.strokeCompact,
-      ]) {
-        final double largeur =
-            RelioMarkGeometry.boundingWidth(stroke) + 2 * 14;
-        expect(largeur, lessThanOrEqualTo(100),
-            reason: 'respiration de 14 u impossible avec un trait de $stroke');
-      }
-    });
-
-    test('la boite englobante inclut le debord du trait', () {
-      final box = RelioMarkGeometry.boundingBox(RelioMarkGeometry.strokePrimary);
-      expect(box.left,
-          closeTo(RelioMarkGeometry.centerLeftX - RelioMarkGeometry.radiusLeft - 2, epsilon));
-      expect(box.right,
-          closeTo(RelioMarkGeometry.centerRightX + RelioMarkGeometry.radiusRight + 2, epsilon));
-      expect(box.top,
-          closeTo(RelioMarkGeometry.centerLineY - RelioMarkGeometry.radiusRight - 2, epsilon));
-      expect(box.bottom, closeTo(RelioMarkGeometry.curveLowY + 2, epsilon));
-    });
-
-    test('la variante compacte elargit la boite du seul ecart de trait', () {
-      // Le trait deborde de sa moitie de chaque cote : l'ecart de largeur vaut
-      // exactement (strokeCompact - strokePrimary) = 2.2 u, idem en hauteur.
-      final double ecart =
-          RelioMarkGeometry.strokeCompact - RelioMarkGeometry.strokePrimary;
-      expect(RelioMarkGeometry.boundingWidth(RelioMarkGeometry.strokeCompact) -
-              RelioMarkGeometry.boundingWidth(RelioMarkGeometry.strokePrimary),
-          closeTo(ecart, 1e-9));
-      expect(
-          RelioMarkGeometry.boundingHeight(RelioMarkGeometry.strokeCompact) -
-              RelioMarkGeometry.boundingHeight(RelioMarkGeometry.strokePrimary),
-          closeTo(ecart, 1e-9));
+  group('Icone applicative', () {
+    test('le fond est un carre a coins arrondis, en retrait', () {
+      expect(RelioMarkGeometry.iconCornerRadiusRatio, closeTo(112 / 512, epsilon));
+      expect(RelioMarkGeometry.iconBackgroundInsetRatio, closeTo(12 / 512, epsilon));
+      expect(RelioMarkGeometry.iconCornerRadiusRatio, greaterThan(0.15));
+      expect(RelioMarkGeometry.iconCornerRadiusRatio, lessThan(0.3));
     });
   });
 
   group('SVG generes', () {
-    /// Lit un SVG de `assets/branding/` et echoue si le fichier est absent.
-    String lire(String chemin) {
-      final File f = File(chemin);
-      expect(f.existsSync(), isTrue, reason: 'SVG manquant : $chemin');
-      return f.readAsStringSync();
-    }
-
     test('les couleurs sont en hexadecimal exact, jamais en nom', () {
       final String svg = lire('assets/branding/mark/mark-primary.svg');
       expect(svg, contains('#F56207'));
+      expect(svg, contains('#1F3A6E'));
       expect(svg, isNot(contains('orange')));
+      expect(svg, isNot(contains('indigo')));
       expect(svg, isNot(contains('fill="F56207"')), reason: 'le # est obligatoire');
     });
 
-    test('le SVG principal porte les valeurs de la specification', () {
+    test('le SVG principal porte exactement les traces de la geometrie', () {
       final String svg = lire('assets/branding/mark/mark-primary.svg');
-      expect(svg, contains('cx="66.0"'));
-      expect(svg, contains('cx="24.0"'));
-      expect(svg, contains('r="14.0"'));
-      expect(svg, contains('r="7.7"'));
-      expect(svg, contains('M 31.7,50.0'));
-      expect(svg, contains('52.0,50.0'));
-      expect(svg, contains('stroke-width="4.0"'));
-      expect(svg, contains('stroke-linecap="round"'));
+      for (final RelioMarkPart part in RelioMarkGeometry.parts) {
+        expect(svg, contains('id="${part.id}"'),
+            reason: 'partie ${part.id} absente du SVG');
+        expect(svg, contains('d="${_attendu(part.nodes)}"'),
+            reason: 'trace ${part.id} divergente : le SVG est perime');
+      }
+      expect(
+        svg,
+        contains('cx="${_n(RelioMarkGeometry.dot.centerX)}" '
+            'cy="${_n(RelioMarkGeometry.dot.centerY)}" '
+            'r="${_n(RelioMarkGeometry.dot.radius)}"'),
+      );
     });
 
-    test('le SVG compact porte le trait de 6,2', () {
-      final String svg = lire('assets/branding/mark/mark-compact.svg');
-      expect(svg, contains('stroke-width="6.2"'));
+    test('toutes les declinaisons portent la MEME geometrie', () {
+      final List<String> fichiers = <String>[
+        'mark-primary.svg',
+        'mark-inverse.svg',
+        'mark-mono-black.svg',
+        'mark-mono-white.svg',
+      ];
+      final Set<String> traces = <String>{
+        for (final String f in fichiers)
+          lire('assets/branding/mark/$f')
+              .split('\n')
+              .where((String l) => l.contains('<path') || l.contains('<circle'))
+              .map((String l) => l.replaceAll(RegExp(r'fill="#[0-9A-F]{6}"'), ''))
+              .join(),
+      };
+      expect(traces, hasLength(1),
+          reason: 'les declinaisons ne doivent differer que par la couleur');
     });
 
-    test('le SVG compact conserve la meme geometrie de courbe', () {
-      final String principal = lire('assets/branding/mark/mark-primary.svg');
-      final String compact = lire('assets/branding/mark/mark-compact.svg');
-      // Seule l'epaisseur doit differer : les points de controle sont identiques.
-      String chemin(String s) =>
-          s.substring(s.indexOf('M 31.7'), s.indexOf('" stroke="#'));
-      expect(chemin(compact), chemin(principal));
+    test('la declinaison inverse est blanche sur fond indigo', () {
+      final String svg = lire('assets/branding/mark/mark-inverse.svg');
+      expect(svg, contains('#FFFFFF'));
+      expect(svg, contains('#F56207'));
     });
 
     test('les declinaisons monochrome existent en noir et en blanc', () {
-      expect(lire('assets/branding/mark/mark-primary-mono-black.svg'),
-          contains('#000000'));
-      expect(lire('assets/branding/mark/mark-primary-mono-white.svg'),
-          contains('#FFFFFF'));
+      expect(lire('assets/branding/mark/mark-mono-black.svg'), contains('#000000'));
+      expect(lire('assets/branding/mark/mark-mono-white.svg'), contains('#FFFFFF'));
     });
 
-    test('le point de controle genere vaut bien 37,993 et 45,707', () {
-      final String svg = lire('assets/branding/mark/mark-primary.svg');
-      expect(svg, contains('C 37.993,58.0 45.707,58.0'));
-      // Recoupe avec la geometrie : 31.7 + 20.3 * 0.31 = 37.993
-      expect(RelioMarkGeometry.curveControl1X, closeTo(37.993, 0.001));
-      expect(RelioMarkGeometry.curveControl2X, closeTo(45.707, 0.001));
+    test('le « R » est ajoure dans le SVG : fill-rule evenodd', () {
+      expect(lire('assets/branding/mark/mark-primary.svg'),
+          contains('fill-rule="evenodd"'));
     });
 
-    test('le SVG ne contient aucun path approximatif', () {
-      // Un seul segment de courbe, deux cercles : aucune suite de coordonnees
-      // « au Feeling ».
+    test('le SVG ne contient que les commandes prevues', () {
       final String svg = lire('assets/branding/mark/mark-primary.svg');
-      final int commands = 'C '.allMatches(svg).length;
-      expect(commands, 1, reason: 'une seule cubique est attendue');
-      expect('L '.allMatches(svg).length, 0, reason: 'pas de segment lineaire');
-      expect('Q '.allMatches(svg).length, 0, reason: 'pas de quadrique');
+      // Aucune cubique, aucune polyligne : le mark est decrit par M, L, Q, Z.
+      expect('C'.allMatches(svg), isEmpty, reason: 'pas de cubique attendue');
+      expect('H'.allMatches(svg), isEmpty, reason: 'H est converti en L');
+      expect('V'.allMatches(svg), isEmpty, reason: 'V est converti en L');
     });
 
-    test('le viewBox correspond a la boite englobante', () {
+    test('le viewBox est la grille de reference', () {
       final String svg = lire('assets/branding/mark/mark-primary.svg');
-      final double largeur = RelioMarkGeometry.boundingWidth(4);
-      final double hauteur = RelioMarkGeometry.boundingHeight(4);
-      expect(svg, contains('viewBox="0 0 ${largeur.toStringAsFixed(1)} ${hauteur.toStringAsFixed(1)}"'));
+      expect(svg, contains('viewBox="0 0 100.0 100.0"'));
+    });
+
+    test('l\'icone applicative est generee : fond indigo a coins arrondis', () {
+      final String svg = lire('assets/branding/icon/relio-app-icon.svg');
+      expect(svg, contains('viewBox="0 0 512.0 512.0"'));
+      expect(svg, contains('rx="112.0"'));
+      expect(svg, contains('fill="#1F3A6E"'));
+    });
+
+    test('les lockups existent et ne contiennent que la geometrie', () {
+      for (final String f in <String>[
+        'lockup-horizontal.svg',
+        'lockup-vertical.svg',
+        'lockup-horizontal-mono-black.svg',
+        'lockup-horizontal-mono-white.svg',
+        'lockup-vertical-mono-black.svg',
+        'lockup-vertical-mono-white.svg',
+      ]) {
+        final String svg = lire('assets/branding/lockup/$f');
+        expect(svg, contains('id="${RelioMarkGeometry.glyph.id}"'), reason: f);
+        expect(svg, isNot(contains('<text')),
+            reason: 'le mot est pose par l\'application, pas dans le SVG ($f)');
+      }
+    });
+
+    test('le lockup cite la signature qu\'il decrit', () {
+      expect(lire('assets/branding/lockup/lockup-horizontal.svg'),
+          contains(RelioSignature.text));
     });
   });
 
-  group('Robustesse de la mise a l\'echelle', () {
-    test('la courbe reste lisible a toutes les tailles exportees', () {
-      for (final double dp in [24, 48, 96, 192, 512, 1024]) {
-        final double trait = RelioMarkGeometry.strokeForSize(dp) * dp / 100;
-        if (dp < RelioMarkGeometry.compactThresholdDp) {
-          expect(trait, greaterThan(1.0),
-              reason: 'trait invisible a $dp dp');
-        } else {
-          expect(trait, greaterThan(1.5), reason: 'trait trop fin a $dp dp');
-        }
-      }
+  group('Le generateur et la couche Flutter ne se divisent pas', () {
+    test('les couleurs hexadecimales du generateur sont celles de RelioBrand', () {
+      final String gen = File('tool/gen_branding.dart').readAsStringSync();
+      String hexOf(Color c) =>
+          '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
+
+      expect(gen, contains("cOrange = '${hexOf(RelioBrand.mark)}'"));
+      expect(gen, contains("cIndigo = '${hexOf(RelioBrand.wordmark)}'"));
+      expect(gen, contains("cBlack = '${hexOf(RelioBrand.monoBlack)}'"));
+      expect(gen, contains("cWhite = '${hexOf(RelioBrand.monoWhite)}'"));
     });
 
-    test('la proportion du mark ne bouge que du fait du trait', () {
-      // La boite englobant le trait, elle grossit des deux cotes : le ratio
-      // hauteur/largeur evolue legerement entre les variantes. Ce qui doit
-      // rester strictement constant, ce sont les CERCLES et la COURBE, dont
-      // depend la lecture du mark. C'est cela que ce test verrouille.
-      for (final double _ in [4.0, 6.2]) {
-        expect(RelioMarkGeometry.radiusRight * 2, 28);
-        expect(RelioMarkGeometry.radiusLeft * 2, closeTo(15.4, 1e-9));
-        expect(RelioMarkGeometry.curveDepth, closeTo(6, 1e-9));
-        expect(RelioMarkGeometry.curveSpan, closeTo(20.3, 1e-9));
-      }
-      // Et l'ecart de ratio reste faible : le mark ne se deforme pas.
-      final double rapportPrincipal =
-          RelioMarkGeometry.boundingHeight(4) / RelioMarkGeometry.boundingWidth(4);
-      final double rapportCompact =
-          RelioMarkGeometry.boundingHeight(6.2) /
-              RelioMarkGeometry.boundingWidth(6.2);
-      expect((rapportCompact - rapportPrincipal).abs(), lessThan(0.03));
+    test('les ecarts de lockup sont declares a l\'identique des deux cotes', () {
+      final String gen = File('tool/gen_branding.dart').readAsStringSync();
+      // Le generateur ne peut pas importer la couche Flutter : il re-declare les
+      // ecarts. On relit donc sa declaration et on compare les VALEURS, sans
+      // imposer la forme textuelle du litteral.
+      double? generateur(String nom) => RegExp(
+            'const double $nom = ([0-9.]+);',
+          ).firstMatch(gen)?.group(1) !=
+          null
+          ? double.parse(RegExp('const double $nom = ([0-9.]+);').firstMatch(gen)!.group(1)!)
+          : null;
+
+      expect(generateur('relioLockupGapHorizontal'),
+          closeTo(RelioBrand.horizontalGap, epsilon));
+      expect(generateur('relioLockupGapVertical'),
+          closeTo(RelioBrand.verticalGap, epsilon));
+
+      // Les deux rapports sont ecrits comme des fractions de la specification
+      // (31/176 pour la signature, mesuree dans le logo de reference). On
+      // compare donc la fraction elle-meme, pas sa valeur formelle.
+      expect(RelioBrand.signatureCapRatio, closeTo(31 / 176, 1e-12));
+      expect(RelioBrand.signatureGapRatio, closeTo(0.37, 1e-12));
+      expect(gen, contains('const double relioSignatureRatio = 31 / 176;'));
+      expect(gen, contains('const double relioSignatureGapRatioText = 0.37;'));
+
+      expect(RelioBrand.horizontalGap, kHorizontalGap);
+      expect(RelioBrand.verticalGap, kVerticalGap);
+    });
+
+    test('le painter traduit bien toutes les especes de noeuds', () {
+      // Si une espece de noeud nouvelle etait ajoutee a la geometrie sans etre
+      // traitee, le rendu s'arreterait au dernier noeud connu. On verifie donc
+      // que la `Path` construite couvre toute la trace.
+      final Path path = relioMarkPath(RelioMarkGeometry.glyph.nodes);
+      expect(path.computeMetrics().length, greaterThan(1),
+          reason: 'le « R » doit produire deux contours');
+      expect(path.contains(Offset(9.748, 50)), isTrue);
+      expect(path.contains(Offset(83.019, 96.541)), isTrue);
+    });
+
+    test('les declinaisons ne different que par la couleur', () {
+      expect(relioMarkColors(RelioMarkVariant.onLight).base, RelioBrand.wordmark);
+      expect(relioMarkColors(RelioMarkVariant.onLight).accent, RelioBrand.mark);
+      expect(relioMarkColors(RelioMarkVariant.onIndigo).base, RelioBrand.monoWhite);
+      expect(relioMarkColors(RelioMarkVariant.onIndigo).accent, RelioBrand.mark);
+      expect(relioMarkColors(RelioMarkVariant.monoBlack).base,
+          relioMarkColors(RelioMarkVariant.monoBlack).accent);
+      expect(relioMarkColors(RelioMarkVariant.monoWhite).base,
+          relioMarkColors(RelioMarkVariant.monoWhite).accent);
     });
   });
 }

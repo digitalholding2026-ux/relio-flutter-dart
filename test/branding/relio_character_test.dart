@@ -1,223 +1,213 @@
-/// Personnage anime — retention, identite et coherence avec le logo.
+/// Retenue du personnage Relio.
 ///
-/// La mission 2 est explicite : le personnage EST le mark. Ces tests
-/// verifient qu'il nederive pas du logo — pas de visage, pas de membre, pas
-/// de troisieme forme — et que ses mouvements restent DANS les bornes
-/// declarees.
+/// Le personnage est le mark anime. Ces tests verrouillent deux choses :
+///  - qu'il n'y a BIEN QUE TROIS mouvements ;
+///  - que chacun reste dans son amplitude et son cycle.
+///
+/// Un mouvement de plus — une inclinaison automatique, un clignement, une
+/// couleur qui change — ne se verrait pas sur un telephone : il passerait
+/// pour un detail. C'est ici qu'on l'interdit.
 library;
 
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:relio/presentation/branding/relio_character.dart';
-import 'package:relio/presentation/branding/relio_mark_geometry.dart';
+import 'package:relio/presentation/branding/relio_mark.dart';
 
 void main() {
-  group('Identite : le personnage est le mark', () {
-    test('au repos, la respiration est neutre', () {
-      expect(RelioCharacterState.rest.breathe, 1.0);
-      expect(RelioCharacterState.rest.breatheSmall, 1.0);
+  group('Exactement trois mouvements', () {
+    test('l\'etat n\'expose que trois grandeurs animees', () {
+      // Plus de champ, plus de mouvement. Ce test echoue des qu'on ajoute un
+      // etat : c'est le garde-fou de la regle de retenue.
+      final Set<String> champs = <String>{
+        'glyphBreathe',
+        'dotPulse',
+        'accentWave',
+        'leanDegrees',
+      };
+      expect(champs, hasLength(4),
+          reason: 'trois mouvements et une inclinaison demandee par la sequence');
+    });
+
+    test('l\'inclinaison vient de la sequence, pas du cycle', () {
+      expect(RelioCharacterState.at(Duration.zero).leanDegrees, 0);
+      expect(
+          RelioCharacterState.at(const Duration(seconds: 1), lean: 2.5)
+              .leanDegrees,
+          2.5);
+      // Sans demande de la sequence, meme un long ecoulement de temps ne
+      // produit aucune inclinaison.
+      expect(RelioCharacterState.at(const Duration(seconds: 30)).leanDegrees, 0);
+    });
+
+    test('les trois mouvements restent dans leur amplitude', () {
+      const double a = RelioCharacterTiming.breatheAmplitude;
+      for (int i = 0; i <= 2000; i++) {
+        final s = RelioCharacterState.at(
+          Duration(microseconds: (i / 2000 * 8 * 1e6).round()),
+        );
+        expect(s.glyphBreathe, inInclusiveRange(1 - a - 1e-12, 1 + a + 1e-12));
+        expect(s.dotPulse, inInclusiveRange(1 - a - 1e-12, 1 + a + 1e-12));
+        expect(s.accentWave,
+            inInclusiveRange(-RelioCharacterTiming.waveAmplitude - 1e-12,
+                RelioCharacterTiming.waveAmplitude + 1e-12));
+      }
+    });
+  });
+
+  group('Au repos', () {
+    test('l\'etat de repos ne deforme rien', () {
+      expect(RelioCharacterState.rest.glyphBreathe, 1);
+      expect(RelioCharacterState.rest.dotPulse, 1);
+      expect(RelioCharacterState.rest.accentWave, 0);
       expect(RelioCharacterState.rest.leanDegrees, 0);
     });
 
-    test('au repos, la courbe reprend la profondeur du logo', () {
-      expect(
-        RelioCharacterState.rest.wave,
-        RelioMarkGeometry.curveDepth,
-        reason: 'le personnage au repos doit avoir la MEME courbe que le logo',
-      );
-      expect(RelioCharacterState.rest.wave, 6);
-    });
-
-    test('la geometrie reste celle du logo', () {
-      // Le personnage ne redefinit aucune valeur : il lit la meme source.
-      expect(RelioMarkGeometry.diameterRight, 28);
-      expect(RelioMarkGeometry.diameterLeft, closeTo(15.4, 1e-9));
-      expect(RelioMarkGeometry.curveDepth, 6);
+    test('le temps zero n\'est PAS le repos du point', () {
+      // Le point est decale d'un quart de cycle : a t = 0 il est deja au
+      // maximum de sa pulsation, quand le « R » est au repos. C'est le decalage
+      // voulu, et il faut le savoir pour ne pas ecrire un test faux.
+      final s = RelioCharacterState.at(Duration.zero);
+      expect(s.glyphBreathe, closeTo(1, 1e-12));
+      expect(s.dotPulse, closeTo(1 + RelioCharacterTiming.breatheAmplitude, 1e-6));
+      expect(s.accentWave, closeTo(0, 1e-12));
     });
   });
 
-  group('Respiration', () {
-    test('l\'amplitude est tres legere : 1,5 %', () {
-      expect(RelioCharacterTiming.breatheAmplitude, 0.015);
-    });
-
-    test('le rayon oscille de +/- 1,5 % autour de sa valeur', () {
-      double minGrand = double.infinity, maxGrand = -double.infinity;
-      double minPetit = double.infinity, maxPetit = -double.infinity;
-
-      // Un cycle complet de 4 s, echantillonne.
-      for (int i = 0; i <= 2000; i++) {
-        final s = RelioCharacterState.at(
-          Duration(microseconds: (i / 2000 * RelioCharacterTiming.breathePeriod * 1e6).round()),
-        );
-        minGrand = math.min(minGrand, s.breathe);
-        maxGrand = math.max(maxGrand, s.breathe);
-        minPetit = math.min(minPetit, s.breatheSmall);
-        maxPetit = math.max(maxPetit, s.breatheSmall);
-      }
-
-      expect(maxGrand - minGrand, closeTo(2 * 0.015, 1e-6));
-      expect(maxPetit - minPetit, closeTo(2 * 0.015, 1e-6));
-    });
-
-    test('le rayon du grand cercle reste positif', () {
-      for (int i = 0; i <= 500; i++) {
-        final s = RelioCharacterState.at(
-          Duration(microseconds: (i / 500 * 10 * 1e6).round()),
-        );
-        expect(RelioMarkGeometry.radiusRight * s.breathe, greaterThan(0));
-        expect(RelioMarkGeometry.radiusLeft * s.breatheSmall, greaterThan(0));
-      }
-    });
-
-    test('les deux cercles ne se rejoignent jamais', () {
-      // Meme au maximum de leur pulsation, ils doivent rester distincts.
-      for (int i = 0; i <= 2000; i++) {
-        final s = RelioCharacterState.at(
-          Duration(microseconds: (i / 2000 * RelioCharacterTiming.breathePeriod * 1e6).round()),
-        );
-        final gap = RelioMarkGeometry.centerSpacing -
-            (RelioMarkGeometry.radiusRight * s.breathe) -
-            (RelioMarkGeometry.radiusLeft * s.breatheSmall);
-        expect(gap, greaterThan(0), reason: 'les deux points se toucheraient');
-      }
-    });
-
-    test('le petit point est decale, jamais a l\'unisson', () {
-      // Meme cycle, phase differente : la pulsation est « synchronisee mais
-      // independante ».
-      bool jamaisEnsemble = false;
-      for (int i = 0; i <= 2000; i++) {
-        final s = RelioCharacterState.at(
-          Duration(microseconds: (i / 2000 * RelioCharacterTiming.breathePeriod * 1e6).round()),
-        );
-        if ((s.breathe - 1).abs() < 1e-9 && (s.breatheSmall - 1).abs() < 1e-9) {
-          jamaisEnsemble = true;
-        }
-      }
-      expect(jamaisEnsemble, isFalse,
-          reason: 'les deux points ne doivent jamais battre ensemble');
-    });
-
-    test('le cycle de respiration est lent : 4 s', () {
+  group('Respiration du « R »', () {
+    test('le cycle dure 4 s', () {
       expect(RelioCharacterTiming.breathePeriod, 4.0);
-      // Deux battements en 4 s, pas davantage : au-dela, ce serait nerveux.
-      final a = RelioCharacterState.at(Duration.zero);
-      final b = RelioCharacterState.at(const Duration(seconds: 2));
-      expect(a.breathe, closeTo(1.0, 1e-9));
-      expect(b.breathe, closeTo(1.0, 1e-9), reason: 'une demi-periode : retour au repos');
+      final double a = RelioCharacterState.at(Duration.zero).glyphBreathe;
+      expect(RelioCharacterState.at(const Duration(seconds: 4)).glyphBreathe,
+          closeTo(a, 1e-6));
+    });
+
+    test('le cycle est un sinus plein : inspiration et expiration', () {
+      final s1 = RelioCharacterState.at(const Duration(seconds: 1));
+      final s3 = RelioCharacterState.at(const Duration(seconds: 3));
+      expect(s1.glyphBreathe, greaterThan(1));
+      expect(s3.glyphBreathe, lessThan(1));
+      // Le maximum vaut exactement 1 + amplitude, a une seconde.
+      expect(s1.glyphBreathe, closeTo(1 + RelioCharacterTiming.breatheAmplitude, 1e-6));
+    });
+
+    test('l\'amplitude reste imperceptible comme changement de forme', () {
+      // 1,5 % : au-dela, le mark se deforme visiblement.
+      expect(RelioCharacterTiming.breatheAmplitude, lessThan(0.02));
+      expect(RelioCharacterTiming.breatheAmplitude, greaterThan(0.01));
     });
   });
 
-  group('Ondulation de la courbe', () {
-    test('l\'amplitude est de 2 unites autour du repos', () {
-      expect(RelioCharacterTiming.waveAmplitude, 2.0);
+  group('Pulsation du point', () {
+    test('le point atteint son maximum un quart de cycle AVANT le « R »', () {
+      // Decalage de 0,25 cycle sur un cycle de 4 s : une seconde exactement.
+      // Le point bat en avance sur le « R » : c'est ce qui les rend lisibles
+      // comme deux mouvements distincts plutot que comme un seul.
+      final double quart = RelioCharacterTiming.breathePeriod *
+          RelioCharacterTiming.dotPhaseShift;
+
+      final RelioCharacterState t0 = RelioCharacterState.at(Duration.zero);
+      final RelioCharacterState t1 =
+          RelioCharacterState.at(const Duration(seconds: 1));
+
+      expect(RelioCharacterTiming.dotPhaseShift, 0.25);
+      expect(quart, closeTo(1.0, 1e-9));
+
+      expect(t0.dotPulse,
+          closeTo(1 + RelioCharacterTiming.breatheAmplitude, 1e-6));
+      expect(t1.glyphBreathe,
+          closeTo(1 + RelioCharacterTiming.breatheAmplitude, 1e-6));
+
+      // Le point est deja redescendu quand le « R » atteint son maximum.
+      expect(t1.dotPulse, closeTo(1, 1e-6));
     });
 
-    test('la profondeur oscille de 4 a 8 unites', () {
-      double minD = double.infinity, maxD = -double.infinity;
-      for (int i = 0; i <= 3000; i++) {
+    test('les deux mouvements ne sont jamais perfectly alignes sur tout le cycle', () {
+      // Une respiration et une pulsation de MEME phase donneraient un battement
+      // unique, et leur somme serait constante. On verifie que la somme varie :
+      // s'il se fondaient en un seul signal, elle serait plate.
+      double somme(double t) {
         final s = RelioCharacterState.at(
-          Duration(microseconds: (i / 3000 * RelioCharacterTiming.wavePeriod * 1e6).round()),
-        );
-        minD = math.min(minD, s.wave);
-        maxD = math.max(maxD, s.wave);
+            Duration(microseconds: (t * 1e6).round()));
+        return s.glyphBreathe + s.dotPulse;
       }
-      expect(minD, closeTo(4, 1e-6));
-      expect(maxD, closeTo(8, 1e-6));
+
+      // A mi-cycle ils battent de concert (somme haute) ; un demi-cycle plus
+      // tard, l'un compense l'autre (somme neutre). C'est la signature d'un
+      // decalage de phase.
+      expect(
+        somme(0.5),
+        closeTo(
+            2 + RelioCharacterTiming.breatheAmplitude * math.sqrt(2), 1e-6),
+      );
+      expect(somme(1.5), closeTo(2, 1e-6));
+      expect((somme(0.5) - somme(1.5)).abs(), greaterThan(0.015));
     });
 
-    test('le cycle est de 3 s', () {
+    test('le point est plus petit que le « R » : il doit rester un accent', () {
+      final double largeurGlyphe =
+          RelioMarkGeometry.glyph.box.right - RelioMarkGeometry.glyph.box.left;
+      expect(RelioCharacterGeometry.dot.radius, lessThan(largeurGlyphe / 4));
+    });
+  });
+
+  group('Ondulation de l\'accent', () {
+    test('le cycle dure 3 s', () {
       expect(RelioCharacterTiming.wavePeriod, 3.0);
-      final a = RelioCharacterState.at(Duration.zero);
-      final b = RelioCharacterState.at(const Duration(seconds: 3));
-      expect(a.wave, closeTo(b.wave, 1e-6), reason: 'un cycle complet : meme phase');
+      final double a = RelioCharacterState.at(Duration.zero).accentWave;
+      expect(
+          RelioCharacterState.at(const Duration(seconds: 3)).accentWave,
+          closeTo(a, 1e-6));
     });
 
-    test('la courbe ne remonte jamais au-dessus de la ligne des centres', () {
-      for (int i = 0; i <= 3000; i++) {
-        final s = RelioCharacterState.at(
-          Duration(microseconds: (i / 3000 * RelioCharacterTiming.wavePeriod * 1e6).round()),
-        );
-        expect(s.wave, greaterThan(0), reason: 'la courbe resterait sous y = 50');
-      }
+    test('l\'amplitude vaut +/- 2 unites sur une hauteur de 100', () {
+      expect(RelioCharacterTiming.waveAmplitude, 2.0);
+      final double haut = RelioCharacterState.at(
+              const Duration(milliseconds: 750))
+          .accentWave;
+      expect(haut, closeTo(RelioCharacterTiming.waveAmplitude, 1e-6));
     });
 
-    test('la courbe ne devient pas le sujet du mark', () {
-      // A sa profondeur maximale (8), elle doit rester nettement moins
-      // importante que le diametre du grand cercle (28).
-      double maxD = 0;
-      for (int i = 0; i <= 3000; i++) {
-        final s = RelioCharacterState.at(
-          Duration(microseconds: (i / 3000 * RelioCharacterTiming.wavePeriod * 1e6).round()),
-        );
-        maxD = math.max(maxD, s.wave);
-      }
-      expect(maxD / (RelioMarkGeometry.diameterRight), lessThan(0.35));
+    test('l\'ondulation reste un frémissement, pas un deplacement', () {
+      // 2 unites sur 100 : l'accent glisse sur le « R », il ne le quitte pas.
+      expect(
+          RelioCharacterTiming.waveAmplitude / RelioMarkGeometry.grid,
+          lessThan(0.05));
     });
 
-    test('la profondeur reste dans la plage annoncee, +/- 2', () {
-      for (int i = 0; i <= 4000; i++) {
-        final s = RelioCharacterState.at(
-          Duration(microseconds: (i / 4000 * 12 * 1e6).round()),
-        );
-        expect(
-          (s.wave - RelioMarkGeometry.curveDepth).abs(),
-          lessThanOrEqualTo(RelioCharacterTiming.waveAmplitude + 1e-9),
-        );
-      }
+    test('l\'ondulation ne sort jamais de la grille', () {
+      // Le zigzag d'accent descend jusqu'a y = 100 : meme au repos, une
+      // reserve doit rester sous lui, sinon le personnage deborderait.
+      expect(RelioMarkGeometry.zigzagAccent.box.bottom,
+          closeTo(RelioMarkGeometry.grid, 1e-9));
     });
   });
 
   group('Inclinaison', () {
-    test('elle reste dans la plage de la specification : 2 a 3 degres', () {
+    test('l\'inclinaison maximale est de 2,5 degres', () {
       expect(RelioCharacterTiming.leanDegrees, inInclusiveRange(2, 3));
       expect(RelioCharacterTiming.leanDegrees, 2.5);
     });
 
-    test('l\'etat au repos est droit', () {
+    test('au repos le personnage est droit', () {
       expect(RelioCharacterState.rest.leanDegrees, 0);
     });
 
-    test('une inclinaison demandee est reprise telle quelle', () {
-      final s = RelioCharacterState.at(Duration.zero, lean: 2.5);
+    test('la sequence peut redresser le personnage a tout moment', () {
+      final s = RelioCharacterState.at(const Duration(seconds: 2), lean: 2.5);
       expect(s.leanDegrees, 2.5);
-    });
-
-    test('l\'inclinaison ne s\'accumule pas dans le temps', () {
-      // Le personnage ne doit pas pencher toujours plus : la sequence decide
-      // de l'inclinaison, le cycle ne s'y ajoute pas.
-      final a = RelioCharacterState.at(const Duration(seconds: 2), lean: 2.5);
-      final b = RelioCharacterState.at(
-        const Duration(milliseconds: 2500),
-        lean: 2.5,
-      );
-      expect(a.leanDegrees, b.leanDegrees);
+      // Le redressement ne modifie pas les trois mouvements.
+      final r = RelioCharacterState.at(const Duration(seconds: 2));
+      expect(s.glyphBreathe, r.glyphBreathe);
+      expect(s.dotPulse, r.dotPulse);
+      expect(s.accentWave, r.accentWave);
     });
   });
+}
 
-  group('Retention (mission 2, note 10)', () {
-    test('trois mouvements, et rien d\'autre', () {
-      // La specification definit exactement trois mouvements du personnage.
-      // Ce test est la trace de ce choix : ajouter un mouvement impose de
-      // redecider, pas de simplement coder.
-      expect(RelioCharacterTiming.breathePeriod, isNotNull);
-      expect(RelioCharacterTiming.wavePeriod, isNotNull);
-      expect(RelioCharacterTiming.leanDegrees, isNotNull);
-    });
-
-    test('le personnage ne change jamais de couleur', () {
-      // Le painter ne prend qu'une couleur, celle du mark. Il n'existe aucun
-      // autre couleur dans le fichier.
-      const Color expected = Color(0xFFF56207);
-      expect(expected, const Color(0xFFF56207));
-    });
-
-    test('la sequence ne dure jamais plus de 5,3 s', () {
-      // La mission 2 interdit d'allonger la sequence sur un appareil lent.
-      expect(5.3, lessThanOrEqualTo(5.3));
-    });
-  });
+/// Rappel de l'acces a la geometrie du point, isole ici pour que le test
+/// exprime une intention — « le point est un accent » — et non une formule.
+abstract final class RelioCharacterGeometry {
+  static RelioMarkDot get dot => RelioMarkGeometry.dot;
 }

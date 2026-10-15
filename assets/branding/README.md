@@ -7,13 +7,22 @@ valeur n'y est ecrite a la main.
 
 | Fichier | Role |
 |---|---|
-| `lib/presentation/branding/relio_mark_geometry.dart` | Geometrie pure, en Dart seul |
-| `lib/presentation/branding/relio_mark.dart` | Couleurs, `RelioMarkPainter`, `RelioWordmark` |
+| `lib/presentation/branding/relio_mark_geometry.dart` | Traces du mark, en Dart seul |
+| `lib/presentation/branding/relio_mark.dart` | Couleurs, `RelioMarkPainter`, `RelioWordmark`, `RelioSignature` |
 | `lib/presentation/branding/relio_lockup.dart` | Dispositions horizontale et verticale |
 
-Le SVG et le rendu a l'ecran lisent **les memes constantes**. Les modifier a la
-main dans un SVG serait les desynchroniser silencieusement : c'est
-interdit.
+La geometrie est decrite comme une suite de **traces remplies** (`M`, `L`,
+`Q`, `Z`) et un disque — le vocabulaire du SVG. Le generateur restitue ces
+commandes telles quelles, et le painter Flutter les traduit en `Path`. Le SVG
+et le rendu a l'ecran lisent donc **la meme definition**, et non deux
+reconstitutions d'une meme intention.
+
+## Origine des valeurs
+
+Les traces viennent de la specification livree, versionnee dans
+[`docs/brand/`](../docs/brand/README.md). `test/branding/brand_spec_test.dart`
+rejoue l'import depuis ces fichiers et **echoue des que les constantes ont
+derive**. Une retouche manuelle de la geometrie ne peut pas passer.
 
 ## Regenerer
 
@@ -24,91 +33,75 @@ flutter test tool/render_branding_test.dart   # les PNG (launcher, splash)
 
 ## Geometrie
 
-Grille de reference 100 x 100, mark centre, axe y vers le bas.
+Grille de reference 100 x 100, mark centre, axe y vers le bas. Encre de
+91,194 x 100 unites.
 
-| Element | Valeur |
-|---|---|
-| Cercle droit | O 28, centre (66, 50) |
-| Cercle gauche | O 15,4, centre (24, 50) |
-| Espacement des centres | 42 |
-| Courbe — depart | (31,7, 50), bord droit du cercle gauche |
-| Courbe — arrivee | (52, 50), bord gauche du cercle droit |
-| Courbe — point bas | (41,85, 56) |
-| Courbe — profondeur | 6 sous la ligne des centres |
-| Courbe — portee | 20,3 (rapport 0,296 ~= 0,30) |
-| Extremites | arrondies (`stroke-linecap: round`) |
-
-La courbe est une cubique de Bezier unique, symetrique par construction. Les
-points de controle sont derives : decalage vertical `6 / 0.75 = 8`, recul
-horizontal `0.31` de la portee.
-
-**Profondeur 6, et non 16.** A 16, la courbe devenait le sujet du mark ;
-a 6, les deux cercles restent les points dominants et la courbe ne fait que
-les relier. `test/branding/mark_geometry_test.dart` verrouille ce choix et
-refuse un depassement de y = 58.
-
-## Variante compacte
-
-| Variante | Trait | Usage |
+| Partie | Role | Boite englobante |
 |---|---|---|
-| Principale | 4 u | splash, en-tete, ecrans >= 48 dp |
-| Compacte | 6,2 u | launcher, favicon, tout rendu <= 48 dp |
+| `glyph` — le « R » | base | (9,748 ; 0) → (83,019 ; 96,541) |
+| `zigzag-accent` | accent | (4,403 ; 60,692) → (59,748 ; 100) |
+| `zigzag-secondary` | base | (48,428 ; 33,019) → (95,597 ; 69,497) |
+| `dot` — disque | accent | centre (89,308 ; 8,805), r = 6,289 |
 
-A 24 dp, le trait de 4 u ne fait que **0,96 px** et disparait. Ce n'est pas un
-probleme de courbe mais un probleme de trait : on epaissit pour compenser la
-perte de definition optique. Cercles et courbe sont **inchanges** — seul le
-trait differe, ce que le test verifie explicitement.
+Le « R » est **ajoure** : son contre est un second contour, pas un trou
+booleen. Tous les remplissages sont donc en `evenOdd`.
 
-Seuil de bascule : 48 dp.
+Il n'y a **plus de trait ni de variante compacte** : le mark est plein, donc
+rien ne s'efface quand la taille diminue. Une seule geometrie sert du splash
+a l'icone de 24 px.
+
+## Declinaisons chromatiques
+
+Le mark porte deux couleurs. La declinaison depend du fond, pas du mark seul.
+
+| Variante | Base | Accent | Usage |
+|---|---|---|---|
+| `onLight` | indigo | orange | splash, en-tete, ecrans clairs |
+| `onIndigo` | blanc | orange | icone applicative |
+| `monoBlack` | noir | noir | impression sur fond clair |
+| `monoWhite` | blanc | blanc | impression sur fond sombre |
+
+## Wordmark et signature
+
+Le mot **« Relio »** et la signature **« Les maths, c'est ton terrain ! »**
+sont poses par l'application en Inter SemiBold 600. Les glyphes ne sont pas
+embarques dans les SVG : la police l'est deja.
+
+| Rapport | Valeur | Origine |
+|---|---|---|
+| Hauteur du mark / hauteur de capitale du mot | 1,93 | logo de reference |
+| Hauteur de capitale de la signature / celle du mot | 31/176 | corps 176 et 31 |
+| Ecartement mot ↔ signature | 0,37 | ligne de base du mot a y = 218 |
 
 ## Launcher Android
 
-Grille adaptative 108 dp, zone sure 66 dp.
-
-Le mark occupe **55 % de la zone sure**, soit 36,3 dp. Il n'est donc pas centre
-bord a bord dans la zone sure : il laisse de la respiration. C'est une
-exception assumee a la regle des 14 unites, imposee par les masques de forme
-des constructeurs. La regle des 14 unites reste valable partout ailleurs
-(splash, en-tete, impression).
-
-Quatre couches sont fournies par densite :
+Grille adaptative 108 dp, zone sure 66 dp. Le mark occupe **55 % de la zone
+sure**, soit 36,3 dp de large et 39,8 dp de haut : il n'est pas carre, et le
+traiter comme tel le ferait deborder en hauteur.
 
 | Couche | Contenu |
 |---|---|
-| `ic_launcher.png` / `_round` | icone legacy, mark orange sur blanc |
-| `ic_launcher_background` | aplat **blanc** plein |
-| `ic_launcher_foreground` | mark orange seul, sur transparent |
+| `ic_launcher.png` / `_round` | icone legacy : fond indigo, mark en declinaison claire |
+| `ic_launcher_background` | aplat **indigo** plein |
+| `ic_launcher_foreground` | mark blanc et orange, sur transparent |
 | `ic_launcher_monochrome` | mark noir, pour les icones themees Android 13+ |
 
-La couche monochrome ne porte **que** le mark : c'est la seule forme qui
-survit a une teinte appliquee par le systeme.
+Le fond est l'**indigo** de la marque, pas l'orange de l'accent : un fond de
+la couleur d'une des parties du mark la rendrait illisible. La couche
+monochrome ne porte que le mark, en noir : c'est la seule forme qui survit a
+une teinte appliquee par le systeme.
 
-La couche **background est blanche**, jamais orange. Un fond de la couleur du
-mark le rend illisible, et le lanceur n'affiche qu'un carre orange uni — c'est
-exactement le defaut que ce reglage corrige.
+### Icone applicative
 
-### Deux pieges de dimensionnement
-
-L'icone est le seul rendu ou ces deux subtilites apparaissent. Elles sont
-codees dans `RelioMarkGeometry` et verifiees par
-`test/branding/launcher_icon_test.dart`.
-
-**La boite englobante surestime l'encre de 8 %.** Les extremites gauche et
-droite du mark ne sont *pas* definies par le debord du trait : elles le sont
-par les **cercles pleins**. La capacite arrondie ne deborde qu'aux extremites
-de la courbe, tres a l'interieur. Dimensionne sur la boite, l'icone sort trop
-petite.
-
-**L'encre n'est pas centree dans la boite.** En haut, le trait deborde au-dessus
-du cercle ; en bas, la courbe descend seule. Le centre optique est donc 2,45 u
-au-dessus du centre geometrique. Centre sur la boite, le mark parait descendu
-dans le masque du lanceur.
+`icon/relio-app-icon.svg` est **genere** lui aussi : fond a coins arrondis
+(r = 112/512) en retrait de 12/512, mark centre. Le fond ne se peint pas a la
+main, sinon il deriverait du mark.
 
 ## Contenu
 
 ```
-mark/       mark-primary, -compact, et variantes mono noir/blanc
-wordmark/   (la police est embarquee ; le mot est pose par l'application)
+mark/       mark-primary, mark-inverse, et variantes mono noir/blanc
+icon/       relio-app-icon.svg, apercu plat de l'icone applicative
 lockup/     lockup-horizontal, -vertical, et variantes mono
 launcher/   presence-<taille>.png, sobre-<taille>.png, mark-<taille>.png,
             ios-1024.png, splash-<taille>.png, adaptive-*.png
@@ -123,6 +116,7 @@ applique lui-meme.
 ## Integration dans l'application
 
 - **En-tete Accueil** : lockup horizontal (`RelioLockupHorizontal`).
+- **Ecran d'entree** : personnage anime (`RelioCharacter`), mark sur fond clair.
 - **Splash Android** : `drawable/launch_background.xml` et sa variante `v21`,
   qui centrent `splash_logo.png` sur fond blanc.
 
@@ -133,19 +127,23 @@ Android retire la fenetre des que Flutter dessine sa premiere frame.
 
 | Role | Valeur |
 |---|---|
-| Mark | `#F56207` |
-| Wordmark | `#1F3A6E` |
+| Accent (zigzag, point) | `#F56207` |
+| Base (« R », second zigzag, mot, signature) | `#1F3A6E` |
+| Fond d'icone et de splash sombre | `#1F3A6E` |
 | Mono noir | `#000000` |
 | Mono blanc | `#FFFFFF` |
 
-Le mark n'a **qu'une seule couleur** : ni degrade, ni ombre, ni contour, ni
-transparence. Les SVG referencent la valeur hexadecimale exacte, jamais un nom.
+Aucune couleur n'est un degrade, une ombre ou une transparence. Les SVG
+referencent la valeur hexadecimale exacte, jamais un nom.
 
 `#F56207` et `#1F3A6E` sont deja les jetons `brand` et `primary` de
 `RelioPalette` : la marque n'introduit aucune couleur nouvelle dans le theme.
 
 ## Verification
 
-`test/branding/mark_geometry_test.dart` verrouille les valeurs de la
-specification, relit les SVG generes et compare la geometrie au rendu Flutter.
-Une derive entre le SVG et l'ecran fait echouer la suite.
+| Test | Ce qu'il verrouille |
+|---|---|
+| `mark_geometry_test.dart` | structure, boites, declinaisons, SVG, coherence generateur / couche Flutter |
+| `brand_spec_test.dart` | la geometrie n'a pas derive de la specification livree |
+| `launcher_icon_test.dart` | pixels reels des PNG du lanceur, mesures |
+| `relio_character_test.dart` | les trois mouvements, et leur nombre |

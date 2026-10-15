@@ -89,7 +89,7 @@ void main() {
       await _ecrire(reduite, '$sortie/launcher-compose-48dp.png');
 
       // Et au strict minimum : 48 dp en mdpi, soit 48 px — la taille ou le
-      // trait de 6,2 u tombe a 2,4 px.
+      // contre du « R » se referme a peine.
       final ui.Image min48 = await _composer(
         cote: 48,
         fond: fond,

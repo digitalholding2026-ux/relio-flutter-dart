@@ -23,30 +23,54 @@ export 'relio_mark_geometry.dart';
 /// nom de couleur : la specification l'exige pour les SVG, et l'usage unique
 /// doit etre le meme partout.
 abstract final class RelioBrand {
-  /// Orange du mark. Couleur unique du mark : ni degrade, ni ombre, ni
-  /// transparence.
+  /// Accent orange : zigzag et point. Couleur unique de l'accent : ni degrade,
+  /// ni ombre, ni transparence.
   static const Color mark = Color(0xFFF56207);
 
-  /// Indigo du wordmark — identique au `primary` de `RelioPalette`.
+  /// Indigo du « R », du second zigzag et du wordmark — identique au `primary`
+  /// de `RelioPalette`.
   static const Color wordmark = Color(0xFF1F3A6E);
 
   /// Noir des declinaisons monochrome.
   static const Color monoBlack = Color(0xFF000000);
 
-  /// Blanc des declinaisons monochrome et du mark inverse sur fond orange.
+  /// Blanc des declinaisons monochrome et du mark inverse sur fond indigo.
   static const Color monoWhite = Color(0xFFFFFFFF);
 
-  /// Fond du splash.
+  /// Fond du splash et de l'icone applicative.
   static const Color splashBackground = Color(0xFFFFFFFF);
+
+  /// Fond de l'icone applicative : meme indigo que le wordmark.
+  static const Color iconBackground = Color(0xFF1F3A6E);
 
   /// Interlettrage du wordmark : -1,5 %.
   static const double wordmarkTracking = -0.015;
+
+  /// Interlettrage de la signature.
+  static const double signatureTracking = 0.0;
 
   /// Ecartement mark ↔ wordmark en disposition horizontale, en unites.
   static const double horizontalGap = 20;
 
   /// Ecartement mark ↔ wordmark en disposition verticale, en unites.
   static const double verticalGap = 12;
+
+  /// Taille de la signature, en fraction de la hauteur de capitale du mot.
+  ///
+  /// Mesure sur la specification : le mot est pose a 176 unites de corps et la
+  /// signature a 31. Les deux partagent la meme fonte, donc le rapport des
+  /// corps vaut celui des hauteurs de capitale.
+  static const double signatureCapRatio = 31 / 176;
+
+  /// Ecartement entre le bas du mot et le haut de la signature, en fraction
+  /// de la hauteur de capitale du mot.
+  ///
+  /// Ce n'est pas un ecartement de grille du mark : il se mesure entre deux
+  /// lignes de texte, donc depuis la ligne de base du mot. Dans la
+  /// specification, la ligne de base du mot est a y = 218 et le haut de
+  /// capitale de la signature a y = 265,45, soit 47,45 unites, pour une
+  /// hauteur de capitale de mot de 128,08.
+  static const double signatureGapRatio = 0.37;
 
   /// Largeur du wordmark « Relio » en Inter SemiBold, en em.
   ///
@@ -70,40 +94,89 @@ abstract final class RelioBrand {
   static const double wordmarkCapHeightEm = 1490 / 2048;
 }
 
+/// Ce sur quoi le mark est pose, et donc de quelles couleurs il separe.
+///
+/// Le mark n'est pas monochrome : le « R » et le second zigzag portent la
+/// couleur de base, le zigzag et le point portent l'accent. La declinaison
+/// depend donc du fond, pas du mark seul.
+enum RelioMarkVariant {
+  /// Sur fond clair : « R » et second zigzag en indigo, accent orange.
+  onLight,
+
+  /// Sur fond indigo : « R » et second zigzag en blanc, accent orange.
+  ///
+  /// C'est la declinaison de l'icone applicative.
+  onIndigo,
+
+  /// Tout en noir : impression sur fond clair.
+  monoBlack,
+
+  /// Tout en blanc : impression sur fond sombre.
+  monoWhite,
+}
+
+/// Les deux couleurs effectivement employeees par une declinaison.
+({Color base, Color accent}) relioMarkColors(RelioMarkVariant variant) =>
+    switch (variant) {
+      RelioMarkVariant.onLight => (base: RelioBrand.wordmark, accent: RelioBrand.mark),
+      RelioMarkVariant.onIndigo => (base: RelioBrand.monoWhite, accent: RelioBrand.mark),
+      RelioMarkVariant.monoBlack => (base: RelioBrand.monoBlack, accent: RelioBrand.monoBlack),
+      RelioMarkVariant.monoWhite => (base: RelioBrand.monoWhite, accent: RelioBrand.monoWhite),
+    };
+
+/// Traduit une trace de la geometrie en `Path`.
+///
+/// Les noeuds sont lus tels quels : aucune conversion, aucune approximation.
+/// C'est ce qui garantit que l'ecran et le SVG decrivent la meme forme.
+Path relioMarkPath(List<RelioMarkNode> nodes) {
+  final Path path = Path();
+  for (final RelioMarkNode node in nodes) {
+    switch (node) {
+      case RelioMarkMoveTo(:final double x, :final double y):
+        path.moveTo(x, y);
+      case RelioMarkLineTo(:final double x, :final double y):
+        path.lineTo(x, y);
+      case RelioMarkQuadTo(
+          :final double cx,
+          :final double cy,
+          :final double x,
+          :final double y,
+        ):
+        path.quadraticBezierTo(cx, cy, x, y);
+      case RelioMarkClose():
+        path.close();
+    }
+  }
+  // `evenOdd` sur TOUTES les traces : le « R » est ajoure, et son contre doit
+  // disparaitre. Sur une trace simple, le remplissage est inchange.
+  path.fillType = PathFillType.evenOdd;
+  return path;
+}
+
 /// Peint le mark Relio.
 ///
-/// Rendu vectoriel et independant de la taille : les valeurs viennent de
+/// Rendu vectoriel et independant de la taille : les traces viennent de
 /// [RelioMarkGeometry] et la seule mise a l'echelle est la transformation du
-/// canvas. Le meme painter sert donc la variante principale et la variante
-/// compacte, selon l'epaisseur demandee.
+/// canvas.
 class RelioMarkPainter extends CustomPainter {
   /// Cree le painter du mark.
-  ///
-  /// [stroke] par defaut suit la taille logique demandee : en dessous de
-  /// [RelioMarkGeometry.compactThresholdDp], le trait s'epaissit
-  /// automatiquement pour rester visible.
   const RelioMarkPainter({
-    this.color = RelioBrand.mark,
-    this.stroke,
+    this.variant = RelioMarkVariant.onLight,
     this.background,
-    this.unitsPerPixel = 1,
+    this.backgroundRadius = 0,
   });
 
-  /// Couleur du trait et des cercles. Le mark n'a qu'une seule couleur.
-  final Color color;
-
-  /// Epaisseur de trait en unites de grille.
-  ///
-  /// Si `null`, [RelioMarkGeometry.strokeForSize] decide selon la taille.
-  final double? stroke;
+  /// Declinaison chromatique.
+  final RelioMarkVariant variant;
 
   /// Fond optionnel, peint avant le mark. `null` pour un fond transparent.
   final Color? background;
 
-  /// Taille du mark en pixels logiques, pour un `unitsPerPixel` de 1.
+  /// Rayon des coins du fond, en unites de grille.
   ///
-  /// Sert a choisir automatiquement la variante de trait.
-  final double unitsPerPixel;
+  /// A zero, le fond est un carre plein. L'icone applicative demande un fond a
+  /// coins arrondis.
+  final double backgroundRadius;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -111,71 +184,47 @@ class RelioMarkPainter extends CustomPainter {
     if (side <= 0) return;
 
     // Le mark est dessine dans ses propres unites puis mis a l'echelle pour
-    // occuper le carre. Le trait reste donc exprime dans les MEMES unites,
-    // quelle que soit la taille de rendu.
-    final double thickness =
-        stroke ?? RelioMarkGeometry.strokeForSize(side / unitsPerPixel);
-
-    final box = RelioMarkGeometry.boundingBox(thickness);
-    final double boxWidth = box.right - box.left;
-    final double boxHeight = box.bottom - box.top;
-
-    // Le facteur tient compte de la boite englobante reelle, trait compris,
-    // pour que rien ne soit rogne meme quand le trait s'epaissit.
-    final double factor = math.min(side / boxWidth, side / boxHeight);
+    // occuper le carre. Comme il n'y a plus de trait a epaissir, la mise a
+    // l'echelle est unique : plus rien ne depend de la taille de rendu.
+    final double factor = side / RelioMarkGeometry.inkHeight;
+    final double drawnWidth = RelioMarkGeometry.inkWidth * factor;
 
     canvas.save();
-    canvas.translate(
-      (size.width - boxWidth * factor) / 2,
-      (size.height - boxHeight * factor) / 2,
-    );
+    canvas.translate((size.width - drawnWidth) / 2, 0.0);
     canvas.scale(factor);
-    // Recalage sur la boite englobante, et non sur la grille brute : la
-    // grille de 100 unites n'est pas le rectangle occupe par le mark.
-    canvas.translate(-box.left, -box.top);
+    canvas.translate(-RelioMarkGeometry.boundingBox.left, -RelioMarkGeometry.boundingBox.top);
 
     if (background case final Color bg) {
-      canvas.drawRect(
-        Rect.fromLTRB(box.left, box.top, box.right, box.bottom),
+      final Rect box = Rect.fromLTRB(
+        RelioMarkGeometry.boundingBox.left,
+        RelioMarkGeometry.boundingBox.top,
+        RelioMarkGeometry.boundingBox.right,
+        RelioMarkGeometry.boundingBox.bottom,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(box, Radius.circular(backgroundRadius)),
         Paint()..color = bg,
       );
     }
 
-    final Paint fill = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill
-      ..isAntiAlias = true;
+    final ({Color base, Color accent}) c = relioMarkColors(variant);
 
-    canvas.drawCircle(
-      const Offset(RelioMarkGeometry.centerRightX, RelioMarkGeometry.centerRightY),
-      RelioMarkGeometry.radiusRight,
-      fill,
-    );
-    canvas.drawCircle(
-      const Offset(RelioMarkGeometry.centerLeftX, RelioMarkGeometry.centerLeftY),
-      RelioMarkGeometry.radiusLeft,
-      fill,
-    );
-
-    final Path curve = Path()
-      ..moveTo(RelioMarkGeometry.curveStartX, RelioMarkGeometry.centerLineY)
-      ..cubicTo(
-        RelioMarkGeometry.curveControl1X,
-        RelioMarkGeometry.curveControlY,
-        RelioMarkGeometry.curveControl2X,
-        RelioMarkGeometry.curveControlY,
-        RelioMarkGeometry.curveEndX,
-        RelioMarkGeometry.centerLineY,
+    for (final RelioMarkPart part in RelioMarkGeometry.parts) {
+      canvas.drawPath(
+        relioMarkPath(part.nodes),
+        Paint()
+          ..color = part.role == RelioMarkRole.accent ? c.accent : c.base
+          ..style = PaintingStyle.fill
+          ..isAntiAlias = true,
       );
+    }
 
-    canvas.drawPath(
-      curve,
+    canvas.drawCircle(
+      Offset(RelioMarkGeometry.dot.centerX, RelioMarkGeometry.dot.centerY),
+      RelioMarkGeometry.dot.radius,
       Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = thickness
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
+        ..color = c.accent
+        ..style = PaintingStyle.fill
         ..isAntiAlias = true,
     );
 
@@ -184,50 +233,44 @@ class RelioMarkPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(RelioMarkPainter old) =>
-      old.color != color ||
-      old.stroke != stroke ||
+      old.variant != variant ||
       old.background != background ||
-      old.unitsPerPixel != unitsPerPixel;
+      old.backgroundRadius != backgroundRadius;
 }
 
 /// Le mark seul, a la taille demandee.
 ///
-/// Se place dans un `SizedBox` carre. La couleur est unique : le mark n'a pas
-/// de variante bichrome.
+/// Se place dans un `SizedBox` carre.
 class RelioMark extends StatelessWidget {
   /// Cree le mark.
   const RelioMark({
     super.key,
     required this.size,
-    this.color = RelioBrand.mark,
-    this.stroke,
+    this.variant = RelioMarkVariant.onLight,
     this.background,
+    this.backgroundRadius = 0,
   });
 
   /// Cote du carre occupe, en pixels logiques.
-  ///
-  /// Sous [RelioMarkGeometry.compactThresholdDp], le trait s'epaissit
-  /// automatiquement : c'est la variante compacte.
   final double size;
 
-  /// Couleur du mark.
-  final Color color;
-
-  /// Force l'epaisseur du trait, en unites de grille, si besoin.
-  final double? stroke;
+  /// Declinaison chromatique.
+  final RelioMarkVariant variant;
 
   /// Fond optionnel.
   final Color? background;
+
+  /// Rayon des coins du fond, en unites de grille.
+  final double backgroundRadius;
 
   @override
   Widget build(BuildContext context) => SizedBox.square(
         dimension: size,
         child: CustomPaint(
           painter: RelioMarkPainter(
-            color: color,
-            stroke: stroke,
+            variant: variant,
             background: background,
-            unitsPerPixel: size,
+            backgroundRadius: backgroundRadius,
           ),
         ),
       );
@@ -238,6 +281,12 @@ class RelioMark extends StatelessWidget {
 /// Inter SemiBold 600, interlettrage -1,5 %, couleur indigo. Aucune fioriture :
 /// ni ombre, ni italique, ni contour.
 class RelioWordmark extends StatelessWidget {
+  /// Texte du wordmark.
+  ///
+  /// Source unique : le generateur de SVG s'en sert pour ses libelles, afin
+  /// que l'ecran et le fichier ne puissent pas diverger.
+  static const String text = 'Relio';
+
   /// Cree le wordmark a une hauteur donnee.
   const RelioWordmark({
     super.key,
@@ -247,7 +296,7 @@ class RelioWordmark extends StatelessWidget {
 
   /// Hauteur de capitale souhaitee, en pixels logiques.
   ///
-  /// La largeur decoule de la fonte : elle n'est pas forcée, ce qui evite de
+  /// La largeur decoule de la fonte : elle n'est pas forcee, ce qui evite de
   /// deformer les glyphes.
   final double capHeight;
 
@@ -282,7 +331,7 @@ class _WordmarkPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final TextPainter painter = TextPainter(
       text: TextSpan(
-        text: 'Relio',
+        text: RelioWordmark.text,
         style: TextStyle(
           fontFamily: 'Inter',
           fontWeight: FontWeight.w600,
@@ -296,12 +345,76 @@ class _WordmarkPainter extends CustomPainter {
 
     // Centrage vertical sur la hauteur de capitale : la zone posee par
     // TextPainter inclut l'ascendante et la descendante, plus hautes que les
-    // capitales themselves.
+    // capitales elles-memes.
     final double dy = size.height / 2 - painter.height / 2;
     painter.paint(canvas, Offset(0, dy));
   }
 
   @override
   bool shouldRepaint(_WordmarkPainter old) =>
+      old.fontSize != fontSize || old.color != color;
+}
+
+/// La signature de marque, sous le wordmark.
+///
+/// « Les maths, c'est ton terrain ! » pose en Inter SemiBold, dans l'indigo du
+/// wordmark. C'est une baseline : elle appartient au lockup, jamais au mark
+/// seul — un mark sur un lanceur n'a pas de signature.
+///
+/// [RelioSignature.text] est la seule source du texte : le generateur SVG
+/// s'en sert aussi, pour que le SVG et l'ecran ne puissent pas diverger.
+class RelioSignature extends StatelessWidget {
+  const RelioSignature({super.key, required this.capHeight, this.color = RelioBrand.wordmark});
+
+  /// Texte de la signature.
+  static const String text = 'Les maths, c\u2019est ton terrain !';
+
+  /// Hauteur de capitale souhaitee, en pixels logiques.
+  final double capHeight;
+
+  /// Couleur du texte.
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final double fontSize = capHeight / RelioBrand.wordmarkCapHeightEm;
+    return SizedBox(
+      height: capHeight,
+      child: CustomPaint(
+        painter: _SignaturePainter(fontSize: fontSize, color: color),
+        child: const SizedBox.shrink(),
+      ),
+    );
+  }
+}
+
+class _SignaturePainter extends CustomPainter {
+  const _SignaturePainter({required this.fontSize, required this.color});
+
+  final double fontSize;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final TextPainter painter = TextPainter(
+      text: TextSpan(
+        text: RelioSignature.text,
+        style: TextStyle(
+          fontFamily: 'Inter',
+          fontWeight: FontWeight.w600,
+          fontSize: fontSize,
+          color: color,
+          letterSpacing: RelioBrand.signatureTracking * fontSize,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final double dy = size.height / 2 - painter.height / 2;
+    painter.paint(canvas, Offset(0, dy));
+  }
+
+  @override
+  bool shouldRepaint(_SignaturePainter old) =>
       old.fontSize != fontSize || old.color != color;
 }

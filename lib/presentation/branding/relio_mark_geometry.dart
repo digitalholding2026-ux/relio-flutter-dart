@@ -6,129 +6,244 @@
 ///
 /// Toutes les valeurs sont exprimees dans la grille de reference de
 /// 100 x 100 unites, le mark etant centre dedans. L'axe y descend, comme en
-/// SVG : la ligne des centres est a y = 50, donc a mi-hauteur de la grille.
+/// SVG.
 ///
-/// Origine du repere : en haut a gauche.
+/// Le mark n'est plus paramétrique : il est decrit comme une suite de
+/// TRACES REMPLIES, exactement comme il a ete valide. C'est ce qui permet au
+/// generateur SVG et au painter Flutter de lire la meme definition au lieu de
+/// reconstituer deux formes qui divergeraient.
 ///
-/// Origine des valeurs : specification de marque. Ces ratios sont(figes. Si un
-/// d'eux ne rend pas correctement a l'ecran, on remonte le constat au lieu
-/// d'ajuster en silence — meme posture que la regle 8 pour les contenus
-/// pedagogiques.
+/// Origine des valeurs : specification de marque `docs/brand/`, livree et
+/// validee. `test/branding/brand_spec_test.dart` rejoue la normalisation depuis
+/// ces fichiers et echoue des que les constantes ci-dessous divergent.
 library;
 
-/// Geometrie du mark Relio, en coordonnees de grille.
+/// Role chromatique d'une partie du mark.
 ///
-/// Les elements accessibles ici sont des nombres bruts ; `RelioMark` (couche
-/// Flutter) les expose sous forme d'`Offset`, de `Rect` et de `Color`.
+/// Le mark n'est plus monochrome : il porte une couleur de base et un accent.
+/// Les declinaisons monochrome ecraseent les deux roles sur une seule couleur.
+enum RelioMarkRole {
+  /// Structure principale : le « R » et le second zigzag.
+  base,
+
+  /// Accent : le zigzag orange et le point.
+  accent,
+}
+
+/// Un noeud de trace, dans la grille de reference.
+///
+/// Les variantes[M] et [L] sont des positions ; [Q] amene un point de
+/// controle puis une arrivee. Ce vocabulaire est celui du SVG : le generateur
+/// le restitue tel quel et le painter le traduit en `Path`.
+sealed class RelioMarkNode {
+  const RelioMarkNode();
+}
+
+/// Deplacement, sans tracé.
+final class RelioMarkMoveTo extends RelioMarkNode {
+  const RelioMarkMoveTo(this.x, this.y);
+  final double x;
+  final double y;
+}
+
+/// Segment droit.
+final class RelioMarkLineTo extends RelioMarkNode {
+  const RelioMarkLineTo(this.x, this.y);
+  final double x;
+  final double y;
+}
+
+/// Courbe quadratique : point de controle puis arrivee.
+final class RelioMarkQuadTo extends RelioMarkNode {
+  const RelioMarkQuadTo(this.cx, this.cy, this.x, this.y);
+  final double cx;
+  final double cy;
+  final double x;
+  final double y;
+}
+
+/// Fermeture du contour courant.
+final class RelioMarkClose extends RelioMarkNode {
+  const RelioMarkClose();
+}
+
+/// Une partie du mark : une trace remplie, avec son role chromatique.
+class RelioMarkPart {
+  const RelioMarkPart({
+    required this.id,
+    required this.role,
+    required this.nodes,
+    required this.box,
+  });
+
+  /// Identifiant stable, utilise par le generateur et les tests.
+  final String id;
+
+  /// Role chromatique de la partie.
+  final RelioMarkRole role;
+
+  /// Trace, en coordonnees de grille.
+  final List<RelioMarkNode> nodes;
+
+  /// Boite englobante de la seule partie, en coordonnees de grille.
+  final ({double left, double top, double right, double bottom}) box;
+
+  /// Centre de la boite englobante : point de pivot des animations.
+  double get centerX => (box.left + box.right) / 2;
+
+  /// Centre de la boite englobante : point de pivot des animations.
+  double get centerY => (box.top + box.bottom) / 2;
+}
+
+/// Le point du mark : un disque, pas une trace.
+///
+/// Traite a part parce que le generateur SVG et le painter l'emetent
+/// respectivement en `<circle>` et en `drawCircle`.
+class RelioMarkDot {
+  const RelioMarkDot({
+    required this.id,
+    required this.role,
+    required this.centerX,
+    required this.centerY,
+    required this.radius,
+  });
+
+  final String id;
+  final RelioMarkRole role;
+  final double centerX;
+  final double centerY;
+  final double radius;
+}
+
 abstract final class RelioMarkGeometry {
   // --- Grille -------------------------------------------------------------
 
   /// Cote de la grille de reference, en unites.
   static const double grid = 100;
 
-  /// Position du centre du mark dans la grille, sur chaque axe.
+  // --- Partie : le « R » ---------------------------------------------------
+
+  /// Le « R », structure principale du mark.
   ///
-  /// Le mark est centre : son axe de symetrie vertical est a x = 50.
-  static const double gridCenterX = 50;
+  /// Contours ajoures (`evenodd`) : le contre du « R » est un deuxieme
+  /// contour, pas un trou boolean.
+  static const RelioMarkPart glyph = RelioMarkPart(
+    id: 'glyph',
+    role: RelioMarkRole.base,
+    nodes: <RelioMarkNode>[
+      RelioMarkMoveTo(9.748, 96.541),
+      RelioMarkLineTo(9.748, 9.119),
+      RelioMarkQuadTo(9.748, 0.0, 19.182, 0.0),
+      RelioMarkLineTo(49.371, 0.0),
+      RelioMarkQuadTo(76.73, 0.0, 76.73, 26.101),
+      RelioMarkQuadTo(76.73, 42.767, 62.579, 50.0),
+      RelioMarkLineTo(83.019, 96.541),
+      RelioMarkLineTo(60.377, 96.541),
+      RelioMarkLineTo(42.453, 53.774),
+      RelioMarkLineTo(29.874, 53.774),
+      RelioMarkLineTo(29.874, 96.541),
+      RelioMarkClose(),
+      RelioMarkMoveTo(29.874, 17.925),
+      RelioMarkLineTo(29.874, 36.792),
+      RelioMarkLineTo(46.855, 36.792),
+      RelioMarkQuadTo(55.975, 36.792, 55.975, 27.358),
+      RelioMarkQuadTo(55.975, 17.925, 46.855, 17.925),
+      RelioMarkClose(),
+    ],
+    box: (left: 9.748, top: 0.0, right: 83.019, bottom: 96.541),
+  );
 
-  // --- Cercles ------------------------------------------------------------
+  // --- Partie : le zigzag d'accent ----------------------------------------
 
-  /// Diametre du cercle droit.
-  static const double diameterRight = 28;
+  /// Le zigzag orange : l'accent qui traverse le « R ».
+  static const RelioMarkPart zigzagAccent = RelioMarkPart(
+    id: 'zigzag-accent',
+    role: RelioMarkRole.accent,
+    nodes: <RelioMarkNode>[
+      RelioMarkMoveTo(4.403, 92.767),
+      RelioMarkLineTo(25.157, 72.013),
+      RelioMarkLineTo(32.704, 79.56),
+      RelioMarkLineTo(51.572, 60.692),
+      RelioMarkLineTo(59.748, 68.868),
+      RelioMarkLineTo(32.704, 95.912),
+      RelioMarkQuadTo(28.616, 100.0, 23.899, 96.541),
+      RelioMarkClose(),
+    ],
+    box: (left: 4.403, top: 60.692, right: 59.748, bottom: 100.0),
+  );
 
-  /// Diametre du cercle gauche : 55 % du cercle droit.
-  static const double diameterLeft = 15.4;
+  // --- Partie : le second zigzag ------------------------------------------
 
-  /// Rayon du cercle droit.
-  static const double radiusRight = diameterRight / 2; // 14
+  /// Le second zigzag, structure principale : il double le premier en montant.
+  static const RelioMarkPart zigzagSecondary = RelioMarkPart(
+    id: 'zigzag-secondary',
+    role: RelioMarkRole.base,
+    nodes: <RelioMarkNode>[
+      RelioMarkMoveTo(48.428, 61.006),
+      RelioMarkLineTo(70.44, 38.679),
+      RelioMarkLineTo(70.44, 49.371),
+      RelioMarkLineTo(86.792, 33.019),
+      RelioMarkLineTo(95.597, 41.824),
+      RelioMarkLineTo(78.931, 58.491),
+      RelioMarkLineTo(89.308, 58.491),
+      RelioMarkLineTo(89.308, 69.497),
+      RelioMarkLineTo(48.428, 69.497),
+      RelioMarkClose(),
+    ],
+    box: (left: 48.428, top: 33.019, right: 95.597, bottom: 69.497),
+  );
 
-  /// Rayon du cercle gauche.
-  static const double radiusLeft = diameterLeft / 2; // 7.7
+  // --- Partie : le point ---------------------------------------------------
 
-  /// Centre du cercle droit.
-  static const double centerRightX = 66;
-  static const double centerRightY = 50;
+  /// Le point orange, en haut a droite : le second accent du mark.
+  static const RelioMarkDot dot = RelioMarkDot(
+    id: 'dot',
+    role: RelioMarkRole.accent,
+    centerX: 89.308,
+    centerY: 8.805,
+    radius: 6.289,
+  );
 
-  /// Centre du cercle gauche.
-  static const double centerLeftX = 24;
-  static const double centerLeftY = 50;
+  // --- Assemblage ----------------------------------------------------------
 
-  /// Distance horizontale entre les deux centres : 42 unites.
-  static const double centerSpacing = centerRightX - centerLeftX;
+  /// Les traces du mark, dans l'ordre de dessin.
+  static const List<RelioMarkPart> parts = <RelioMarkPart>[
+    glyph,
+    zigzagAccent,
+    zigzagSecondary,
+  ];
 
-  // --- Courbe -------------------------------------------------------------
+  // --- Boite englobante ---------------------------------------------------
 
-  /// Ligne des centres, en y.
+  /// Boite englobante du mark entier, en coordonnees de grille.
   ///
-  /// Sert de reference aux deux cercles et aux extremites de la courbe.
-  static const double centerLineY = 50;
+  /// Le mark est remplit de traces pleines : il n'y a plus de trait dont le
+  /// debord devrait etre ajoute. La boite se lit directement sur les boites
+  /// des parties.
+  static const ({double left, double top, double right, double bottom})
+  boundingBox = (
+    left: 4.403,
+    top: 0.0,
+    right: 95.597,
+    bottom: 100.0,
+  );
 
-  /// Point bas de la courbe : 6 unites sous la ligne des centres.
+  /// Largeur REELLEMENT encree du mark, en unites de grille.
   ///
-  /// La profondeur a ete ramenee de 16 a 6 unites. A 16, la courbe devenait
-  /// le sujet du mark ; a 6, les deux cercles restent les points dominants et
-  /// la courbe ne fait que les relier. Rapport profondeur/portee :
-  /// 6 / 20.3 = 0.296, conforme au 0.30 de la specification.
-  static const double curveLowY = 56;
+  /// Distincte de la largeur de la boite englobante des lignes ci-dessous :
+  /// celle-ci se rapporte a un carre de reference arbitraire, celle-la a
+  /// l'encre. Les deux coincident ici puisque le mark n'a plus de debord de
+  /// trait, mais les nommer separement evite de les confondre.
+  static double get inkWidth => boundingBox.right - boundingBox.left;
 
-  /// Abcisse du bord droit du cercle gauche : 24 + 7.7.
-  static const double curveStartX = centerLeftX + radiusLeft; // 31.7
+  /// Hauteur REELLEMENT encree du mark, en unites de grille.
+  static double get inkHeight => boundingBox.bottom - boundingBox.top;
 
-  /// Abcisse du bord gauche du cercle droit : 66 - 14.
-  static const double curveEndX = centerRightX - radiusRight; // 52
+  /// Centre vertical reellement encre, en unites de grille.
+  static double get inkCenterY => (boundingBox.top + boundingBox.bottom) / 2;
 
-  /// Portee horizontale de la courbe : 20.3 unites.
-  static const double curveSpan = curveEndX - curveStartX;
-
-  /// Profondeur de la courbe sous la ligne des centres : 6 unites.
-  static const double curveDepth = curveLowY - centerLineY;
-
-  /// Abcisse du point bas : milieu exact entre les deux extremites.
-  static const double curveLowX = (curveStartX + curveEndX) / 2; // 41.85
-
-  /// Decalage vertical des points de controle d'une cubique symetrique.
-  ///
-  /// Pour une cubique dont les quatre points de controle sont a la meme
-  /// ordonnee aux extremites et a `centerLineY + decalage` au centre,
-  /// l'ordonnee au parametre `t = 0.5` vaut `centerLineY + 0.75 * decalage`.
-  /// Imposer `curveLowY` donne donc `6 / 0.75 = 8`.
-  static const double curveControlOffset = 8;
-
-  /// Recul horizontal des points de controle, en fraction de la portee.
-  ///
-  /// Plus la valeur est grande, plus le minimum est large et « presque plat ».
-  /// 0.31 donne un creux doux qui tient dans 6 unites de profondeur sans
-  /// paraitre tendu, conformement a la specification.
-  static const double curveControlReach = 0.31;
-
-  /// Abscisse du premier point de controle.
-  static const double curveControl1X = curveStartX + curveSpan * curveControlReach;
-
-  /// Abscisse du second point de controle.
-  static const double curveControl2X = curveEndX - curveSpan * curveControlReach;
-
-  /// Ordonnee des deux points de controle.
-  static const double curveControlY = centerLineY + curveControlOffset;
-
-  // --- Trait --------------------------------------------------------------
-
-  /// Epaisseur du trait, variante principale : rendue a partir de 48 dp.
-  static const double strokePrimary = 4;
-
-  /// Epaisseur du trait, variante compacte : rendue sous 48 dp.
-  ///
-  /// A 24 dp, le trait de 4 unites ne fait que 0.96 px et disparait. Ce n'est
-  /// pas un probleme de courbe mais un probleme de trait : on epaissit pour
-  /// compenser la perte de definition optique. Proportions des cercles et de
-  /// la courbe inchangees — seul le trait differe.
-  static const double strokeCompact = 6.2;
-
-  /// Taille en dp en dessous de laquelle la variante compacte s'applique.
-  static const double compactThresholdDp = 48;
-
-  /// Epaisseur de trait adaptee a une largeur logique donnee.
-  static double strokeForSize(double logicalWidth) =>
-      logicalWidth < compactThresholdDp ? strokeCompact : strokePrimary;
+  /// Centre horizontal reellement encre, en unites de grille.
+  static double get inkCenterX => (boundingBox.left + boundingBox.right) / 2;
 
   // --- Launcher icon ------------------------------------------------------
 
@@ -142,120 +257,31 @@ abstract final class RelioMarkGeometry {
   static const double androidMarkFill = 0.55;
 
   /// Cote du mark dans la grille de 108 dp : 66 * 0.55 = 36.3 dp.
-  ///
-  /// Le mark n'est donc pas centre bord a bord dans la zone sure : il laisse
-  /// de la respiration. Exception ASSUMEE a la regle des 14 unites, imposee
-  /// par les contraintes Android.
   static const double androidMarkSizeDp = androidSafeZoneDp * androidMarkFill;
 
   /// Largeur REELLE du mark dans la grille de 108 dp, en dp.
-  ///
-  /// La specification dit « environ 36 dp de large » : c'est la largeur du
-  /// mark, pas celle du carre qui l'englobe.
-  ///
-  /// Ces deux valeurs ne se confondent pas. Le mark est plus large que haut
-  /// (67,7 x 24 unites pour le trait principal) : traiter 36 dp comme un cote
-  /// de carre ne donnerait que 25,4 dp de largeur effective, et le mark
-  /// paraitrait trop petit dans le lanceur.
   static double get androidMarkWidthDp => androidMarkSizeDp;
 
   /// Hauteur correspondante du mark, en dp, deduite de son rapport de forme.
   ///
-  /// Le ratio hauteur/largeur de la boite englobante vaut environ 0,375 pour
-  /// le trait compact.
+  /// Le mark n'est pas carre : il mesure 91,194 x 100 unites. Traiter
+  /// `androidMarkSizeDp` comme un cote de carre le ferait sortir de la zone
+  /// sure en hauteur.
   static double get androidMarkHeightDp =>
-      androidMarkWidthDp * boundingHeight(strokeCompact) / boundingWidth(strokeCompact);
+      androidMarkWidthDp * inkHeight / inkWidth;
 
-  // --- Boite englobante ---------------------------------------------------
+  // --- Icone applicative --------------------------------------------------
 
-  /// Moitie du trait : c'est de combien le trait deborde de chaque cote.
-  static double strokeCap(double stroke) => stroke / 2;
-
-  /// Boite englobante du mark, trait compris.
+  /// Rayon des coins du fond de l'icone, en fraction du cote.
   ///
-  /// Les extremites arrondies ajoutent la meme moitie d'epaisseur que le
-  /// debord du trait : la boite est donc legerement plus large que la seule
-  /// somme des diametres.
-  static ({double left, double top, double right, double bottom}) boundingBox(
-    double stroke,
-  ) {
-    final double cap = strokeCap(stroke);
-    return (
-      left: centerLeftX - radiusLeft - cap,
-      top: centerLineY - radiusRight - cap,
-      right: centerRightX + radiusRight + cap,
-      bottom: curveLowY + cap,
-    );
-  }
+  /// L'icone fournie introduit un carre a coins arrondis : ce rayon est ce
+  /// qui la distingue d'une pastille pleine. Exprime en fraction pour
+  /// survivre a tous les densites sans etre recalcule.
+  static const double iconCornerRadiusRatio = 112 / 512;
 
-  /// Largeur REELLEMENT encree du mark, en unites de grille.
+  /// Marge du fond de l'icone, en fraction du cote.
   ///
-  /// Distincte de [boundingWidth], qui surestime : celle-ci presume que le
-  /// debord du trait defini les extremites gauche et droite. C'est faux. Le
-  /// trait ne deborde que de sa CAPACITE RONDE aux deux extremites de la
-  /// courbe, c'est-a-dire a x = 31,7 et x = 52 — tres a l'interieur du dessin.
-  /// Les extremites gauche et droite sont les CERCLES PLEINS, dont le bord
-  /// ne depasse jamais le rayon.
-  ///
-  /// Consequence concrete : une icone dimensionnee sur `boundingWidth` sort
-  /// 8 % trop petite, sans que rien ne le signale.
-  static double get inkWidth =>
-      centerSpacing + radiusRight + radiusLeft; // 63,7
-
-  /// Centre vertical REELLEMENT ENCRE du mark, en unites de grille.
-  ///
-  /// Ce n'est pas le milieu de la boite englobante : celle-ci inclut le
-  /// debord de trait en haut (au-dessus du cercle) alors qu'en bas la courbe
-  /// descend seule. L'encre commence au sommet du grand cercle (36) et finit
-  /// au creux de la courbe (56 + capacite), soit un centre a 47,55 — et non a
-  /// 50.
-  ///
-  /// Sans cette correction, une icone centree sur la boite placerait le mark
-  /// 2,45 unites trop bas : il paraitrait descentu dans le lanceur.
-  static double get inkCenterY => (centerLineY - radiusRight + curveLowY + strokeCap(strokeCompact)) / 2;
-
-  /// Largeur de la boite englobante, trait compris.
-  static double boundingWidth(double stroke) =>
-      boundingBox(stroke).right - boundingBox(stroke).left;
-
-  /// Hauteur de la boite englobante, trait compris.
-  static double boundingHeight(double stroke) =>
-      boundingBox(stroke).bottom - boundingBox(stroke).top;
-
-  // --- Evaluation de la cubique ------------------------------------------
-
-  /// Ordonnee de la courbe au parametre [t] de Bezier.
-  ///
-  /// Expose pour les tests : la valeur 56 au point bas doit etre CONFIRMEE par
-  /// l'evaluation, pas reconduite depuis la specification.
-  static double curveY(double t) {
-    final double mt = 1 - t;
-    return mt * mt * mt * centerLineY +
-        3 * mt * mt * t * curveControlY +
-        3 * mt * t * t * curveControlY +
-        t * t * t * centerLineY;
-  }
-
-  /// Abscisse de la courbe au parametre [t] de Bezier.
-  static double curveX(double t) {
-    final double mt = 1 - t;
-    return mt * mt * mt * curveStartX +
-        3 * mt * mt * t * curveControl1X +
-        3 * mt * t * t * curveControl2X +
-        t * t * t * curveEndX;
-  }
-
-  /// Profondeur maximale reellement atteinte par la courbe, mesuree par
-  /// echantillonnage.
-  ///
-  /// Sert de garde-fou : la profondeur doit rester inferieure au double de la
-  /// profondeur voulue, faute de quoi le mark se transformerait en Smile.
-  static double measuredDepth({int samples = 2000}) {
-    double maxY = centerLineY;
-    for (int i = 0; i <= samples; i++) {
-      final double y = curveY(i / samples);
-      if (y > maxY) maxY = y;
-    }
-    return maxY - centerLineY;
-  }
+  /// Le fond ne touche pas le bord du canevas : il est en retrait, sinon les
+  /// coins arrondis seraient coupes par le bord du fichier.
+  static const double iconBackgroundInsetRatio = 12 / 512;
 }

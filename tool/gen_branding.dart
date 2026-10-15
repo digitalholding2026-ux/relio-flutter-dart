@@ -12,11 +12,25 @@
 /// rendu a l'ecran passe par `RelioMarkPainter`. Le test
 /// `test/branding/mark_geometry_test.dart` compare les deux et interdit qu'ils
 /// divergent.
+///
+/// Ce generateur n'importe QUE la geometrie, en Dart pur : c'est ce qui lui
+/// permet de tourner hors de Flutter. Les couleurs sont donc re-declarees ici
+/// en hexadecimal, et `test/branding/mark_geometry_test.dart` echoue des que
+/// elles divergent de `RelioBrand`.
 library;
 
 import 'dart:io';
 
 import 'package:relio/presentation/branding/relio_mark_geometry.dart';
+
+/// Couleurs de la marque, en hexadecimal exact.
+///
+/// Re-declarees ici parce que `RelioBrand` vit dans la couche Flutter. La
+/// duplication est verifiee par `test/branding/mark_geometry_test.dart`.
+const String cOrange = '#F56207';
+const String cIndigo = '#1F3A6E';
+const String cBlack = '#000000';
+const String cWhite = '#FFFFFF';
 
 /// Nombre de decimales conserve dans les SVG.
 ///
@@ -28,87 +42,141 @@ String n(double v) {
   return r == r.roundToDouble() ? r.toStringAsFixed(1) : r.toString();
 }
 
-/// Les deux points de controle de la cubique, formates pour le `C` d'un SVG.
-String controlPoints() =>
-    '${n(RelioMarkGeometry.curveControl1X)},${n(RelioMarkGeometry.curveControlY)} '
-    '${n(RelioMarkGeometry.curveControl2X)},${n(RelioMarkGeometry.curveControlY)}';
+/// Les deux couleurs effectivement employees par une declinaison.
+({String base, String accent}) colorsOf(String variant) => switch (variant) {
+      'onLight' => (base: cIndigo, accent: cOrange),
+      'onIndigo' => (base: cWhite, accent: cOrange),
+      'monoBlack' => (base: cBlack, accent: cBlack),
+      'monoWhite' => (base: cWhite, accent: cWhite),
+      _ => throw 'Declinaison inconnue : $variant',
+    };
+
+/// Le `d` d'un trace, avec les memes commandes que la geometrie.
+///
+/// Aucune conversion : les noeuds sont M, L, Q et Z, qui sont deja du SVG.
+/// C'est ce qui rend le fichier GENERE et non RECONSTITUE.
+String pathData(List<RelioMarkNode> nodes) {
+  final StringBuffer out = StringBuffer();
+  for (final RelioMarkNode node in nodes) {
+    switch (node) {
+      case RelioMarkMoveTo(:final double x, :final double y):
+        out.write('M${n(x)} ${n(y)}');
+      case RelioMarkLineTo(:final double x, :final double y):
+        out.write('L${n(x)} ${n(y)}');
+      case RelioMarkQuadTo(
+          :final double cx,
+          :final double cy,
+          :final double x,
+          :final double y,
+        ):
+        out.write('Q${n(cx)} ${n(cy)} ${n(x)} ${n(y)}');
+      case RelioMarkClose():
+        out.write('Z');
+    }
+  }
+  return out.toString();
+}
 
 /// Le groupement SVG du mark, seul, aux coordonnees de la grille.
 ///
-/// [color] est ecrit en hexadecimal exact, jamais par un nom : la
-/// specification l'exige.
-String markBody(String color, double stroke) => '''
-    <circle cx="${n(RelioMarkGeometry.centerRightX)}" cy="${n(RelioMarkGeometry.centerRightY)}" r="${n(RelioMarkGeometry.radiusRight)}" fill="$color"/>
-    <circle cx="${n(RelioMarkGeometry.centerLeftX)}" cy="${n(RelioMarkGeometry.centerLeftY)}" r="${n(RelioMarkGeometry.radiusLeft)}" fill="$color"/>
-    <path d="M ${n(RelioMarkGeometry.curveStartX)},${n(RelioMarkGeometry.centerLineY)} C ${controlPoints()} ${n(RelioMarkGeometry.curveEndX)},${n(RelioMarkGeometry.centerLineY)}" stroke="$color" stroke-width="${n(stroke)}" stroke-linecap="round"/>''';
+/// Le `fill-rule` vaut `evenodd` partout : le « R » est ajoure et son contre
+/// doit disparaitre.
+String markBody(String variant) {
+  final ({String base, String accent}) c = colorsOf(variant);
+  final StringBuffer out = StringBuffer();
+  for (final RelioMarkPart part in RelioMarkGeometry.parts) {
+    final String fill = part.role == RelioMarkRole.accent ? c.accent : c.base;
+    out.write('\n    <path id="${part.id}" d="${pathData(part.nodes)}" fill="$fill"/>');
+  }
+  out.write('\n    <circle id="${RelioMarkGeometry.dot.id}"'
+      ' cx="${n(RelioMarkGeometry.dot.centerX)}" cy="${n(RelioMarkGeometry.dot.centerY)}"'
+      ' r="${n(RelioMarkGeometry.dot.radius)}" fill="${c.accent}"/>');
+  return out.toString();
+}
 
 /// Le mark seul, en SVG.
 ///
-/// Le `viewBox` est la boite englobante reelle, trait compris : le fichier est
-/// donc rogne au plus juste, sans transparence peripherique inutile.
+/// Le `viewBox` est la boite englobante reelle : le fichier est donc rogne au
+/// plus juste, sans transparence peripherique inutile.
 String markSvg({
-  required String color,
-  double stroke = RelioMarkGeometry.strokePrimary,
+  required String variant,
   String title = 'Relio',
-  String variant = 'principale',
+  String nom = 'principale',
 }) {
-  final box = RelioMarkGeometry.boundingBox(stroke);
-  final double w = box.right - box.left;
-  final double h = box.bottom - box.top;
+  const double g = RelioMarkGeometry.grid;
   return '''
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n(w)} ${n(h)}" width="${n(w)}" height="${n(h)}" role="img" aria-label="$title">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n(g)} ${n(g)}" width="${n(g)}" height="${n(g)}" role="img" aria-label="$title">
   <title>$title</title>
-  <desc>Mark Relio, variante $variant. Grille de reference 100 x 100 ; boite englobante ${n(w)} x ${n(h)} unites, trait de ${n(stroke)} unites compris.</desc>
-  <g fill="none" fill-rule="evenodd">${markBody(color, stroke)}
+  <desc>Mark Relio, declinaison $nom. Grille de reference 100 x 100 ; boite englobante ${n(RelioMarkGeometry.inkWidth)} x ${n(RelioMarkGeometry.inkHeight)} unites. Traces pleines : le « R » est ajoure (fill-rule evenodd).</desc>
+  <g fill-rule="evenodd">${markBody(variant)}
   </g>
 </svg>
 ''';
 }
 
-/// Lockup horizontal : mark a gauche, wordmark a droite.
+/// Lockup horizontal : mark a gauche, bloc mot + signature a droite.
 ///
-/// Le geometrie du mark est ici ; le wordmark est pose par l'application en
-/// Inter SemiBold. Embedder les glyphes dans chaque fichier gonflerait chaque
-/// SVG de dizaines de kilo-octets sans gain : la police est deja embarquee.
-String lockupHorizontalSvg({
-  required String markColor,
-  required String wordmarkColor,
-  double stroke = RelioMarkGeometry.strokePrimary,
-}) {
-  final box = RelioMarkGeometry.boundingBox(stroke);
-  final double w = box.right - box.left;
-  final double h = box.bottom - box.top;
+/// Le geometrie du mark est ici ; le mot et la signature sont poses par
+/// l'application en Inter SemiBold 600. Embedder les glyphes dans chaque
+/// fichier gonflerait chaque SVG de dizaines de kilo-octets sans gain : la
+/// police est deja embarquee.
+String lockupHorizontalSvg({required String variant}) {
+  const double g = RelioMarkGeometry.grid;
   return '''
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n(w)} ${n(h)}" width="${n(w)}" height="${n(h)}" role="img" aria-label="Relio">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n(g)} ${n(g)}" width="${n(g)}" height="${n(g)}" role="img" aria-label="Relio">
   <title>Relio — lockup horizontal</title>
-  <desc>Geometrie du mark. Le wordmark "Relio" est pose par l'application en Inter SemiBold 600, interlettrage -1.5 %, couleur $wordmarkColor, a ${relioLockupGapHorizontal.toStringAsFixed(0)} unites du bord droit du mark, centre verticalement sur la ligne des centres (y = ${n(RelioMarkGeometry.centerLineY)}).</desc>
-  <g fill="none" fill-rule="evenodd">${markBody(markColor, stroke)}
+  <desc>Geometrie du mark. A droite du mark, le bloc de texte est pose par l'application : « Relio » en Inter SemiBold 600, couleur ${colorsOf(variant).base}, a ${relioLockupGapHorizontal.toStringAsFixed(0)} unites du bord droit du mark ; dessous, la signature « Les maths, c’est ton terrain ! » en Inter SemiBold 600, hauteur de capitale au ${(relioSignatureRatio * 100).toStringAsFixed(1)} % de celle du mot, a ${relioSignatureGapRatioText.toStringAsFixed(2)} hauteur de capitale de son bas.</desc>
+  <g fill-rule="evenodd">${markBody(variant)}
   </g>
 </svg>
 ''';
 }
 
-/// Lockup vertical : mark au-dessus, wordmark en dessous.
+/// Lockup vertical : mark au-dessus, bloc mot + signature en dessous.
 ///
 /// Comme pour le lockup horizontal, seule la geometrie du mark est decrite ;
-/// le wordmark est pose par l'application.
-String lockupVerticalSvg({
-  required String markColor,
-  required String wordmarkColor,
-  double stroke = RelioMarkGeometry.strokePrimary,
-}) {
+/// le texte est pose par l'application.
+String lockupVerticalSvg({required String variant}) {
   const double g = RelioMarkGeometry.grid;
   return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n(g)} ${n(g)}" width="${n(g)}" height="${n(g)}" role="img" aria-label="Relio">
   <title>Relio — lockup vertical</title>
-  <desc>Geometrie du mark, centre dans la grille 100 x 100. Le wordmark est pose par l'application en dessous, a ${relioLockupGapVertical.toStringAsFixed(0)} unites d'ecartement, centre horizontalement, Inter SemiBold 600, couleur $wordmarkColor.</desc>
-  <g fill="none" fill-rule="evenodd">${markBody(markColor, stroke)}
+  <desc>Geometrie du mark, centre dans la grille 100 x 100. Sous le mark, le bloc de texte est pose par l'application, a ${relioLockupGapVertical.toStringAsFixed(0)} unites d'ecartement, centre horizontalement : « Relio » en Inter SemiBold 600, puis la signature « Les maths, c’est ton terrain ! » meme fonte.</desc>
+  <g fill-rule="evenodd">${markBody(variant)}
   </g>
 </svg>
 ''';
 }
 
-/// Ecartement mark ↔ wordmark du lockup horizontal, en unites de grille.
+/// Icone applicative : fond indigo a coins arrondis, mark en version claire.
+///
+/// Le fond est genere, lui aussi : un fond peint a la main deriverait du mark,
+/// et l'icone serait la seule declinaison non regeneree.
+String appIconSvg() {
+  const double g = RelioMarkGeometry.grid;
+  const double canvas = 512;
+  final double inset = RelioMarkGeometry.iconBackgroundInsetRatio * canvas;
+  final double side = canvas - 2 * inset;
+  final double radius = RelioMarkGeometry.iconCornerRadiusRatio * canvas;
+
+  // Le mark est centre dans le carre de fond, a son echelle de grille.
+  final double scale = side / g;
+  final double drawn = RelioMarkGeometry.inkWidth * scale;
+  final double dx = inset + (side - drawn) / 2;
+  final double dy = inset + (side - RelioMarkGeometry.inkHeight * scale) / 2;
+
+  return '''
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n(canvas)} ${n(canvas)}" width="${n(canvas)}" height="${n(canvas)}" role="img" aria-label="Relio">
+  <title>Relio — icône d'application</title>
+  <desc>Icone applicative. Fond indigo a coins arrondis, mark en declinaison claire : « R » et second zigzag en blanc, accent orange. Les deux calques sont regenerables separement : ce fichier n'est qu'un apercu plat.</desc>
+  <rect x="${n(inset)}" y="${n(inset)}" width="${n(side)}" height="${n(side)}" rx="${n(radius)}" fill="$cIndigo"/>
+  <g transform="translate(${n(dx)} ${n(dy)}) scale(${n(scale)})" fill-rule="evenodd">${markBody('onIndigo')}
+  </g>
+</svg>
+''';
+}
+
+/// Ecartement mark ↔ bloc de texte du lockup horizontal, en unites de grille.
 ///
 /// Repris de la specification. Le generateur ne peut pas importer la couche
 /// Flutter, donc la valeur est re-declaree ici et verifiee par
@@ -116,15 +184,16 @@ String lockupVerticalSvg({
 /// divergent.
 const double relioLockupGapHorizontal = 20;
 
-/// Ecartement mark ↔ wordmark du lockup vertical, en unites de grille.
+/// Ecartement mark ↔ bloc de texte du lockup vertical, en unites de grille.
 const double relioLockupGapVertical = 12;
 
-void main() {
-  const String orange = '#F56207';
-  const String indigo = '#1F3A6E';
-  const String black = '#000000';
-  const String white = '#FFFFFF';
+/// Taille de la signature, en fraction de la hauteur de capitale du mot.
+const double relioSignatureRatio = 31 / 176;
 
+/// Ecartement mot ↔ signature, en fraction de la hauteur de capitale du mot.
+const double relioSignatureGapRatioText = 0.37;
+
+void main() {
   const String br = 'assets/branding';
 
   void write(String path, String content) {
@@ -132,34 +201,22 @@ void main() {
     stdout.writeln('ecrit  $path');
   }
 
-  // --- mark : principale, compacte, monochrome -------------------------
-  write('$br/mark/mark-primary.svg',
-      markSvg(color: orange, variant: 'principale, trait 4 u'));
-  write('$br/mark/mark-primary-mono-black.svg',
-      markSvg(color: black, variant: 'monochrome noir'));
-  write('$br/mark/mark-primary-mono-white.svg',
-      markSvg(color: white, variant: 'monochrome blanc'));
-  write('$br/mark/mark-compact.svg',
-      markSvg(color: orange, stroke: RelioMarkGeometry.strokeCompact, variant: 'compacte, trait 6.2 u'));
-  write('$br/mark/mark-compact-mono-black.svg',
-      markSvg(color: black, stroke: RelioMarkGeometry.strokeCompact, variant: 'compacte monochrome noir'));
-  write('$br/mark/mark-compact-mono-white.svg',
-      markSvg(color: white, stroke: RelioMarkGeometry.strokeCompact, variant: 'compacte monochrome blanc'));
+  // --- mark : quatre declinaisons ----------------------------------------
+  write('$br/mark/mark-primary.svg', markSvg(variant: 'onLight', nom: 'principale, sur fond clair'));
+  write('$br/mark/mark-inverse.svg', markSvg(variant: 'onIndigo', title: 'Relio', nom: 'inverse, sur fond indigo'));
+  write('$br/mark/mark-mono-black.svg', markSvg(variant: 'monoBlack', nom: 'monochrome noir'));
+  write('$br/mark/mark-mono-white.svg', markSvg(variant: 'monoWhite', nom: 'monochrome blanc'));
 
   // --- lockups ----------------------------------------------------------
-  write('$br/lockup/lockup-horizontal.svg',
-      lockupHorizontalSvg(markColor: orange, wordmarkColor: indigo));
-  write('$br/lockup/lockup-horizontal-mono-black.svg',
-      lockupHorizontalSvg(markColor: black, wordmarkColor: black));
-  write('$br/lockup/lockup-horizontal-mono-white.svg',
-      lockupHorizontalSvg(markColor: white, wordmarkColor: white));
-  write('$br/lockup/lockup-vertical.svg',
-      lockupVerticalSvg(markColor: orange, wordmarkColor: indigo));
-  write('$br/lockup/lockup-vertical-mono-black.svg',
-      lockupVerticalSvg(markColor: black, wordmarkColor: black));
-  write('$br/lockup/lockup-vertical-mono-white.svg',
-      lockupVerticalSvg(markColor: white, wordmarkColor: white));
+  write('$br/lockup/lockup-horizontal.svg', lockupHorizontalSvg(variant: 'onLight'));
+  write('$br/lockup/lockup-horizontal-mono-black.svg', lockupHorizontalSvg(variant: 'monoBlack'));
+  write('$br/lockup/lockup-horizontal-mono-white.svg', lockupHorizontalSvg(variant: 'monoWhite'));
+  write('$br/lockup/lockup-vertical.svg', lockupVerticalSvg(variant: 'onLight'));
+  write('$br/lockup/lockup-vertical-mono-black.svg', lockupVerticalSvg(variant: 'monoBlack'));
+  write('$br/lockup/lockup-vertical-mono-white.svg', lockupVerticalSvg(variant: 'monoWhite'));
+
+  // --- icone applicative -------------------------------------------------
+  write('$br/icon/relio-app-icon.svg', appIconSvg());
 
   stdout.writeln('\nGenerateur termine.');
 }
-

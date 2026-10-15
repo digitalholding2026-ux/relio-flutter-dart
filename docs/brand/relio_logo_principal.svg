@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360">
+  <title>Relio — logo principal</title>
+  <desc>Logo Relio en indigo avec un accent orange évoquant la progression.</desc>
+  <rect width="1200" height="360" fill="#FFFFFF"/>
+  <g transform="translate(35 25)">
+    <path d="M28 270 V54 Q28 28 56 28 H132 Q215 28 215 104 Q215 151 174 172 L231 270 H164 L116 181 H88 V270 Z M88 82 V129 H132 Q157 129 157 105 Q157 82 132 82 Z" fill="#1F3A6E" fill-rule="evenodd"/>
+    <path d="M38 252 L84 207 L105 228 L150 183 L174 207 L104 276 Q94 286 81 276 Z" fill="#F56207"/>
+    <path d="M93 202 L145 150 L145 176 L180 141 L202 163 L167 198 L190 198 L190 224 L93 224 Z" fill="#1F3A6E"/>
+  </g>
+  <text x="310" y="218" font-family="Nunito, Arial Rounded MT Bold, Arial, sans-serif" font-size="176" font-weight="800" letter-spacing="-7" fill="#1F3A6E">Relio</text>
+  <circle cx="601" cy="73" r="13" fill="#F56207"/>
+  <text x="320" y="288" font-family="Nunito, Arial, sans-serif" font-size="31" font-weight="600" fill="#1F3A6E">Les maths, c’est ton terrain !</text>
+  <path d="M790 301 Q868 281 954 294" fill="none" stroke="#F56207" stroke-width="7" stroke-linecap="round"/>
+</svg>

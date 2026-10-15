@@ -5,8 +5,9 @@
      a la regle des 14 unites, imposee par les masques de forme des
      constructeurs.
 
-     Le fond est un aplat orange plein ; le premier plan ne porte que le mark,
-     en position centrale. Voir assets/branding/launcher/. -->
+     Le fond est un aplat INDIGO plein ; le premier plan ne porte que le mark,
+     en declinaison claire — « R » et second zigzag en blanc, accent orange.
+     C'est ce qui rend le mark blanc lisible. Voir assets/branding/launcher/. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@mipmap/ic_launcher_background"/>
     <foreground android:drawable="@mipmap/ic_launcher_foreground"/>

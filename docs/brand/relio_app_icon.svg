@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <title>Relio — icône d’application</title>
+  <rect x="12" y="12" width="488" height="488" rx="112" fill="#1F3A6E"/>
+  <path d="M117 395 V117 Q117 88 147 88 H243 Q330 88 330 171 Q330 224 285 247 L350 395 H278 L221 259 H181 V395 Z M181 145 V205 H235 Q264 205 264 175 Q264 145 235 145 Z" fill="#FFFFFF" fill-rule="evenodd"/>
+  <path d="M100 383 L166 317 L190 341 L250 281 L276 307 L190 393 Q177 406 162 395 Z" fill="#F56207"/>
+  <path d="M240 282 L310 211 V245 L362 193 L390 221 L337 274 H370 V309 H240 Z" fill="#FFFFFF"/>
+  <circle cx="370" cy="116" r="20" fill="#F56207"/>
+</svg>

@@ -243,14 +243,31 @@ Une valeur mathématique ajoutée (tâche de vérification, réponse attendue) d
 
 > **Aucun SVG, PNG ou widget de la marque ne s'édite à la main.**
 
-La géométrie du logo vit dans **un seul fichier** :
+La géométrie du mark vit dans **un seul fichier** :
 
 ```
 lib/presentation/branding/relio_mark_geometry.dart
 ```
 
-Le SVG et le rendu à l'écran lisent les **mêmes constantes**. Toute
-déclinaison (lockup, monochrome, launcher, splash) en découle.
+Le mark y est décrit comme une suite de **traces pleines** (`M`, `L`, `Q`,
+`Z`) et un disque. C'est le vocabulaire du SVG : le générateur restitue ces
+commandes telles quelles, et `RelioMarkPainter` les traduit en `Path`. Les
+deux lisent donc **la même définition**, et non deux reconstitutions d'une
+même intention.
+
+### Origine : une spécification versionnée
+
+Les traces viennent de `docs/brand/`, où sont versionnés les deux SVG livrés
+et validés. `test/branding/brand_spec_test.dart` **rejoue l'import** depuis
+ces fichiers et échoue dès que les constantes ont dérivé.
+
+> Une retouche manuelle de `relio_mark_geometry.dart` fait donc échouer la
+> suite. C'est ce qui rend cette règle opposable plutôt que déclarative.
+
+Le mark n'est paramétrique en rien : ni cercle, ni courbe, ni épaisseur de
+trait — il est plein, donc rien ne s'efface quand la taille diminue. Les
+valeurs sont figées **tant que la spécification de `docs/brand/` ne change
+pas**.
 
 ### Ce qu'il faut faire après toute retouche de la marque
 
@@ -266,29 +283,37 @@ déclinaison (lockup, monochrome, launcher, splash) en découle.
 
    ```bash
    flutter analyze
-   flutter test test/branding/mark_geometry_test.dart
+   flutter test test/branding
    ```
 
 ### Pourquoi cette règle existe
 
 Un SVG retouché à la main dérive du painter, ou l'inverse. Les deux
 décrivent alors deux marques différentes : l'impression ne correspond plus à
-l'écran, et rien ne le signale. `mark_geometry_test.dart` relit les SVG
-générés et échoue dès qu'ils divergent de la géométrie.
+l'écran, et rien ne le signale. `brand_spec_test.dart` échoue dès que la
+géométrie s'écarte de la spécification.
 
 ### Valeurs figées
 
-Ne pas les ajuster sans remonter le constat. Les ratios de la spécification
-ont été vérifiés un par un ; une correction doit être motivée, pas
-discrète.
+Ne pas les ajuster sans remonter le constat. Les rapports ci-dessous ont été
+vérifiés un par un ; une correction doit être motivée, pas discrète.
 
 | Élément | Valeur |
 |---|---|
-| Cercle droit / gauche | Ø 28 / Ø 15,4, centres (66, 50) et (24, 50) |
-| Courbe | départ (31,7, 50), arrivée (52, 50), point bas (41,85, 56) |
-| Profondeur | 6 sous la ligne des centres — **pas 16** |
-| Trait | 4 u (≥ 48 dp) / 6,2 u (< 48 dp) |
-| Couleurs | mark `#F56207`, wordmark `#1F3A6E` |
+| Grille de référence | 100 × 100, mark centré |
+| Encre du mark | 91,194 × 100 — **plus haut que large** |
+| « R » | (9,748 ; 0) → (83,019 ; 96,541), ajouré, `evenOdd` |
+| Zigzag d'accent | (4,403 ; 60,692) → (59,748 ; 100) |
+| Second zigzag | (48,428 ; 33,019) → (95,597 ; 69,497) |
+| Point | centre (89,308 ; 8,805), rayon 6,289 |
+| Launcher adaptatif | grille 108 dp, zone sûre 66 dp, mark à 55 % = 36,3 dp |
+| Icône applicative | coins r = 112/512, fond en retrait de 12/512 |
+| Rapport mark / mot | 1,93 |
+| Signature | corps 31/176 du mot, écartement 0,37 |
+| Couleurs | accent `#F56207`, base `#1F3A6E` |
+
+Le mark porte **deux couleurs** : la structure en indigo, l'accent en orange.
+La déclinaison dépend du fond — sur fond indigo, la structure passe en blanc.
 
 ---
 
@@ -312,11 +337,12 @@ La chronologie de l'écran d'entrée (première ouverture) est **figée** :
   l'interdit explicitement. Sur un appareil lent, la sequence doit **sauter des
   étapes** — c'est ce que fait le tap d'accélération — pas durer plus longtemps.
 - **Ajouter un mouvement** au personnage. Il y en a exactement trois :
-  le grand point respire, le petit point pulse décalé, la courbe ondule.
+  le « R » respire, le point pulse décalé, le zigzag d'accent ondule.
   Un mouvement qui ne se décrit pas en une phrase simple est un mouvement de
   trop.
 - **Donner un visage, des membres ou une couleur au personnage.** Le
-  personnage *est* le mark : deux points et une courbe, en `#F56207`.
+  personnage *est* le mark : le « R », deux zigzags et un point, structure
+  indigo et accent orange.
 
 ### Le tap n'accélère qu'avant le bouton
 
@@ -353,8 +379,8 @@ fragile — l'animation du personnage ne se stabilise jamais.
 | Flutter | 3.47.7 |
 | NDK requis | 28.2.13676358 |
 | Persistance | Drift / SQLite, schéma v2 |
-| Marque | `assets/branding/` — voir [règle 9](#règle-9--la-marque-est-générée-pas-dessinée) |
-| Tests | 534 (400 applicatifs + 61 marque + 73 écran d'entrée) |
+| Marque | `assets/branding/` — spécification dans `docs/brand/`, voir [règle 9](#règle-9--la-marque-est-générée-pas-dessinée) |
+| Tests | 708 (622 applicatifs + 86 marque) |
 | Écran d'entrée | 5,3 s, première ouverture uniquement — voir règle 10 |
 
 ### Branches

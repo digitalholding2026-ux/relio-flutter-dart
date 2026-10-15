@@ -1,8 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 67.7 24.0" width="67.7" height="24.0" role="img" aria-label="Relio">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100.0 100.0" width="100.0" height="100.0" role="img" aria-label="Relio">
   <title>Relio</title>
-  <desc>Mark Relio, variante principale, trait 4 u. Grille de reference 100 x 100 ; boite englobante 67.7 x 24.0 unites, trait de 4.0 unites compris.</desc>
-  <g fill="none" fill-rule="evenodd">    <circle cx="66.0" cy="50.0" r="14.0" fill="#F56207"/>
-    <circle cx="24.0" cy="50.0" r="7.7" fill="#F56207"/>
-    <path d="M 31.7,50.0 C 37.993,58.0 45.707,58.0 52.0,50.0" stroke="#F56207" stroke-width="4.0" stroke-linecap="round"/>
+  <desc>Mark Relio, declinaison principale, sur fond clair. Grille de reference 100 x 100 ; boite englobante 91.194 x 100.0 unites. Traces pleines : le « R » est ajoure (fill-rule evenodd).</desc>
+  <g fill-rule="evenodd">
+    <path id="glyph" d="M9.748 96.541L9.748 9.119Q9.748 0.0 19.182 0.0L49.371 0.0Q76.73 0.0 76.73 26.101Q76.73 42.767 62.579 50.0L83.019 96.541L60.377 96.541L42.453 53.774L29.874 53.774L29.874 96.541ZM29.874 17.925L29.874 36.792L46.855 36.792Q55.975 36.792 55.975 27.358Q55.975 17.925 46.855 17.925Z" fill="#1F3A6E"/>
+    <path id="zigzag-accent" d="M4.403 92.767L25.157 72.013L32.704 79.56L51.572 60.692L59.748 68.868L32.704 95.912Q28.616 100.0 23.899 96.541Z" fill="#F56207"/>
+    <path id="zigzag-secondary" d="M48.428 61.006L70.44 38.679L70.44 49.371L86.792 33.019L95.597 41.824L78.931 58.491L89.308 58.491L89.308 69.497L48.428 69.497Z" fill="#1F3A6E"/>
+    <circle id="dot" cx="89.308" cy="8.805" r="6.289" fill="#F56207"/>
   </g>
 </svg>

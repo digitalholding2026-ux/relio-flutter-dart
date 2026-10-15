@@ -6,9 +6,12 @@
 ///
 /// REGLE DE RETENUE (mission 2, note 10) : un mouvement qui ne peut pas etre
 /// decrit en une phrase simple est trop complexe. Ici, il n'y en a que trois :
-///   - le grand point respire ;
-///   - le petit point pulse, synchronise mais independant ;
-///   - la courbe ondule comme sous un souffle.
+///   - le « R » respire ;
+///   - le point pulse, synchronise mais independant ;
+///   - le zigzag d'accent ondule comme sous un souffle.
+///
+/// Le second zigzag ne bouge pas : deux mouvements de plus et le mark deviendrait
+/// un element nerveux, ce que la specification exclut.
 ///
 /// Aucun saut, aucun retournement, aucun changement de couleur, aucun son.
 library;
@@ -17,7 +20,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'relio_mark_geometry.dart';
+import 'relio_mark.dart';
 
 /// Timings du personnage.
 ///
@@ -27,26 +30,25 @@ abstract final class RelioCharacterTiming {
   /// Cycle de la respiration, en secondes.
   static const double breathePeriod = 4.0;
 
-  /// Cycle de l'ondulation de la courbe, en secondes.
+  /// Cycle de l'ondulation du zigzag, en secondes.
   static const double wavePeriod = 3.0;
 
   /// Amplitude de l'ondulation, en unites de grille.
   ///
-  /// La profondeur oscille entre 4 et 8 unites de profondeur, soit y = 54 a
-  /// y = 58 : le point de repos (y = 56) est respecte.
+  /// Le zigzag se deplace de +/- 2 unites sur une hauteur de 100 : 2 % du
+  /// mark. C'est un frémissement, pas un deplacement.
   static const double waveAmplitude = 2.0;
 
-  /// Amplitude de la respiration, en fraction du rayon.
+  /// Amplitude de la respiration, en fraction de la taille du « R ».
   ///
   /// 1,5 % : perceptible comme vivant, invisible comme changement de forme.
   static const double breatheAmplitude = 0.015;
 
-  /// Phase de decalage du petit point, en fraction de cycle.
+  /// Phase de decalage du point, en fraction de cycle.
   ///
-  /// Le petit point pulse « de facon independante mais synchronisee » : meme
-  /// cycle, mais decale, pour que les deux points ne battent jamais a
-  /// l'unisson.
-  static const double smallDotPhaseShift = 0.25;
+  /// Le point pulse « de facon independante mais synchronisee » : meme cycle,
+  /// mais decale, pour que le « R » et le point ne battent jamais a l'unisson.
+  static const double dotPhaseShift = 0.25;
 
   /// Inclinaison maximale, en degres.
   ///
@@ -63,34 +65,38 @@ abstract final class RelioCharacterTiming {
 class RelioCharacterState {
   /// Cree un etat.
   const RelioCharacterState({
-    required this.breathe,
-    required this.breatheSmall,
-    required this.wave,
+    required this.glyphBreathe,
+    required this.dotPulse,
+    required this.accentWave,
     required this.leanDegrees,
   });
 
   /// Zero au repos : ni gonflement, ni ondulation, ni inclinaison.
   static const RelioCharacterState rest = RelioCharacterState(
-    breathe: 1,
-    breatheSmall: 1,
-    wave: RelioMarkGeometry.curveDepth,
+    glyphBreathe: 1,
+    dotPulse: 1,
+    accentWave: 0,
     leanDegrees: 0,
   );
 
-  /// Multiplicateur de rayon du GRAND cercle : 1 au repos, legerement au-dessus
-  /// en fin d'inspiration. Vaut 1 +/- `breatheAmplitude`.
-  final double breathe;
-
-  /// Multiplicateur de rayon du PETIT cercle.
+  /// Multiplicateur de taille du « R » : 1 au repos, legerement au-dessus en
+  /// fin d'inspiration. Vaut 1 +/- `breatheAmplitude`.
   ///
-  /// Meme cycle que [breathe], mais DECALE : les deux points ne battent donc
+  /// La mise a l'echelle se fait sur le centre du « R », jamais sur un bord :
+  /// un glyphe qui gonfle depuis sa gauche se deplacerait lateralement.
+  final double glyphBreathe;
+
+  /// Multiplicateur de taille du point.
+  ///
+  /// Meme cycle que [glyphBreathe], mais DECALE : les deux ne battent donc
   /// jamais a l'unisson. C'est ce qui rend la pulsation lisible sans etre
   /// nerveuse.
-  final double breatheSmall;
+  final double dotPulse;
 
-  /// Profondeur de la courbe en unites de grille, MESUREE depuis la ligne des
-  /// centres. Vaut `curveDepth` au repos, +/- `waveAmplitude`.
-  final double wave;
+  /// Decalage vertical du zigzag d'accent, en unites de grille.
+  ///
+  /// Vaut +/- [RelioCharacterTiming.waveAmplitude] autour de zero.
+  final double accentWave;
 
   /// Inclinaison en degres. Positive : le personnage s'incline vers le texte.
   final double leanDegrees;
@@ -107,25 +113,25 @@ class RelioCharacterState {
         elapsed.inMicroseconds / (RelioCharacterTiming.wavePeriod * 1e6);
 
     // Respiration : sinus plein, donc alternance inspiration / expiration.
-    final double breathe = 1 +
+    final double glyphBreathe = 1 +
         RelioCharacterTiming.breatheAmplitude * math.sin(2 * math.pi * breathePhase);
 
-    // Le petit point suit le meme cycle, decale d'un quart de periode : il
-    // finit sa respiration quand le grand commence.
-    final double breatheSmall = 1 +
+    // Le point suit le meme cycle, decale d'un quart de periode : il finit sa
+    // respiration quand le « R » commence.
+    final double dotPulse = 1 +
         RelioCharacterTiming.breatheAmplitude *
             math.sin(
-              2 * math.pi * (breathePhase + RelioCharacterTiming.smallDotPhaseShift),
+              2 * math.pi * (breathePhase + RelioCharacterTiming.dotPhaseShift),
             );
 
     // Ondulation : sinus plein, soit +/- 2 autour du repos.
-    final double wave = RelioMarkGeometry.curveDepth +
+    final double accentWave =
         RelioCharacterTiming.waveAmplitude * math.sin(2 * math.pi * wavePhase);
 
     return RelioCharacterState(
-      breathe: breathe,
-      breatheSmall: breatheSmall,
-      wave: wave,
+      glyphBreathe: glyphBreathe,
+      dotPulse: dotPulse,
+      accentWave: accentWave,
       leanDegrees: lean,
     );
   }
@@ -139,118 +145,90 @@ class RelioCharacterPainter extends CustomPainter {
   /// Cree le painter du personnage.
   const RelioCharacterPainter({
     required this.state,
-    this.color = const Color(0xFFF56207),
-    this.stroke = RelioMarkGeometry.strokePrimary,
+    this.variant = RelioMarkVariant.onLight,
   });
 
   /// Etat anime courant.
   final RelioCharacterState state;
 
-  /// Couleur unique du personnage.
-  final Color color;
-
-  /// Epaisseur du trait, en unites de grille.
-  final double stroke;
+  /// Declinaison chromatique, comme le mark statique.
+  final RelioMarkVariant variant;
 
   @override
   void paint(Canvas canvas, Size size) {
     final double side = math.min(size.width, size.height);
     if (side <= 0) return;
 
-    // Au repos, la boite englobante est celle du mark statique. L'ondulation
-    // descend de 2 unites au maximum : on reserve cette place en permanence,
-    // sinon le personnage « sauterait » d'une image a l'autre.
-    const double reserveWave = RelioCharacterTiming.waveAmplitude;
-    final double boxHeight =
-        RelioMarkGeometry.boundingHeight(stroke) + reserveWave;
-    final double boxWidth = RelioMarkGeometry.boundingWidth(stroke);
-    final double factor = side / boxWidth;
+    // Le zigzag d'accent se deplace de +/- `waveAmplitude` : on reserve cette
+    // place en permanence, sinon le personnage « sauterait » d'une image a
+    // l'autre. La reserve est symetrique, pour que le repos soit centre.
+    const double reserve = RelioCharacterTiming.waveAmplitude;
+    final double boxHeight = RelioMarkGeometry.inkHeight + 2 * reserve;
+    final double factor = side / RelioMarkGeometry.inkWidth;
 
     canvas.save();
-    canvas.translate((size.width - boxWidth * factor) / 2, (size.height - boxHeight * factor) / 2);
+    canvas.translate(
+      (size.width - RelioMarkGeometry.inkWidth * factor) / 2,
+      (size.height - boxHeight * factor) / 2,
+    );
     canvas.scale(factor);
+    canvas.translate(-RelioMarkGeometry.boundingBox.left, -RelioMarkGeometry.boundingBox.top);
 
-    final box = RelioMarkGeometry.boundingBox(stroke);
-
-    // Inclinaison : pivot sur le milieu de la ligne des centres, pour que le
-    // personnage bascule sur lui-meme et non autour d'un bord.
-    canvas.translate(
-      (box.left + box.right) / 2,
-      RelioMarkGeometry.centerLineY,
-    );
+    // Inclinaison : pivot sur le centre reel du mark, pour que le personnage
+    // bascule sur lui-meme et non autour d'un bord.
+    canvas.translate(RelioMarkGeometry.inkCenterX, RelioMarkGeometry.inkCenterY);
     canvas.rotate(state.leanDegrees * math.pi / 180);
-    canvas.translate(
-      -(box.left + box.right) / 2,
-      -RelioMarkGeometry.centerLineY,
-    );
+    canvas.translate(-RelioMarkGeometry.inkCenterX, -RelioMarkGeometry.inkCenterY);
 
-    // Recalage vertical : la boite reservee au repos laisse le bas libre, on
-    // centre donc sur la boite REELLE du mark et on translate de la reserve.
-    canvas.translate(-box.left, -(box.top + reserveWave / 2));
+    final ({Color base, Color accent}) c = relioMarkColors(variant);
 
-    final Paint fill = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill
-      ..isAntiAlias = true;
+    void paintPart(RelioMarkPart part, Color color) => canvas.drawPath(
+          relioMarkPath(part.nodes),
+          Paint()
+            ..color = color
+            ..style = PaintingStyle.fill
+            ..isAntiAlias = true,
+        );
 
-    // Les deux cercles respirent. Le petit point a sa propre phase : meme
-    // cycle, decale.
+    // Le « R » respire : echelle depuis son propre centre.
+    canvas.save();
+    canvas.translate(RelioMarkGeometry.glyph.centerX, RelioMarkGeometry.glyph.centerY);
+    canvas.scale(state.glyphBreathe);
+    canvas.translate(-RelioMarkGeometry.glyph.centerX, -RelioMarkGeometry.glyph.centerY);
+    paintPart(RelioMarkGeometry.glyph, c.base);
+    canvas.restore();
+
+    // Le second zigzag est immobile : c'est lui qui donne son assiette au
+    // mark pendant que l'accent bouge.
+    paintPart(RelioMarkGeometry.zigzagSecondary, c.base);
+
+    // Le zigzag d'accent ondule : un simple soulevement vertical.
+    canvas.save();
+    canvas.translate(0.0, state.accentWave);
+    paintPart(RelioMarkGeometry.zigzagAccent, c.accent);
+    canvas.restore();
+
+    // Le point pulse, depuis son centre.
+    canvas.save();
+    canvas.translate(RelioMarkGeometry.dot.centerX, RelioMarkGeometry.dot.centerY);
+    canvas.scale(state.dotPulse);
+    canvas.translate(-RelioMarkGeometry.dot.centerX, -RelioMarkGeometry.dot.centerY);
     canvas.drawCircle(
-      Offset(
-        RelioMarkGeometry.centerRightX,
-        RelioMarkGeometry.centerRightY,
-      ),
-      RelioMarkGeometry.radiusRight * state.breathe,
-      fill,
-    );
-
-    canvas.drawCircle(
-      Offset(
-        RelioMarkGeometry.centerLeftX,
-        RelioMarkGeometry.centerLeftY,
-      ),
-      RelioMarkGeometry.radiusLeft * state.breatheSmall,
-      fill,
-    );
-
-    // La courbe ondule : sa profondeur est mesuree depuis la ligne des
-    // centres, et son amplitude vaut +/- `waveAmplitude` autour du repos.
-    final double depth = state.wave;
-    // Pour une cubique dont le point bas vaut `depth`, le decalage vertical
-    // des points de controle vaut (depth / 0.75). C'est la meme relation que
-    // pour le mark statique — la courbe reste la meme courbe, elle respire.
-    final double controlOffset = depth / 0.75;
-
-    final Path curve = Path()
-      ..moveTo(RelioMarkGeometry.curveStartX, RelioMarkGeometry.centerLineY)
-      ..cubicTo(
-        RelioMarkGeometry.curveControl1X,
-        RelioMarkGeometry.centerLineY + controlOffset,
-        RelioMarkGeometry.curveControl2X,
-        RelioMarkGeometry.centerLineY + controlOffset,
-        RelioMarkGeometry.curveEndX,
-        RelioMarkGeometry.centerLineY,
-      );
-
-    canvas.drawPath(
-      curve,
+      Offset(RelioMarkGeometry.dot.centerX, RelioMarkGeometry.dot.centerY),
+      RelioMarkGeometry.dot.radius,
       Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
+        ..color = c.accent
+        ..style = PaintingStyle.fill
         ..isAntiAlias = true,
     );
+    canvas.restore();
 
     canvas.restore();
   }
 
   @override
   bool shouldRepaint(RelioCharacterPainter old) =>
-      old.state != state ||
-      old.color != color ||
-      old.stroke != stroke;
+      old.state != state || old.variant != variant;
 }
 
 /// Le personnage Relio, anime en continu.
@@ -264,7 +242,7 @@ class RelioCharacter extends StatefulWidget {
     required this.size,
     this.animate = true,
     this.lean = 0,
-    this.color = const Color(0xFFF56207),
+    this.variant = RelioMarkVariant.onLight,
   });
 
   /// Cote du personnage, en pixels logiques.
@@ -279,8 +257,8 @@ class RelioCharacter extends StatefulWidget {
   /// Inclinaison demandee par la sequence, en degres.
   final double lean;
 
-  /// Couleur unique du personnage.
-  final Color color;
+  /// Declinaison chromatique.
+  final RelioMarkVariant variant;
 
   @override
   State<RelioCharacter> createState() => _RelioCharacterState();
@@ -332,12 +310,12 @@ class _RelioCharacterState extends State<RelioCharacter>
         child: CustomPaint(
           painter: RelioCharacterPainter(
             state: RelioCharacterState(
-              breathe: 1,
-              breatheSmall: 1,
-              wave: RelioMarkGeometry.curveDepth,
+              glyphBreathe: 1,
+              dotPulse: 1,
+              accentWave: 0,
               leanDegrees: widget.lean,
             ),
-            color: widget.color,
+            variant: widget.variant,
           ),
         ),
       );
@@ -353,7 +331,7 @@ class _RelioCharacterState extends State<RelioCharacter>
         return SizedBox.square(
           dimension: widget.size,
           child: CustomPaint(
-            painter: RelioCharacterPainter(state: state, color: widget.color),
+            painter: RelioCharacterPainter(state: state, variant: widget.variant),
           ),
         );
       },
