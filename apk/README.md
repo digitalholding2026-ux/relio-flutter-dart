@@ -7,9 +7,17 @@ télécharger et l'installer sur un téléphone.
 
 | Fichier | Taille | Contenu |
 |---|---|---|
-| `apk/relio-socle-v0.3.4-logo.apk` | ~21,9 Mo | **Dernier build.** Logo Relio : marque, splash, icône d'application |
+| `apk/relio-socle-v0.3.9-marque.apk` | ~22,1 Mo | **Dernier build.** Nouveau mark, icône d'application et logo principal |
+| `apk/relio-socle-v0.3.9-audit.apk` | ~22,1 Mo | Audit onboarding : trois corrections d'affichage |
+| `apk/relio-socle-v0.3.8-onboarding.apk` | ~22,1 Mo | Onboarding complet : prénom, test d'entrée, clôture |
+| `apk/relio-socle-v0.3.7-marqueurs-onboarding.apk` | ~21,9 Mo | Marqueurs d'onboarding |
+| `apk/relio-socle-v0.3.6-test-entree.apk` | ~21,9 Mo | Test d'entrée de cinq questions |
+| `apk/relio-socle-v0.3.5-bouton-entree.apk` | ~21,9 Mo | Bouton d'entrée |
+| `apk/relio-socle-v0.3.4-logo.apk` | ~21,9 Mo | Ancienne marque : deux points et une courbe |
 | `apk/relio-socle-v0.3.4-navigation.apk` | ~21,9 Mo | Navigation à trois onglets, Accueil, Apprendre, Profil |
 | `apk/relio-socle-v0.3.4-relation-ppcm.apk` | ~21,7 Mo | Contrat « relation PPCM–PGCD appliquée » |
+| `apk/relio-socle-v0.3.4-ecran-entree.apk` | ~21,9 Mo | Écran d'entrée animé |
+| `apk/relio-socle-v0.3.4-corrections.apk` | ~21,9 Mo | Corrections d'affichage |
 | `apk/relio-socle-v0.3.3-typographie.apk` | ~21,7 Mo | Police Inter + formateur typographique |
 | `apk/relio-socle-v0.3.2-verification-transfert.apk` | ~21,9 Mo | Cœur de la vérification de transfert |
 | `apk/relio-socle-v0.3.1-verrouillage.apk` | ~21,9 Mo | Verrouillage du champ après validation |
@@ -54,22 +62,30 @@ arbitrer n° 6).
 
 ## Contenu du dernier build
 
-`relio-socle-v0.3.4-logo.apk` — **la marque Relio**, déclinée et intégrée à
-l'application :
+`relio-socle-v0.3.9-marque.apk` — **la marque Relio est entièrement
+remplacée** par les deux fichiers fournis, propagés à toute l'application :
 
-- **mark** : deux cercles (Ø 28 et Ø 15,4) reliés par une courbe de
-  profondeur 6, en `#F56207` seul ;
-- **splash** : fond blanc, mark centré, « Relio » en dessous en Inter
-  SemiBold indigo. **Aucun délai artificiel** : l'écran disparaît dès que
-  l'application est prête ;
-- **icône d'application** : icône adaptative Android conforme aux masques
-  des constructeurs (zone sûre 66 dp respectée), plus une couche
-  monochrome pour les icônes thémées d'Android 13+ ;
-- **en-tête d'accueil** : lockup horizontal, mark et wordmark alignés ;
-- le nom de l'application sous le lanceur s'affiche désormais « Relio ».
+- **nouveau mark** : un « R » ajouré, deux zigzags et un point orange ;
+- **icône d'application** : fond indigo à coins arrondis, mark en blanc et
+  orange, déclarée en calques Android séparés — le fond n'est plus cuit
+  dans l'image, donc les masques des constructeurs ne le rognent plus ;
+- **splash** : fond blanc, mark, « Relio » puis la signature
+  « Les maths, c'est ton terrain ! », le tout en Inter SemiBold ;
+- **écran d'entrée** : le personnage animé est le nouveau mark. Il garde
+  **exactement trois mouvements** — le « R » respire, le point pulse
+  décalé, le zigzag d'accent ondule ;
+- **en-tête d'accueil** : lockup horizontal avec le nouveau mark.
 
-Le logo est **dessiné par le code**, pas embarqué comme image : la marque
-reste nette à toute densité d'écran, sans alourdir l'APK.
+La marque est **générée**, pas dessinée : la géométrie vit dans un seul
+fichier, et le SVG, les PNG et le rendu à l'écran lisent la même
+définition. Un test rejoue l'import depuis la spécification versionnée et
+échoue si la géométrie en dérive.
+
+### Précédent build
+
+`relio-socle-v0.3.4-logo.apk` — **l'ancienne marque Relio**, deux cercles
+(Ø 28 et Ø 15,4) reliés par une courbe, en `#F56207` seul, avec splash,
+icône d'application et en-tête d'accueil. Conservé pour comparaison.
 
 ### Précédent build
 
