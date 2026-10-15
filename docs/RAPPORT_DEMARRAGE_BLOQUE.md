@@ -189,7 +189,7 @@ d'arbre ne savent pas voir.
 | `2-bienvenue.png` | Bienvenue | correct — lockup entier, texte, bouton |
 | `3-introduction.png` | Introduction au questionnaire | **correct — c'était l'écran bloqué** |
 | `4-prenom.png` | Prénom | **défaut de mise en page, voir § 5.4** |
-| `6-cloture.png` | Clôture | non produite — voir § 7 |
+| `6-cloture.png` | Clôture | correct — texte exact, bouton, aucun recouvrement |
 
 L'outil est ce qui a révélé le défaut de largeur du § 3.4. Il a aussi révélé
 celui du § 5.4.
@@ -246,7 +246,9 @@ possible : `HypervisorPlatform` est `Disabled`, et l'activer exigerait un
 redémarrage de la machine. Aucun test sur appareil n'a donc été réalisé.
 
 **Ce qui a été vérifié :** tests automatisés, et capture du rendu réel des
-écrans par le moteur de rendu à la résolution de référence.
+**quatre écrans du parcours** à la résolution de référence. Trois des quatre
+sont visuellement corrects ; l'écran du prénom porte un défaut de mise en page
+distinct (§ 5.4), **présent dans l'APK publié**.
 
 **Ce qui ne l'a pas été :**
 
