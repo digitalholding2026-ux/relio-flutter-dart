@@ -295,64 +295,40 @@ class RelioWordmark extends StatelessWidget {
   });
 
   /// Hauteur de capitale souhaitee, en pixels logiques.
-  ///
-  /// La largeur decoule de la fonte : elle n'est pas forcee, ce qui evite de
-  /// deformer les glyphes.
   final double capHeight;
 
   /// Couleur du texte.
   final Color color;
 
-  @override
-  Widget build(BuildContext context) {
-    // La hauteur de capitale commande la taille de police. La largeur est laissee
-    // au moteur de texte : la contraindre deformationnerait les glyphes, et la
-    // fonte reste la reference.
-    final double fontSize = capHeight / RelioBrand.wordmarkCapHeightEm;
-
-    return SizedBox(
-      height: capHeight,
-      child: CustomPaint(
-        painter: _WordmarkPainter(fontSize: fontSize, color: color),
-        // La largeur reelle est publiee par le painter via son child minimal.
-        child: const SizedBox.shrink(),
-      ),
-    );
-  }
-}
-
-class _WordmarkPainter extends CustomPainter {
-  const _WordmarkPainter({required this.fontSize, required this.color});
-
-  final double fontSize;
-  final Color color;
+  /// Corps de police correspondant à [capHeight].
+  ///
+  /// La hauteur de capitale d'Inter SemiBold vaut 1490/2048 em : c'est elle,
+  /// et non le corps, qui commande la taille optique du mot.
+  double get fontSize => capHeight / RelioBrand.wordmarkCapHeightEm;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final TextPainter painter = TextPainter(
-      text: TextSpan(
-        text: RelioWordmark.text,
+  Widget build(BuildContext context) => Text(
+        text,
+        textAlign: TextAlign.left,
+        // `height: 1` et une gouttière forcée fixent la boîte à `fontSize`.
+        //
+        // Le mot occupe alors une place RÉELLE dans la mise en page. Ce n'était
+        // pas le cas avant : le texte était peint par un `CustomPaint` dont
+        // l'enfant valait zéro, donc la boîte mesurait zéro de large, et le mot
+        // se superposait au mark avant de sortir de l'écran.
         style: TextStyle(
           fontFamily: 'Inter',
           fontWeight: FontWeight.w600,
           fontSize: fontSize,
           color: color,
           letterSpacing: RelioBrand.wordmarkTracking * fontSize,
+          height: 1,
         ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-
-    // Centrage vertical sur la hauteur de capitale : la zone posee par
-    // TextPainter inclut l'ascendante et la descendante, plus hautes que les
-    // capitales elles-memes.
-    final double dy = size.height / 2 - painter.height / 2;
-    painter.paint(canvas, Offset(0, dy));
-  }
-
-  @override
-  bool shouldRepaint(_WordmarkPainter old) =>
-      old.fontSize != fontSize || old.color != color;
+        strutStyle: StrutStyle.fromTextStyle(
+          TextStyle(fontSize: fontSize),
+          forceStrutHeight: true,
+        ),
+      );
 }
 
 /// La signature de marque, sous le wordmark.
@@ -378,43 +354,24 @@ class RelioSignature extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double fontSize = capHeight / RelioBrand.wordmarkCapHeightEm;
-    return SizedBox(
-      height: capHeight,
-      child: CustomPaint(
-        painter: _SignaturePainter(fontSize: fontSize, color: color),
-        child: const SizedBox.shrink(),
+    return Text(
+      text,
+      textAlign: TextAlign.left,
+      // Même géométrie de boîte que le wordmark : voir [RelioWordmark] pour
+      // l'explication — c'est la raison pour laquelle la signature occupait
+      // elle aussi une place de largeur nulle.
+      style: TextStyle(
+        fontFamily: 'Inter',
+        fontWeight: FontWeight.w600,
+        fontSize: fontSize,
+        color: color,
+        letterSpacing: RelioBrand.signatureTracking * fontSize,
+        height: 1,
+      ),
+      strutStyle: StrutStyle.fromTextStyle(
+        TextStyle(fontSize: fontSize),
+        forceStrutHeight: true,
       ),
     );
   }
-}
-
-class _SignaturePainter extends CustomPainter {
-  const _SignaturePainter({required this.fontSize, required this.color});
-
-  final double fontSize;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final TextPainter painter = TextPainter(
-      text: TextSpan(
-        text: RelioSignature.text,
-        style: TextStyle(
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.w600,
-          fontSize: fontSize,
-          color: color,
-          letterSpacing: RelioBrand.signatureTracking * fontSize,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-
-    final double dy = size.height / 2 - painter.height / 2;
-    painter.paint(canvas, Offset(0, dy));
-  }
-
-  @override
-  bool shouldRepaint(_SignaturePainter old) =>
-      old.fontSize != fontSize || old.color != color;
 }

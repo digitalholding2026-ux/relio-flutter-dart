@@ -15,10 +15,13 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:relio/presentation/branding/relio_lockup.dart';
+import 'package:relio/presentation/branding/relio_mark.dart';
 import 'package:relio/presentation/screens/intro/opening_page.dart';
 import 'package:relio/presentation/screens/onboarding/closing_page.dart';
 import 'package:relio/presentation/screens/onboarding/entry_test_intro_page.dart';
 import 'package:relio/presentation/screens/onboarding/name_page.dart';
+import 'package:relio/presentation/screens/onboarding/onboarding_metrics.dart';
 import 'package:relio/presentation/screens/onboarding/welcome_page.dart';
 import 'package:relio/presentation/strings/relio_strings.dart';
 import 'package:relio/presentation/theme/relio_theme.dart';
@@ -202,6 +205,71 @@ void main() {
         expect(opaciteMinimale(tester), 1,
             reason: '$nom doit être visible sans animation');
       }
+    });
+  });
+
+  group('Le lockup occupe une vraie largeur', () {
+    testWidgets('le mot et la signature ne sont pas peints hors de leur boîte',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        RelioPaletteScope(
+          palette: RelioPalette.standard(),
+          child: MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: RelioLockupHorizontal(
+                  markSize: OnboardingMetrics.welcomeLockupCapHeightCompact,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Un `CustomPaint` dont l'enfant vaut zéro reported une largeur NULLE,
+      // et son texte se peint par-dessus le mark puis hors de l'écran. Le
+      // lockup complet devait donc mesurer la largeur du mark seul.
+      final double largeur = tester
+          .getSize(find.byType(RelioLockupHorizontal))
+          .width;
+      final double largeurMark = RelioMarkGeometry.grid *
+          OnboardingMetrics.welcomeLockupCapHeightCompact *
+          2 *
+          RelioMarkGeometry.inkWidth /
+          RelioMarkGeometry.inkHeight /
+          OnboardingMetrics.compactWidthThreshold;
+
+      expect(largeur, greaterThan(largeurMark * 1.5),
+          reason: 'le mot doit ajouter une largeur RÉELLE à celle du mark');
+      expect(largeur, lessThanOrEqualTo(360),
+          reason: 'le lockup doit tenir dans l\'écran de référence');
+    });
+
+    testWidgets('l\'accueil affiche un lockup entier', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        RelioPaletteScope(
+          palette: RelioPalette.standard(),
+          child: const MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: RelioLockupHorizontal(markSize: 22),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
     });
   });
 
