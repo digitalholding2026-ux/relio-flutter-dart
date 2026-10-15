@@ -145,98 +145,106 @@ class _ClosingPageState extends State<ClosingPage>
   Widget build(BuildContext context) {
     final palette = RelioPaletteScope.of(context);
 
-    return Scaffold(
-      backgroundColor: palette.background,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final double from = OnboardingMetrics.characterSize(
-              width: constraints.maxWidth,
-              large: false,
-            );
-            final double to = OnboardingMetrics.characterSize(
-              width: constraints.maxWidth,
-              large: true,
-            );
-            final double size = Tween<double>(
-              begin: from,
-              end: to,
-            ).evaluate(_grow);
+    // L'écran s'abonne à ses trois animations. SANS cet abonnement, `build`
+    // ne serait rejoué que si un AUTRE élément de l'arbre le demandait : les
+    // contrôleurs tourneraient, mais le texte et le bouton resteraient peints
+    // à leur état INITIAL — donc transparents. Un élève aurait vu le
+    // personnage seul, sans phrase ni bouton, et n'aurait pas pu sortir.
+    return AnimatedBuilder(
+      animation: Listenable.merge(<Listenable>[_grow, _text, _button]),
+      builder: (BuildContext context, _) => Scaffold(
+        backgroundColor: palette.background,
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final double from = OnboardingMetrics.characterSize(
+                width: constraints.maxWidth,
+                large: false,
+              );
+              final double to = OnboardingMetrics.characterSize(
+                width: constraints.maxWidth,
+                large: true,
+              );
+              final double size = Tween<double>(
+                begin: from,
+                end: to,
+              ).evaluate(_grow);
 
-            // MISE EN PAGE EN COLONNE, et non en `Stack` superpose.
-            //
-            // Le `Stack` positionnait le personnage et le texte par des
-            // decalages ABSOLUS, chacun ignorant l'autre. Sur un petit ecran
-            // (360 x 640) avec la police a 1,3, la phrase de cloture occupe
-            // quatre lignes et venaiT CHEVAUCHER le personnage : les deux se
-            // trouvaient dans la meme bande verticale.
-            //
-            // La colonne rend ce defaut IMPOSSIBLE : chaque element recoit la
-            // place restante, et le texte ne peut pas remonter sur le
-            // personnage quel que soit le nombre de lignes.
-            return Column(
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.only(top: RelioSpacing.xxl),
-                  child: RelioCharacter(
-                    size: size,
-                    animate: !widget.reduceAnimations,
+              // MISE EN PAGE EN COLONNE, et non en `Stack` superpose.
+              //
+              // Le `Stack` positionnait le personnage et le texte par des
+              // decalages ABSOLUS, chacun ignorant l'autre. Sur un petit ecran
+              // (360 x 640) avec la police a 1,3, la phrase de cloture occupe
+              // quatre lignes et venaiT CHEVAUCHER le personnage : les deux se
+              // trouvaient dans la meme bande verticale.
+              //
+              // La colonne rend ce defaut IMPOSSIBLE : chaque element recoit la
+              // place restante, et le texte ne peut pas remonter sur le
+              // personnage quel que soit le nombre de lignes.
+              return Column(
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.only(top: RelioSpacing.xxl),
+                    child: RelioCharacter(
+                      size: size,
+                      animate: !widget.reduceAnimations,
+                    ),
                   ),
-                ),
-                // Le texte occupe toute la place restante et se centre dedans :
-                // il s'ecarte du personnage au lieu de le traverser.
-                Expanded(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: RelioSpacing.horizontal,
-                        vertical: RelioSpacing.md,
-                      ),
-                      child: Opacity(
-                        opacity: _text.value,
-                        child: Text(
-                          RelioStrings.closingMessage(
-                            // Le prénom est capitalisé ici aussi : une
-                            // installation antérieure, ou une saisie passée
-                            // par l'écran Profil, peut l'avoir laissé en
-                            // minuscules.
-                            capitalizeName(widget.name),
+                  // Le texte occupe toute la place restante et se centre dedans :
+                  // il s'ecarte du personnage au lieu de le traverser.
+                  Expanded(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: RelioSpacing.horizontal,
+                          vertical: RelioSpacing.md,
+                        ),
+                        child: Opacity(
+                          opacity: _text.value,
+                          child: Text(
+                            RelioStrings.closingMessage(
+                              // Le prénom est capitalisé ici aussi : une
+                              // installation antérieure, ou une saisie passée
+                              // par l'écran Profil, peut l'avoir laissé en
+                              // minuscules.
+                              capitalizeName(widget.name),
+                            ),
+                            textAlign: TextAlign.center,
+                            style: RelioType.title(palette),
                           ),
-                          textAlign: TextAlign.center,
-                          style: RelioType.title(palette),
                         ),
                       ),
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    RelioSpacing.horizontal,
-                    RelioSpacing.md,
-                    RelioSpacing.horizontal,
-                    RelioSpacing.xl,
-                  ),
-                  child: Opacity(
-                    opacity: _button.value,
-                    child: Transform.translate(
-                      // Glissement vertical de 8 dp à l'apparition.
-                      offset: Offset(
-                        0,
-                        OnboardingMetrics.slideOffset * (1 - _button.value),
-                      ),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: _busy ? null : _confirm,
-                          child: const Text(RelioStrings.closingDiscover),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      RelioSpacing.horizontal,
+                      RelioSpacing.md,
+                      RelioSpacing.horizontal,
+                      RelioSpacing.xl,
+                    ),
+                    child: Opacity(
+                      opacity: _button.value,
+                      child: Transform.translate(
+                        // Glissement vertical de 8 dp à l'apparition.
+                        offset: Offset(
+                          0,
+                          OnboardingMetrics.slideOffset * (1 - _button.value),
+                        ),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed: _busy ? null : _confirm,
+                            child: const Text(RelioStrings.closingDiscover),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
     );

@@ -91,65 +91,73 @@ class _EntryTestIntroPageState extends State<EntryTestIntroPage>
   Widget build(BuildContext context) {
     final palette = RelioPaletteScope.of(context);
 
-    return Scaffold(
-      backgroundColor: palette.background,
-      body: SafeArea(
-        child: Column(
-          children: <Widget>[
-            const SizedBox(height: RelioSpacing.xxl),
-            _arriving(0, _chips(palette)),
-            const SizedBox(height: RelioSpacing.xl),
-            Expanded(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: RelioSpacing.horizontal,
-                    vertical: RelioSpacing.md,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      _arriving(
-                        1,
-                        Text(
-                          RelioStrings.entryIntroMessage,
-                          textAlign: TextAlign.center,
-                          style: RelioType.title(palette),
+    // L'écran s'abonne à l'animation. SANS cet abonnement, `build` ne serait
+    // rejoué que si un AUTRE élément de l'arbre le demandait : le contrôleur
+    // tournerait, mais l'écran resterait peint tel qu'il l'était à la première
+    // image — c'est-à-dire entièrement transparent. Un `AnimatedBuilder` qui
+    // n'écoute rien ne redessine rien ; c'est tout le sujet.
+    return AnimatedBuilder(
+      animation: _reveal,
+      builder: (BuildContext context, _) => Scaffold(
+        backgroundColor: palette.background,
+        body: SafeArea(
+          child: Column(
+            children: <Widget>[
+              const SizedBox(height: RelioSpacing.xxl),
+              _arriving(0, _chips(palette)),
+              const SizedBox(height: RelioSpacing.xl),
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: RelioSpacing.horizontal,
+                      vertical: RelioSpacing.md,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        _arriving(
+                          1,
+                          Text(
+                            RelioStrings.entryIntroMessage,
+                            textAlign: TextAlign.center,
+                            style: RelioType.title(palette),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: RelioSpacing.md),
-                      _arriving(
-                        1,
-                        Text(
-                          RelioStrings.entryIntroCaption,
-                          textAlign: TextAlign.center,
-                          style: RelioType.caption(palette),
+                        const SizedBox(height: RelioSpacing.md),
+                        _arriving(
+                          1,
+                          Text(
+                            RelioStrings.entryIntroCaption,
+                            textAlign: TextAlign.center,
+                            style: RelioType.caption(palette),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                RelioSpacing.horizontal,
-                RelioSpacing.md,
-                RelioSpacing.horizontal,
-                RelioSpacing.xl,
-              ),
-              child: _arriving(
-                2,
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: widget.onStart,
-                    child: const Text(RelioStrings.entryIntroStart),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  RelioSpacing.horizontal,
+                  RelioSpacing.md,
+                  RelioSpacing.horizontal,
+                  RelioSpacing.xl,
+                ),
+                child: _arriving(
+                  2,
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: widget.onStart,
+                      child: const Text(RelioStrings.entryIntroStart),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -128,11 +128,17 @@ class _NamePageState extends State<NamePage>
   Widget build(BuildContext context) {
     final palette = RelioPaletteScope.of(context);
 
-    return Scaffold(
-      backgroundColor: palette.background,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
+    // L'écran s'abonne à sa sortie. SANS cet abonnement, `build` ne serait
+    // rejoué que si un AUTRE élément de l'arbre le demandait : le contrôleur
+    // tournerait, mais le rétrécissement du personnage et le fondu du contenu
+    // resteraient peints à leur état initial. L'écran resterait figé.
+    return AnimatedBuilder(
+      animation: _exit,
+      builder: (BuildContext context, _) => Scaffold(
+        backgroundColor: palette.background,
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
             // Le personnage se réduit de 140 à 80 à la validation, pour
             // laisser la place à la première question.
             final double from = OnboardingMetrics.characterSize(
@@ -149,8 +155,14 @@ class _NamePageState extends State<NamePage>
             ).evaluate(_exit);
 
             // Le contenu suit la sortie : il s'efface pendant le rétrécissement.
+            //
+            // AVEC animations réduites, le contenu est visible d'emblée et le
+            // reste : il valait 0, ce qui rendait l'écran INUTILISABLE — pas de
+            // titre, pas de champ, pas de bouton — pour tout élève ayant
+            // demandé à limiter les animations. Réduire les animations doit
+            // retirer le mouvement, jamais l'information.
             final double contentOpacity =
-                widget.reduceAnimations ? 0 : (1 - _exit.value);
+                widget.reduceAnimations ? 1 : (1 - _exit.value);
 
             return Stack(
               children: <Widget>[
@@ -219,7 +231,8 @@ class _NamePageState extends State<NamePage>
                 ),
               ],
             );
-          },
+            },
+          ),
         ),
       ),
     );

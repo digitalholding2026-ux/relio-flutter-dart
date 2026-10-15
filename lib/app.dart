@@ -11,6 +11,8 @@
 /// suite du parcours.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'data/db/app_database.dart';
@@ -32,6 +34,7 @@ import 'presentation/screens/learn_page.dart';
 import 'presentation/screens/onboarding/onboarding_flow.dart';
 import 'presentation/screens/onboarding/welcome_page.dart';
 import 'presentation/screens/profile_page.dart';
+import 'presentation/strings/relio_strings.dart';
 import 'presentation/theme/relio_theme.dart';
 
 /// Étape de premier lancement, lue depuis un seul endroit.
@@ -54,6 +57,13 @@ enum _Stage {
 
   /// Parcours terminé : l'accueil.
   home,
+
+  /// Le drapeau n'a pas pu être lu : on propose de réessayer.
+  ///
+  /// Cet état EXISTE parce que l'absence d'écran est le pire échec possible :
+  /// sans lui, une lecture de base qui ne répond pas laisserait l'application
+  /// sur un fond blanc, sans explication et sans issue.
+  startupFailed,
 }
 
 class RelioApp extends StatefulWidget {
@@ -141,13 +151,26 @@ class _RelioAppState extends State<RelioApp> {
   /// sur `hasCompletedFirstLaunch()` aurait rejoué cet écran une seconde fois,
   /// et surtout aurait fait perdre la reprise du test.
   ///
-  /// Une lecture en échec vaut « déjà vu » : mieux vaut laisser l'élève
+  /// Une lecture en ÉCHEC vaut « déjà vu » : mieux vaut laisser l'élève
   /// directement à l'accueil que bloquer l'application sur une préférence
   /// illisible.
+  ///
+  /// Une lecture qui NE RÉPOND PAS, en revanche, ne vaut pas « déjà vu » : elle
+  /// ne répond pas non plus. On lui impose un délai au-delà duquel l'écran
+  /// d'échec est proposé, avec un bouton de réessai. Sans ce filet, la
+  /// moindre attente non satisfaite — verrou de base, migration lente, I/O
+  /// bloqué — laisserait l'application sur un fond blanc, sans explication et
+  /// sans issue.
+  static const Duration _resolveTimeout = Duration(seconds: 8);
+
   Future<void> _resolveFirstLaunch() async {
-    var seen = true;
+    bool seen;
     try {
-      seen = await _repository.hasSeenEntryScreen();
+      seen = await _repository.hasSeenEntryScreen().timeout(_resolveTimeout);
+    } on TimeoutException {
+      if (!mounted) return;
+      setState(() => _stage = _Stage.startupFailed);
+      return;
     } catch (_) {
       seen = true;
     }
@@ -227,6 +250,17 @@ class _RelioAppState extends State<RelioApp> {
     if (mounted) setState(() => _stage = _Stage.home);
   }
 
+  /// Le démarrage a échoué : on propose de réessayer.
+  ///
+  /// Le réessai RELIT le drapeau depuis le début. Il ne suppose rien de
+  /// l'échec précédent : si la base est simplement lente au premier accès, le
+  /// second essai passe.
+  void _retryStartup() {
+    if (!mounted) return;
+    setState(() => _stage = _Stage.deciding);
+    _resolveFirstLaunch();
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -288,6 +322,10 @@ class _RelioAppState extends State<RelioApp> {
                     settings: settings,
                     controller: _controller,
                   ),
+
+                // Jamais un fond blanc sans issue : on dit ce qu'il se passe
+                // et on donne un moyen de recommencer.
+                _Stage.startupFailed => _StartupError(onRetry: _retryStartup),
               },
             ),
           ),
@@ -308,6 +346,60 @@ class _SplashGate extends StatelessWidget {
   Widget build(BuildContext context) => const Scaffold(
         backgroundColor: Color(0xFFFFFFFF),
       );
+}
+
+/// Écran d'échec du démarrage, avec réessai.
+///
+/// Il EXISTE pour une raison précise : sans lui, toute initialisation qui ne
+/// aboutit pas se traduit par un écran blanc. L'élève verrait une page vide,
+/// sans savoir s'il doit attendre, relancer, ou quoi que ce soit.
+class _StartupError extends StatelessWidget {
+  const _StartupError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final RelioPalette palette = RelioPaletteScope.of(context);
+
+    return Scaffold(
+      backgroundColor: palette.background,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: RelioSpacing.horizontal,
+              vertical: RelioSpacing.xl,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  RelioStrings.startupErrorTitle,
+                  textAlign: TextAlign.center,
+                  style: RelioType.title(palette),
+                ),
+                const SizedBox(height: RelioSpacing.md),
+                Text(
+                  RelioStrings.startupErrorMessage,
+                  textAlign: TextAlign.center,
+                  style: RelioType.body(palette),
+                ),
+                const SizedBox(height: RelioSpacing.xl),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: onRetry,
+                    child: const Text(RelioStrings.startupRetry),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Coquille des trois onglets, avec la navigation du chapitre.

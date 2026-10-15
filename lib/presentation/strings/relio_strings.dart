@@ -199,6 +199,28 @@ abstract final class RelioStrings {
   /// Introduction au questionnaire — bouton.
   static const String entryIntroStart = 'C\u2019est parti !';
 
+  // ---------------------------------------------------------------------
+  // Démarrage — échec d'initialisation
+  //
+  // Un écran blanc sans explication est le pire des échecs : l'élève ne sait
+  // ni ce qui s'est passé, ni quoi faire. Il doit donc toujours y avoir un
+  // écran d'erreur et un moyen de réessayer.
+  // ---------------------------------------------------------------------
+
+  /// Titre de l'écran d'échec au démarrage.
+  static const String startupErrorTitle =
+      'Relio n\'a pas pu démarrer';
+
+  /// Message de l'écran d'échec au démarrage.
+  ///
+  /// Volontairement NEUTRE : ni cause affirmée, ni diagnostic. L'élève n'a
+  /// rien à corriger — c'est l'application qui doit recommencer.
+  static const String startupErrorMessage =
+      'La préparation n\'a pas abouti. Réessaie pour continuer ton parcours.';
+
+  /// Bouton de réessai.
+  static const String startupRetry = 'Réessayer';
+
   // Onboarding — parcours d'entrée
   //
   // Aucun de ces libellés ne mentionne de score, de niveau ni de résultat :

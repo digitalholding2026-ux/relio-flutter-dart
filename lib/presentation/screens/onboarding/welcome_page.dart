@@ -115,73 +115,81 @@ class _WelcomePageState extends State<WelcomePage>
   Widget build(BuildContext context) {
     final palette = RelioPaletteScope.of(context);
 
-    return Scaffold(
-      backgroundColor: palette.background,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final bool compact = constraints.maxWidth <=
-                OnboardingMetrics.compactWidthThreshold;
-            final double cap = compact
-                ? OnboardingMetrics.welcomeLockupCapHeightCompact
-                : OnboardingMetrics.welcomeLockupCapHeight;
+    // L'écran s'abonne à l'animation. SANS cet abonnement, `build` ne serait
+    // rejoué que si un AUTRE élément de l'arbre le demandait : le contrôleur
+    // tournerait, mais l'écran resterait peint tel qu'il l'était à la première
+    // image — c'est-à-dire entièrement transparent. Un `AnimatedBuilder` qui
+    // n'écoute rien ne redessine rien ; c'est tout le sujet.
+    return AnimatedBuilder(
+      animation: _reveal,
+      builder: (BuildContext context, _) => Scaffold(
+        backgroundColor: palette.background,
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final bool compact = constraints.maxWidth <=
+                  OnboardingMetrics.compactWidthThreshold;
+              final double cap = compact
+                  ? OnboardingMetrics.welcomeLockupCapHeightCompact
+                  : OnboardingMetrics.welcomeLockupCapHeight;
 
-            return Column(
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.only(top: RelioSpacing.xxl),
-                  child: _arriving(
-                    0,
-                    _Composition(palette: palette),
+              return Column(
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.only(top: RelioSpacing.xxl),
+                    child: _arriving(
+                      0,
+                      _Composition(palette: palette),
+                    ),
                   ),
-                ),
-                const SizedBox(height: RelioSpacing.xl),
-                _arriving(
-                  1,
-                  RelioLockupHorizontal(markSize: cap),
-                ),
-                // Le texte prend TOUTE la place restante et se centre dedans.
-                // Il ne peut donc ni pousser le bouton hors de l'écran, ni
-                // chevaucher le logo, quel que soit le nombre de lignes.
-                Expanded(
-                  child: Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: RelioSpacing.horizontal,
-                        vertical: RelioSpacing.md,
-                      ),
-                      child: _arriving(
-                        2,
-                        Text(
-                          RelioStrings.welcomeMessage,
-                          textAlign: TextAlign.center,
-                          style: RelioType.title(palette),
+                  const SizedBox(height: RelioSpacing.xl),
+                  _arriving(
+                    1,
+                    RelioLockupHorizontal(markSize: cap),
+                  ),
+                  // Le texte prend TOUTE la place restante et se centre dedans.
+                  // Il ne peut donc ni pousser le bouton hors de l'écran, ni
+                  // chevaucher le logo, quel que soit le nombre de lignes.
+                  Expanded(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: RelioSpacing.horizontal,
+                          vertical: RelioSpacing.md,
+                        ),
+                        child: _arriving(
+                          2,
+                          Text(
+                            RelioStrings.welcomeMessage,
+                            textAlign: TextAlign.center,
+                            style: RelioType.title(palette),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    RelioSpacing.horizontal,
-                    RelioSpacing.md,
-                    RelioSpacing.horizontal,
-                    RelioSpacing.xl,
-                  ),
-                  child: _arriving(
-                    3,
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: _busy ? null : _start,
-                        child: const Text(RelioStrings.welcomeStart),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      RelioSpacing.horizontal,
+                      RelioSpacing.md,
+                      RelioSpacing.horizontal,
+                      RelioSpacing.xl,
+                    ),
+                    child: _arriving(
+                      3,
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: _busy ? null : _start,
+                          child: const Text(RelioStrings.welcomeStart),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
