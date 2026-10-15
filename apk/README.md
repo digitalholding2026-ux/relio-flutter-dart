@@ -7,7 +7,8 @@ télécharger et l'installer sur un téléphone.
 
 | Fichier | Taille | Contenu |
 |---|---|---|
-| `apk/relio-socle-v0.4.1-demarrage.apk` | ~22,1 Mo | **Dernier build.** Correction du démarrage bloqué |
+| `apk/relio-socle-v0.4.2-prenom.apk` | ~22,1 Mo | **Dernier build.** Correction du chevauchement sur l'écran du prénom |
+| `apk/relio-socle-v0.4.1-demarrage.apk` | ~22,1 Mo | Démarrage corrigé — mais titre et personnage superposés |
 | `apk/relio-socle-v0.4.0-parcours-entree.apk` | ~22,1 Mo | ⚠️ **Ne pas installer** — écran d'introduction invisible |
 | `apk/relio-socle-v0.3.9-marque.apk` | ~22,1 Mo | Nouveau mark, icône d'application et logo principal |
 | `apk/relio-socle-v0.3.9-audit.apk` | ~22,1 Mo | Audit onboarding : trois corrections d'affichage |
@@ -64,6 +65,23 @@ arbitrer n° 6).
 
 ## Contenu du dernier build
 
+`relio-socle-v0.4.2-prenom.apk` — **fin de la série de correctifs**.
+
+Reprend tout le `0.4.1` et corrige le dernier défaut connu : sur l'écran du
+prénom, le titre « Comment tu t'appelles ? » passait **sur le personnage**,
+avec 50 px de recouvrement.
+
+L'écran est passé d'une superposition à une disposition en colonne —
+personnage en haut, titre et champ dans la place restante, bouton en bas.
+Aucun changement de design par rapport à `0.4.1` : c'est la même
+répartition, sans que les deux éléments se marchent dessus.
+
+> Les versions précédentes restent utilisables mais portent ce défaut :
+> **`0.4.0` est bloqué**, **`0.4.1` fonctionne mais le prénom est mal
+> composé**. Installez `0.4.2`.
+
+### Précédent build
+
 `relio-socle-v0.4.1-demarrage.apk` — **correction du démarrage bloqué**.
 
 Sur la version précédente, l'application s'ouvrait sur un écran presque
@@ -88,9 +106,9 @@ Trois défauts corrigés :
 
 > ⚠️ **`relio-socle-v0.4.0-parcours-entree.apk` est défectueux** : c'est la
 > version du blocage ci-dessus. L'installer ne fait que reproduire l'écran
-> blanc. Il est conservé pour la trace ; **installez la 0.4.1 à la place**.
+> blanc. Il est conservé pour la trace ; **installez la 0.4.2 à la place**.
 
-Cette version n'a **pas** été vérifiée sur un téléphone : l'environnement de
+Cette série n'a **pas** été vérifiée sur un téléphone : l'environnement de
 compilation n'a ni appareil ni émulateur. Le parcours a été validé par
 tests automatisés et par capture du rendu réel des écrans, ce qui a détecté
 le défaut, mais **le comportement tactile reste à confirmer sur appareil**.
