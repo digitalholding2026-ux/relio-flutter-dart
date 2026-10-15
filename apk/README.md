@@ -7,7 +7,8 @@ télécharger et l'installer sur un téléphone.
 
 | Fichier | Taille | Contenu |
 |---|---|---|
-| `apk/relio-socle-v0.4.0-parcours-entree.apk` | ~22,1 Mo | **Dernier build.** Parcours d'entrée complet en sept étapes |
+| `apk/relio-socle-v0.4.1-demarrage.apk` | ~22,1 Mo | **Dernier build.** Correction du démarrage bloqué |
+| `apk/relio-socle-v0.4.0-parcours-entree.apk` | ~22,1 Mo | ⚠️ **Ne pas installer** — écran d'introduction invisible |
 | `apk/relio-socle-v0.3.9-marque.apk` | ~22,1 Mo | Nouveau mark, icône d'application et logo principal |
 | `apk/relio-socle-v0.3.9-audit.apk` | ~22,1 Mo | Audit onboarding : trois corrections d'affichage |
 | `apk/relio-socle-v0.3.8-onboarding.apk` | ~22,1 Mo | Onboarding complet : prénom, test d'entrée, clôture |
@@ -63,8 +64,41 @@ arbitrer n° 6).
 
 ## Contenu du dernier build
 
-`relio-socle-v0.4.0-parcours-entree.apk` — **le parcours d'entrée, de la
-première ouverture à l'accueil**, désormais en sept étapes :
+`relio-socle-v0.4.1-demarrage.apk` — **correction du démarrage bloqué**.
+
+Sur la version précédente, l'application s'ouvrait sur un écran presque
+blanc : cinq petits points en haut, aucun texte, aucun bouton, et plus
+rien. **Le parcours était inutilisable.**
+
+La cause : quatre écrans lisaient la valeur de leur animation directement
+dans `build()`, sans s'abonner à l'animation. Le contrôleur tournait, mais
+l'écran ne se redessinait jamais — et comme tout le contenu apparaissait par
+un fondu, il restait invisible. Aucun message, aucune erreur : seulement un
+écran vide.
+
+Trois défauts corrigés :
+
+- **le contenu ne s'affichait plus** sur l'introduction au questionnaire, la
+  bienvenue, le prénom et la clôture ;
+- **« réduire les animations » masquait l'écran du prénom** — ni titre, ni
+  champ, ni bouton ;
+- **le mot « Relio » et sa signature n'occupaient aucune largeur**, et se
+  superposaient à la marque avant de sortir de l'écran. Visible aussi sur
+  l'accueil.
+
+> ⚠️ **`relio-socle-v0.4.0-parcours-entree.apk` est défectueux** : c'est la
+> version du blocage ci-dessus. L'installer ne fait que reproduire l'écran
+> blanc. Il est conservé pour la trace ; **installez la 0.4.1 à la place**.
+
+Cette version n'a **pas** été vérifiée sur un téléphone : l'environnement de
+compilation n'a ni appareil ni émulateur. Le parcours a été validé par
+tests automatisés et par capture du rendu réel des écrans, ce qui a détecté
+le défaut, mais **le comportement tactile reste à confirmer sur appareil**.
+
+### Précédent build
+
+`relio-socle-v0.4.0-parcours-entree.apk` — parcours d'entrée en sept étapes,
+**mais bloqué à l'introduction du questionnaire** (voir ci-dessus).
 
 1. **Ouverture** — le logo se révèle, sans bouton et sans attente. L'écran
    enchaîne tout seul, et rien n'y est enregistré : si l'élève le quitte,
@@ -79,9 +113,9 @@ première ouverture à l'accueil**, désormais en sept étapes :
 6. **Conclusion** — « Merci {prénom} ! Je commence à mieux te connaître. »
 7. **Accueil**.
 
-Le parcours **reprend exactement où il s'était arrêté**. Abandonner au
-milieu du questionnaire ne le fait pas disparaître : les réponses déjà
-enregistrées sont conservées, et l'élève retrouve la question suivante.
+Le parcours reprend exactement où il s'était arrêté. Abandonner au milieu du
+questionnaire ne le fait pas disparaître : les réponses déjà enregistrées
+sont conservées, et l'élève retrouve la question suivante.
 
 > Une réponse n'est enregistrée qu'une fois l'écriture **confirmée**. Si elle
 > échoue, l'élève reste sur la question, sa saisie n'est pas effacée et il
