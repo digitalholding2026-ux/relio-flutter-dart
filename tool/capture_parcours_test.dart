@@ -46,10 +46,12 @@ Future<void> capturer(WidgetTester tester, String nom, Widget ecran) async {
 
   // Les animations sont RÉDUITES : la capture doit montrer l'état FINAL de
   // chaque écran, pas une image prise au milieu d'un fondu.
+  //
+  // Quelques pompages suffisent : avec `reduceAnimations`, les contrôleurs
+  // valent 1 dès la première image. Avancer la montre de plusieurs secondes
+  // ne fait qu'allonger le test pour rien.
   await tester.pump();
-  for (int i = 0; i < 80; i++) {
-    await tester.pump(const Duration(milliseconds: 100));
-  }
+  await tester.pump(const Duration(milliseconds: 400));
 
   final RenderRepaintBoundary boundary =
       cle.currentContext!.findRenderObject()! as RenderRepaintBoundary;

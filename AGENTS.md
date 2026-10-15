@@ -408,9 +408,17 @@ exactement ce qui a masqué le blocage de démarrage décrit dans
 - **Éviter `pumpAndSettle` sur un écran qui attend entre deux animations.**
   Pendant un `Future.delayed` aucune frame n'est attendue : la boucle rend
   la main avant que le contenu soit apparu.
+- **Un `Stack` ne signale rien quand deux enfants se chevauchent.** Seul un
+  débordement de `Flex` lève une exception ; un recouvrement passe
+  inaperçu. `expect(tester.takeException(), isNull)` ne le prouve donc pas.
+  C'est ainsi que le titre de l'écran du prénom en est venu à passer sur le
+  personnage — 50 px de recouvrement, zéro test en échec.
+- **Capturer l'écran.** C'est le seul contrôle qui voie un recouvrement, un
+  décalage ou un texte hors de son cadre.
 
 > Aucun écran du parcours ne doit être considéré vérifié tant qu'il n'a pas
-> été **vu**. Un test qui passe sur un écran vide est pire qu'aucun test.
+> été **vu**. Un test qui passe sur un écran vide, ou sur un écran où deux
+> éléments se marchent dessus, est pire qu'aucun test.
 
 ---
 

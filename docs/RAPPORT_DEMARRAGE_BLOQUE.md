@@ -182,8 +182,48 @@ Le parcours réel, de bout en bout, sur base réelle :
 
 Capture le **rendu réel** de chaque écran à 360 × 640, police Inter chargée.
 Une capture d'un écran bloqué donne une image blanche — ce que les assertions
-d'arbre ne savent pas voir. C'est cet outil qui a révélé le défaut de largeur
-du § 3.4.
+d'arbre ne savent pas voir.
+
+| Capture | Écran | Verdict |
+|---|---|---|
+| `2-bienvenue.png` | Bienvenue | correct — lockup entier, texte, bouton |
+| `3-introduction.png` | Introduction au questionnaire | **correct — c'était l'écran bloqué** |
+| `4-prenom.png` | Prénom | **défaut de mise en page, voir § 5.4** |
+| `6-cloture.png` | Clôture | non produite — voir § 7 |
+
+L'outil est ce qui a révélé le défaut de largeur du § 3.4. Il a aussi révélé
+celui du § 5.4.
+
+### 5.4 Défaut trouvé APRÈS le correctif — titre et personnage superposés
+
+Défaut **préexistant**, distinct du blocage, **non corrigé** à ce jour.
+
+Sur l'écran du prénom, le titre « Comment tu t'appelles ? » passe **sur le
+personnage**. Mesuré à 360 × 640 :
+
+| Élément | Occupe |
+|---|---|
+| Personnage | 182 → 302 |
+| Titre | 252 → 308 |
+| Champ | 332 → 388 |
+| Bouton | 572 → 620 |
+
+Recouvrement de **50 px** entre le bas du personnage et le titre.
+
+**Cause :** `name_page.dart` compose l'écran avec un `Stack` — personnage
+`Align` d'un côté, contenu centré de l'autre. Les deux se superposent donc par
+construction. `closing_page.dart` a exactement été corrigé de cette façon
+(le commentaire qui s'y trouve décrit le défaut), mais `name_page.dart` a
+gardé le `Stack`.
+
+**Pourquoi aucun test ne l'a vu :** `tester.takeException()` ne signale **pas**
+un chevauchement de `Stack` — seuls les débordements de `Flex` lèvent. Un
+`expect(tester.takeException(), isNull)` passe donc malgré le recouvrement.
+
+**Non corrigé ici**, le rapport se terminant sur le correctif de démarrage et
+la publication. La correction est connue : reprendre la disposition en
+colonne de `closing_page.dart`, ou ancrer le personnage dans le tiers
+supérieur comme le fait déjà `entry_test_page.dart`.
 
 ---
 
