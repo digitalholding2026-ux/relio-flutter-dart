@@ -158,6 +158,47 @@ abstract final class RelioStrings {
   static const String reduceAnimationsLabel = 'Réduire les animations';
 
   // ---------------------------------------------------------------------
+  // ---------------------------------------------------------------------
+  // Ouverture — révélation de la marque
+  //
+  // L'ouverture ne parle pas : elle montre le logo. Le seul texte qu'elle
+  // porte est donc la signature, qui vit dans `RelioSignature.text` et non
+  // ici — une seule source pour le mot de marque.
+  // ---------------------------------------------------------------------
+
+  /// Étape Bienvenue — texte d'accueil.
+  ///
+  /// Texte EXACT : il ne se reformule pas, et aucune variante n'existe pour
+  /// un écran plus étroit. La mise en page s'adapte, le texte non.
+  static const String welcomeMessage =
+      'Salut, moi c\u2019est Relio ! On va avancer ensemble en maths, '
+      'à ton rythme. Pr\u00eat à découvrir comment je peux t\u2019aider ?';
+
+  /// Étape Bienvenue — bouton d'entrée dans le parcours.
+  static const String welcomeStart = 'Commencer';
+
+  // ---------------------------------------------------------------------
+  // Introduction au questionnaire
+  //
+  // Explique une étape de DÉCOUVERTE. Aucun mot ne doit laisser croire à une
+  // évaluation, ni à un résultat : ni « test », ni « examen », ni « note ».
+  // ---------------------------------------------------------------------
+
+  /// Introduction au questionnaire — texte.
+  static const String entryIntroMessage =
+      'Faisons connaissance ! Je vais te proposer 5 petites questions de '
+      'maths. Elles m\u2019aideront à mieux comprendre ton point de départ '
+      'pour t\u2019accompagner dans la suite. Ici, on avance pas à pas.';
+
+  /// Introduction au questionnaire — légende sous les pastilles.
+  ///
+  /// Reformule la étape sans jamais parler d'évaluation : cinq questions,
+  /// une par une.
+  static const String entryIntroCaption = 'Cinq questions, une par une.';
+
+  /// Introduction au questionnaire — bouton.
+  static const String entryIntroStart = 'C\u2019est parti !';
+
   // Onboarding — parcours d'entrée
   //
   // Aucun de ces libellés ne mentionne de score, de niveau ni de résultat :
@@ -198,8 +239,12 @@ abstract final class RelioStrings {
       'Je n’ai pas de question à te proposer pour le moment.';
 
   /// Clôture — texte d'accueil, prénom inséré au début.
+  ///
+  /// AUCUN bilan : ni score, ni « tu as réussi », ni nombre de bonnes
+  /// réponses. La phrase annonce la suite, pas un résultat.
   static String closingMessage(String name) =>
-      'Merci $name. Je commence à te connaître.';
+      'Merci $name ! Je commence à mieux te connaître. '
+      'On va continuer à avancer ensemble, étape par étape.';
 
   /// Clôture — bouton de sortie du parcours.
   static const String closingDiscover = 'Découvrir Relio';

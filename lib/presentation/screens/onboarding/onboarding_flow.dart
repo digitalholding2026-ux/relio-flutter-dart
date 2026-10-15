@@ -1,7 +1,7 @@
 /// Onboarding — routeur du parcours d'entrée.
 ///
-/// Affiche l'un des trois écrans — Prénom, Test, Clôture — selon l'état de
-/// l'élève, et décide de la suite.
+/// Affiche l'un des écrans — Introduction, Prénom, Test, Clôture — selon
+/// l'état de l'élève, et décide de la suite.
 ///
 /// LE ROUTEUR NE CONNAIT QUE L'ORCHESTRATEUR. Il ne lit aucun dépôt, aucun
 /// marqueur, aucune session : il demande à [EntryTestOnboarding], et suit ce
@@ -11,7 +11,7 @@
 /// L'ORDRE DE ROUTAGE est celui validé :
 ///
 ///   parcours terminé          → accueil (traité par l'appelant) ;
-///   pas de prénom valide      → étape Prénom ;
+///   pas de prénom valide      → Introduction, puis Prénom ;
 ///   session prête à terminer  → clôture ;
 ///   question disponible       → question courante ;
 ///   sinon                     → clôture.
@@ -22,11 +22,19 @@ import 'package:flutter/material.dart';
 import '../../../domain/entrytest/entry_test_onboarding.dart';
 import '../../../domain/entrytest/entry_test_session.dart';
 import 'closing_page.dart';
+import 'entry_test_intro_page.dart';
 import 'entry_test_page.dart';
 import 'name_page.dart';
 
 /// Étape courante du parcours.
 enum OnboardingStep {
+  /// Explication de l'étape questionnaire, avant la saisie du prénom.
+  ///
+  /// N'est affichée qu'au DÉBUT du parcours. Un élève qui revient au milieu
+  /// du test la saute : il a déjà vu l'explication, et la lui republier
+  /// retarderait la reprise sans rien lui apprendre.
+  entryIntro,
+
   /// Demande du prénom.
   name,
 
@@ -67,7 +75,10 @@ class OnboardingFlowState extends State<OnboardingFlow> {
   EntryTestSession? _session;
 
   /// Étape courante.
-  OnboardingStep _step = OnboardingStep.name;
+  ///
+  /// Valeur de départ seulement : [_resolve] la remplace dès qu'elle a
+  /// interrogé l'orchestrateur. Elle ne doit jamais être lue avant.
+  OnboardingStep _step = OnboardingStep.entryIntro;
 
   /// Le parcours est-il terminé ? L'écran d'attente disparaît alors.
   bool _done = false;
@@ -111,10 +122,10 @@ class OnboardingFlowState extends State<OnboardingFlow> {
     try {
       session = await widget.onboarding.openSession();
     } catch (_) {
-      // Sans session, l'écran Prénom reste affichable : l'élève commence,
+      // Sans session, l'introduction reste affichable : l'élève commence,
       // et l'échec sera visible à l'enregistrement.
       if (mounted) {
-        setState(() => _step = OnboardingStep.name);
+        setState(() => _step = OnboardingStep.entryIntro);
       }
       return;
     }
@@ -130,11 +141,16 @@ class OnboardingFlowState extends State<OnboardingFlow> {
   ///
   /// L'étape Prénom est SAUTÉE si un prénom valide existe déjà : aucun
   /// affichage, aucune confirmation.
+  ///
+  /// L'introduction au questionnaire suit la MÊME condition. Elle ne sert
+  /// qu'à annoncer une étape qu'on n'a pas encore commencé ; si le prénom est
+  /// déjà connu, c'est que le parcours est ailleurs — test en cours, ou
+  /// clôture — et la republier retarderait la reprise.
   static OnboardingStep _stepFor({
     required EntryTestSession session,
     required bool hasName,
   }) {
-    if (!hasName) return OnboardingStep.name;
+    if (!hasName) return OnboardingStep.entryIntro;
     if (session.isReadyToComplete || session.isCompleted) {
       return OnboardingStep.closing;
     }
@@ -197,7 +213,11 @@ class OnboardingFlowState extends State<OnboardingFlow> {
       canPop: _step == OnboardingStep.test,
       onPopInvokedWithResult: (bool didPop, Object? _) {
         if (didPop) return;
-        if (_step == OnboardingStep.name) return;
+        // L'introduction et le Prénom sont les DEUX PREMIÈRES étapes : le
+        // retour Android ne peut pas les faire reculer, il n'y a rien
+        // derrière. Le parcours n'est pas soldé pour autant — aucun marqueur
+        // n'est écrit ici.
+        if (_step != OnboardingStep.test) return;
         // Depuis le test, on revient au Prénom sans rien écrire.
         setState(() => _step = OnboardingStep.name);
       },
@@ -207,6 +227,12 @@ class OnboardingFlowState extends State<OnboardingFlow> {
 
   Widget _buildStep() {
     switch (_step) {
+      case OnboardingStep.entryIntro:
+        return EntryTestIntroPage(
+          reduceAnimations: widget.reduceAnimations,
+          onStart: () => setState(() => _step = OnboardingStep.name),
+        );
+
       case OnboardingStep.name:
         return NamePage(
           reduceAnimations: widget.reduceAnimations,

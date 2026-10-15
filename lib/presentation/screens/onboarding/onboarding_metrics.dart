@@ -1,14 +1,14 @@
-/// Dimensions et chronologie de l'onboarding — un seul endroit.
+/// Dimensions et chronologie du parcours d'entrée — un seul endroit.
 ///
-/// Les valeurs viennent de la spécification des trois écrans (Prénom, Test,
-/// Clôture). Elles sont regroupées ici pour qu'un ajustement ne se fasse pas à
-/// trois endroits différents, et pour que les tests puissent les citer sans
-/// les recopier.
+/// Les valeurs viennent de la spécification des écrans (Ouverture, Bienvenue,
+/// Introduction au questionnaire, Prénom, Test, Clôture). Elles sont
+/// regroupées ici pour qu'un ajustement ne se fasse pas à six endroits
+/// différents, et pour que les tests puissent les citer sans les recopier.
 library;
 
 import '../../theme/relio_theme.dart';
 
-/// tailles et durées du parcours d'entrée.
+/// Tailles et durées du parcours d'entrée.
 abstract final class OnboardingMetrics {
   // -------------------------------------------------------------------
   // Le personnage
@@ -53,6 +53,25 @@ abstract final class OnboardingMetrics {
   static double get nameFieldHeight => RelioSizes.fieldHeight;
 
   // -------------------------------------------------------------------
+  // La présentation d'introduction au questionnaire
+  // -------------------------------------------------------------------
+
+  /// Diamètre d'une pastille.
+  static const double introChipSize = 10;
+
+  /// Écart entre deux pastilles.
+  static const double introChipGap = 8;
+
+  /// Hauteur de la zone de pastilles.
+  static double get introChipHeight => introChipSize;
+
+  /// Nombre de pastilles : une par question du test d'entrée.
+  ///
+  /// Ce n'est PAS une progression — elle est vide au départ. C'est une
+  /// promesse de durée courte, lisible avant même de commencer.
+  static const int introChipCount = 5;
+
+  // -------------------------------------------------------------------
   // Le test d'entrée
   // -------------------------------------------------------------------
 
@@ -75,9 +94,9 @@ abstract final class OnboardingMetrics {
   // -------------------------------------------------------------------
   // Chronologie — en millisecondes
   //
-  // Ces durées sont des VALEURS DE DESIGN, pas des instants narratifs : ce ne
-  // sont pas celles de l'écran d'entrée, dont la séquence de 5,3 s reste
-  // figée par sa propre spécification.
+  // Ces durées sont des VALEURS DE DESIGN : durée d'un mouvement, jamais
+  // délai d'attente. Aucune d'elles ne retient l'élève, et l'abandon de
+  // l'écran n'est jamais conditionné à leur écoulement.
   // -------------------------------------------------------------------
 
   /// Fondu de sortie de l'étape Prénom (titre, champ, bouton).
@@ -109,4 +128,66 @@ abstract final class OnboardingMetrics {
 
   /// Glissement vertical des apparitions.
   static const double slideOffset = 8;
+
+  /// Décalage entre deux blocs qui arrivent l'un après l'autre.
+  static const int staggerMs = 110;
+
+  // -------------------------------------------------------------------
+  // Ouverture — révélation de la marque
+  //
+  // L'ouverture ne RACONTE rien : elle montre le logo, puis s'efface. Il n'y a
+  // donc pas de chronologie narrative, seulement la durée d'une révélation.
+  // Aucune de ces valeurs n'est un délai d'attente : chacune est la durée
+  // d'un mouvement, et l'écran enchaîne dès que le mouvement est terminé.
+  // -------------------------------------------------------------------
+
+  /// Durée totale de la révélation, avant passage à l'étape Bienvenue.
+  ///
+  /// C'est le plafond de l'écran : passé ce point, la suite est affichée quoi
+  /// qu'il arrive. Aucune animation ne peut retenir l'élève.
+  static const int openingTotalMs = 1600;
+
+  /// Fondu d'apparition du logo.
+  static const int openingFadeMs = 320;
+
+  /// Mise à l'échelle du logo, de `openingScaleFrom` à 1.
+  static const int openingScaleMs = 460;
+
+  /// Décalage avant le début du mouvement d'échelle.
+  ///
+  /// Le logo apparaît d'abord, il se met ensuite à sa place : sans ce
+  /// décalage, fondu et échelle se superposent et l'ensemble parait flou.
+  static const int openingScaleDelayMs = 80;
+
+  /// Échelle initiale du logo.
+  static const double openingScaleFrom = 0.94;
+
+  /// Durée du glissement vertical du logo, en dp.
+  ///
+  /// Le logo descend de 10 dp vers sa place : c'est le « mouvement graphique
+  /// subtil » de l'ouverture. Il n'a lieu qu'une fois, à l'arrivée.
+  static const double openingRise = 10;
+
+  /// Delai avant la sortie, une fois le logo en place.
+  ///
+  /// court : le logo doit se poser avant que l'écran change. Il ne s'agit pas
+  /// de faire attendre, mais de ne pas faire disparaître une marque pendant
+  /// qu'elle bouge encore.
+  static const int openingExitMs = 420;
+
+  /// Durée du fondu de sortie vers l'étape Bienvenue.
+  static const int openingExitFadeMs = 260;
+
+  // -------------------------------------------------------------------
+  // Étape Bienvenue
+  // -------------------------------------------------------------------
+
+  /// Durée d'une apparition décalée (texte, puis bouton).
+  static const int welcomeRevealMs = 360;
+
+  /// Taille du lockup sur l'écran d'accueil, en hauteur de capitale du mot.
+  static const double welcomeLockupCapHeight = 30;
+
+  /// Taille du lockup sur écran compact.
+  static const double welcomeLockupCapHeightCompact = 22;
 }

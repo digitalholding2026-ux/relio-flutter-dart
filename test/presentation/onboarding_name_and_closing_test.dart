@@ -200,7 +200,15 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('Merci Awa. Je commence à te connaître.'), findsOneWidget);
+      // La phrase est EXACTE : elle annonce la suite, et ne restitue aucun
+      // résultat. Ni score, ni « tu as réussi », ni nombre de bonnes réponses.
+      expect(
+        find.text(
+          'Merci Awa ! Je commence à mieux te connaître. '
+          'On va continuer à avancer ensemble, étape par étape.',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('capitalise un prenom venu en minuscules',

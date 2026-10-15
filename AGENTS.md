@@ -317,56 +317,73 @@ La déclinaison dépend du fond — sur fond indigo, la structure passe en blanc
 
 ---
 
-## Règle 10 — L'écran d'entrée est une spécification temporelle figée
+## Règle 10 — L'ouverture montre la marque, elle n'attend pas
 
-> **La séquence dure 5,3 secondes. Jamais plus.**
+> **Aucun bouton sur l'ouverture. Aucune attente artificielle.**
 
-La chronologie de l'écran d'entrée (première ouverture) est **figée** :
+> Cette règle remplace une contrainte antérieure qui figeait une séquence de
+> 5,3 s avec un bouton « Commencer ». Elle est **abolie** : la mission
+> « expérience d'entrée » a substitué à l'ouverture une **révélation du logo**
+> suivie de deux écrans qui portent chacun leur propre texte et leur propre
+> bouton. La règle ci-dessous décrit ce qui existe désormais.
+
+L'ouverture est le **premier** écran, et le seul qui n'ait rien à demander :
 
 | Temps | Ce qui se passe |
 |---|---|
-| 0 s | Le personnage apparaît : fondu + scale 0,9 → 1,0, sur 300 ms |
-| 1,5 s | « Salut. Je suis Relio. » — fondu 250 ms |
-| 3 s | « Je t'accompagne en maths, à ton rythme. » |
-| 5 s | « On commence ? » — le personnage se redresse |
-| 5,3 s | Bouton « Commencer » — fondu + glissement de 8 dp |
+| 0 ms | Le logo apparaît : fondu 320 ms |
+| 80 → 540 ms | Il se pose : échelle 0,94 → 1, descente de 10 dp |
+| 1 600 ms | La révélation est finie |
+| 2 020 ms | Passage à l'écran Bienvenue |
 
 ### Ce qu'il ne faut PAS faire
 
-- **Allonger la séquence** pour compenser un appareil lent. La mission 2
-  l'interdit explicitement. Sur un appareil lent, la sequence doit **sauter des
-  étapes** — c'est ce que fait le tap d'accélération — pas durer plus longtemps.
-- **Ajouter un mouvement** au personnage. Il y en a exactement trois :
-  le « R » respire, le point pulse décalé, le zigzag d'accent ondule.
-  Un mouvement qui ne se décrit pas en une phrase simple est un mouvement de
-  trop.
-- **Donner un visage, des membres ou une couleur au personnage.** Le
-  personnage *est* le mark : le « R », deux zigzags et un point, structure
-  indigo et accent orange.
+- **Ajouter un bouton** sur l'ouverture. Elle rend la main seule : l'élève
+  n'a rien à valider, il n'a qu'à regarder la marque.
+- **Allonger la séquence** pourahlonger l'attente. Chaque durée est la durée
+  d'un mouvement, pas un délai. Au-delà de `openingTotalMs`, l'écran enchaîne
+  quoi qu'il arrive.
+- **Faire dépendre la navigation d'une animation.** L'enchaînement passe par
+  une minuterie bornée, pas par la fin d'un `AnimationController`. Une
+  animation avortée, une préférence « réduire les animations » ou un retour
+  au premier plan ne peuvent pas bloquer l'élève.
+- **Dessiner la marque dans l'écran.** L'ouverture instancie
+  `RelioLockupHorizontal`, le même widget que l'accueil. Si la marque évolue,
+  un seul endroit change.
+- **Ajouter un personnage, un avatar ou une mascotte.** Le sujet est suspendu.
+  Le `RelioCharacter` — le mark animé — reste sur le prénom, le test et la
+  clôture, où il existait déjà ; il n'est pas étendu.
 
-### Le tap n'accélère qu'avant le bouton
+### Le parcours, dans l'ordre
 
-Un tap n'importe où saute vers le bouton **tant que la séquence n'est pas
-terminée**. Une fois le bouton visible, le tap ne fait strictement rien, et le
-bouton n'est **pas** dans l'arbre avant 5,3 s : il ne doit jamais être
-atteignable au toucher trop tôt.
+| Étape | Écran | Écrit un marqueur ? |
+|---|---|---|
+| 1 | Ouverture — révélation du logo | non |
+| 2 | Bienvenue — « Commencer » | `entryScreenSeen` |
+| 3 | Introduction au questionnaire — « C'est parti ! » | non |
+| 4 | Prénom — « Continuer » | `learnerFirstName` |
+| 5 | Questionnaire — « Continuer » × 5 | réponses, en silence |
+| 6 | Conclusion — « Découvrir Relio » | `firstLaunchCompleted` |
+| 7 | Accueil | non |
+
+`entryScreenSeen` est écrit **au seul tap sur « Commencer »**, et rien d'autre.
+L abandoning de l'ouverture ne marque donc rien : l'élève la reverra.
 
 ### Tests
 
 ```bash
-flutter test test/presentation/intro_sequence_test.dart    # chronologie
-flutter test test/presentation/intro_page_test.dart        # comportement
-flutter test test/branding/relio_character_test.dart       # rétention
-flutter test test/presentation/intro_accessibility_test.dart
+flutter test test/presentation/entry_screens_test.dart       # les 3 écrans
+flutter test test/presentation/onboarding_entry_flow_test.dart # le flux complet
+flutter test test/branding/relio_character_test.dart         # rétention
 ```
 
-La chronologie est testée **sans rendu** : `IntroSequenceState.at(durée)` est
-une fonction pure. Tester la sequence via `pumpAndSettle` serait lent et
-fragile — l'animation du personnage ne se stabilise jamais.
+`RelioApp` prend `showIntro: false` dans les tests d'interface : le parcours
+d'entrée n'a pas à être traversé pour tester un écran d'accueil.
 
-> `RelioApp` prend `showIntro: false` dans les tests d'interface. Sans ce
-> drapeau, chaque test d'ecran attendrait 5,3 s et `pumpAndSettle`
-> expirerait, puisque l'animation du personnage tourne en boucle.
+> Les écrans qui portent le personnage ne peuvent pas être testés par
+> `pumpAndSettle` : son animation tourne en boucle et l'état ne se stabilise
+> jamais. On pompe donc un nombre fixe de fois, comme le fait
+> `laisserResoudre` dans `onboarding_entry_flow_test.dart`.
 
 ---
 
@@ -380,8 +397,8 @@ fragile — l'animation du personnage ne se stabilise jamais.
 | NDK requis | 28.2.13676358 |
 | Persistance | Drift / SQLite, schéma v2 |
 | Marque | `assets/branding/` — spécification dans `docs/brand/`, voir [règle 9](#règle-9--la-marque-est-générée-pas-dessinée) |
-| Tests | 708 (622 applicatifs + 86 marque) |
-| Écran d'entrée | 5,3 s, première ouverture uniquement — voir règle 10 |
+| Tests | 674 (588 applicatifs + 86 marque) |
+| Écran d'entrée | 7 étapes, ~2 s d'ouverture sans bouton — voir règle 10 |
 
 ### Branches
 
