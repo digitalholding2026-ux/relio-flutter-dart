@@ -189,7 +189,7 @@ void main() {
 
     testWidgets('la question a choix tient dans l\'ecran',
         (WidgetTester tester) async {
-      // Question 2 : trois cartes de 60 dp, la plus haute de toutes.
+      // Question 2 : trois cartes de 56 dp, les plus hautes de toutes.
       final EntryTestSession q2 = session.withAnswer(
         await onboarding.submitAnswer(
           session: session,
@@ -244,7 +244,7 @@ void main() {
 
       final Rect personnage = tester.getRect(find.byType(RelioCharacter));
       final Rect texte = tester.getRect(
-        find.text(RelioStrings.closingMessage('Jean-Baptiste')),
+        find.text(RelioStrings.closingTitle('Jean-Baptiste')),
       );
       expect(personnage.overlaps(texte), isFalse,
           reason: 'le texte passe sous le personnage');

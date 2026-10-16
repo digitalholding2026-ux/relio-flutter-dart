@@ -18,8 +18,9 @@ import 'package:relio/domain/entrytest/entry_test_repository.dart';
 import 'package:relio/domain/entrytest/entry_test_session.dart';
 import 'package:relio/domain/learning/learning_event_repository.dart';
 import 'package:relio/domain/settings/learner_settings.dart';
+import 'package:relio/presentation/branding/relio_character.dart';
+import 'package:relio/presentation/screens/onboarding/entry_kit.dart';
 import 'package:relio/presentation/screens/onboarding/entry_test_page.dart';
-import 'package:relio/presentation/screens/onboarding/onboarding_metrics.dart';
 import 'package:relio/presentation/strings/relio_strings.dart';
 import 'package:relio/presentation/theme/relio_theme.dart';
 import 'package:relio/presentation/widgets/math_text.dart';
@@ -419,20 +420,11 @@ void main() {
     });
   });
 
-  group('Personnage', () {
-    testWidgets('le personnage fait 80 dp sur ecran standard',
-        (WidgetTester tester) async {
+  group('Marque en retrait', () {
+    testWidgets('le test affiche un mark de 24 dp', (WidgetTester tester) async {
       await monterTest(tester);
-      // La taille est celle de l'etape Test : 80, pas 140.
-      expect(OnboardingMetrics.characterSize(width: 400, large: false), 80);
-      expect(OnboardingMetrics.characterSize(width: 400, large: true), 140);
-    });
-
-    testWidgets('le personnage fait 70 dp sur ecran etroit',
-        (WidgetTester tester) async {
-      // En dessous de 360 dp de large, la taille reduite s'applique.
-      expect(OnboardingMetrics.characterSize(width: 320, large: false), 70);
-      expect(OnboardingMetrics.characterSize(width: 320, large: true), 120);
+      final double taille = tester.getSize(find.byType(RelioCharacter)).width;
+      expect(taille, EntryBrand.test);
     });
   });
 }

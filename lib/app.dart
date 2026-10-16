@@ -31,6 +31,7 @@ import 'presentation/screens/home_page.dart';
 import 'presentation/screens/intro/intro_preloader.dart';
 import 'presentation/screens/intro/opening_page.dart';
 import 'presentation/screens/learn_page.dart';
+import 'presentation/screens/onboarding/entry_kit.dart';
 import 'presentation/screens/onboarding/onboarding_flow.dart';
 import 'presentation/screens/onboarding/welcome_page.dart';
 import 'presentation/screens/profile_page.dart';
@@ -294,39 +295,55 @@ class _RelioAppState extends State<RelioApp> {
               // Tant que la question premiere-ouverture n'est pas tranchee,
               // on n'affiche ni l'accueil ni le parcours : afficher un ecran
               // puis le remplacer ferait un clignotement.
-              home: switch (_stage) {
-                _Stage.deciding => const _SplashGate(),
+              //
+              // Fondu croisé entre les moments du parcours (ouverture,
+              // bienvenue, onboarding) : 275 ms, sans glissement,
+              // interruptible. Le logo ne « vole » pas — chaque écran pose
+              // le sien.
+              home: EntryTransition(
+                child: switch (_stage) {
+                  _Stage.deciding => const _SplashGate(
+                      key: ValueKey<_Stage>(_Stage.deciding),
+                    ),
 
-                // L'ouverture montre la marque, puis rend la main. Elle porte
-                // le prechargement de l'accueil : il a toute la durée de la
-                // revelation pour deriver, en silence.
-                _Stage.opening => OpeningPage(
-                    reduceAnimations: settings.reduceAnimations,
-                    onFinished: _onOpeningFinished,
-                    preload: IntroPreloader(widget.database).run,
-                  ),
+                  // L'ouverture montre la marque, puis rend la main. Elle porte
+                  // le prechargement de l'accueil : il a toute la durée de la
+                  // revelation pour deriver, en silence.
+                  _Stage.opening => OpeningPage(
+                      key: const ValueKey<_Stage>(_Stage.opening),
+                      reduceAnimations: settings.reduceAnimations,
+                      onFinished: _onOpeningFinished,
+                      preload: IntroPreloader(widget.database).run,
+                    ),
 
-                _Stage.welcome => WelcomePage(
-                    reduceAnimations: settings.reduceAnimations,
-                    onStart: _completeFirstLaunch,
-                  ),
+                  _Stage.welcome => WelcomePage(
+                      key: const ValueKey<_Stage>(_Stage.welcome),
+                      reduceAnimations: settings.reduceAnimations,
+                      onStart: _completeFirstLaunch,
+                    ),
 
-                _Stage.onboarding => OnboardingFlow(
-                    onboarding: _entryOnboarding,
-                    reduceAnimations: settings.reduceAnimations,
-                    onCompleted: _onOnboardingCompleted,
-                  ),
+                  _Stage.onboarding => OnboardingFlow(
+                      key: const ValueKey<_Stage>(_Stage.onboarding),
+                      onboarding: _entryOnboarding,
+                      reduceAnimations: settings.reduceAnimations,
+                      onCompleted: _onOnboardingCompleted,
+                    ),
 
-                _Stage.home => _RelioShell(
-                    database: widget.database,
-                    settings: settings,
-                    controller: _controller,
-                  ),
+                  _Stage.home => _RelioShell(
+                      key: const ValueKey<_Stage>(_Stage.home),
+                      database: widget.database,
+                      settings: settings,
+                      controller: _controller,
+                    ),
 
-                // Jamais un fond blanc sans issue : on dit ce qu'il se passe
-                // et on donne un moyen de recommencer.
-                _Stage.startupFailed => _StartupError(onRetry: _retryStartup),
-              },
+                  // Jamais un fond blanc sans issue : on dit ce qu'il se passe
+                  // et on donne un moyen de recommencer.
+                  _Stage.startupFailed => _StartupError(
+                      key: const ValueKey<_Stage>(_Stage.startupFailed),
+                      onRetry: _retryStartup,
+                    ),
+                },
+              ),
             ),
           ),
         );
@@ -340,7 +357,7 @@ class _RelioAppState extends State<RelioApp> {
 /// Blanc, sans rien : ce n'est pas un chargement annonce, c'est le temps d'une
 /// lecture de base qui prend quelques millisecondes.
 class _SplashGate extends StatelessWidget {
-  const _SplashGate();
+  const _SplashGate({super.key});
 
   @override
   Widget build(BuildContext context) => const Scaffold(
@@ -354,7 +371,7 @@ class _SplashGate extends StatelessWidget {
 /// aboutit pas se traduit par un écran blanc. L'élève verrait une page vide,
 /// sans savoir s'il doit attendre, relancer, ou quoi que ce soit.
 class _StartupError extends StatelessWidget {
-  const _StartupError({required this.onRetry});
+  const _StartupError({super.key, required this.onRetry});
 
   final VoidCallback onRetry;
 
@@ -405,6 +422,7 @@ class _StartupError extends StatelessWidget {
 /// Coquille des trois onglets, avec la navigation du chapitre.
 class _RelioShell extends StatefulWidget {
   const _RelioShell({
+    super.key,
     required this.database,
     required this.settings,
     required this.controller,

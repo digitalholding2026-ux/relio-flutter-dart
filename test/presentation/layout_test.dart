@@ -208,9 +208,9 @@ void main() {
   group('Thème', () {
     test('couleurs conformes à la spécification', () {
       final palette = RelioPalette.standard();
-      expect(palette.primary.toARGB32(), 0xFF1F3A6E);
-      expect(palette.primaryContainer.toARGB32(), 0xFFE6ECF7);
-      expect(palette.brand.toARGB32(), 0xFFF56207);
+      expect(palette.primary.toARGB32(), 0xFF0E1821);
+      expect(palette.primaryContainer.toARGB32(), 0xFFE7E8E9);
+      expect(palette.brand.toARGB32(), 0xFFFE7904);
       expect(palette.hintText.toARGB32(), 0xFFB45309);
       expect(palette.hintBackground.toARGB32(), 0xFFFEF3C7);
       expect(palette.successText.toARGB32(), 0xFF15803D);

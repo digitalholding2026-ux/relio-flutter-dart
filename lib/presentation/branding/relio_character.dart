@@ -6,12 +6,12 @@
 ///
 /// REGLE DE RETENUE (mission 2, note 10) : un mouvement qui ne peut pas etre
 /// decrit en une phrase simple est trop complexe. Ici, il n'y en a que trois :
-///   - le « R » respire ;
-///   - le point pulse, synchronise mais independant ;
-///   - le zigzag d'accent ondule comme sous un souffle.
+///   - le chapeau respire ;
+///   - les pages pulsent, synchronisees mais independantes ;
+///   - le gland ondule comme sous un souffle.
 ///
-/// Le second zigzag ne bouge pas : deux mouvements de plus et le mark deviendrait
-/// un element nerveux, ce que la specification exclut.
+/// Le fût, la courbe et le balayage ne bougent pas : trois mouvements de plus
+/// et le mark deviendrait un element nerveux, ce que la specification exclut.
 ///
 /// Aucun saut, aucun retournement, aucun changement de couleur, aucun son.
 library;
@@ -30,24 +30,25 @@ abstract final class RelioCharacterTiming {
   /// Cycle de la respiration, en secondes.
   static const double breathePeriod = 4.0;
 
-  /// Cycle de l'ondulation du zigzag, en secondes.
+  /// Cycle de l'ondulation du gland, en secondes.
   static const double wavePeriod = 3.0;
 
   /// Amplitude de l'ondulation, en unites de grille.
   ///
-  /// Le zigzag se deplace de +/- 2 unites sur une hauteur de 100 : 2 % du
+  /// Le gland se deplace de +/- 2 unites sur une hauteur de 100 : 2 % du
   /// mark. C'est un frémissement, pas un deplacement.
   static const double waveAmplitude = 2.0;
 
-  /// Amplitude de la respiration, en fraction de la taille du « R ».
+  /// Amplitude de la respiration, en fraction de la taille du chapeau.
   ///
   /// 1,5 % : perceptible comme vivant, invisible comme changement de forme.
   static const double breatheAmplitude = 0.015;
 
-  /// Phase de decalage du point, en fraction de cycle.
+  /// Phase de decalage des pages, en fraction de cycle.
   ///
-  /// Le point pulse « de facon independante mais synchronisee » : meme cycle,
-  /// mais decale, pour que le « R » et le point ne battent jamais a l'unisson.
+  /// Les pages pulsent « de facon independante mais synchronisee » : meme
+  /// cycle, mais decale, pour que le chapeau et les pages ne battent jamais
+  /// a l'unisson.
   static const double dotPhaseShift = 0.25;
 
   /// Inclinaison maximale, en degres.
@@ -79,21 +80,21 @@ class RelioCharacterState {
     leanDegrees: 0,
   );
 
-  /// Multiplicateur de taille du « R » : 1 au repos, legerement au-dessus en
+  /// Multiplicateur de taille du chapeau : 1 au repos, legerement au-dessus en
   /// fin d'inspiration. Vaut 1 +/- `breatheAmplitude`.
   ///
-  /// La mise a l'echelle se fait sur le centre du « R », jamais sur un bord :
-  /// un glyphe qui gonfle depuis sa gauche se deplacerait lateralement.
+  /// La mise a l'echelle se fait sur le centre du chapeau, jamais sur un bord :
+  /// une forme qui gonfle depuis sa gauche se deplacerait lateralement.
   final double glyphBreathe;
 
-  /// Multiplicateur de taille du point.
+  /// Multiplicateur de taille des pages.
   ///
   /// Meme cycle que [glyphBreathe], mais DECALE : les deux ne battent donc
   /// jamais a l'unisson. C'est ce qui rend la pulsation lisible sans etre
   /// nerveuse.
   final double dotPulse;
 
-  /// Decalage vertical du zigzag d'accent, en unites de grille.
+  /// Decalage vertical du gland, en unites de grille.
   ///
   /// Vaut +/- [RelioCharacterTiming.waveAmplitude] autour de zero.
   final double accentWave;
@@ -116,8 +117,8 @@ class RelioCharacterState {
     final double glyphBreathe = 1 +
         RelioCharacterTiming.breatheAmplitude * math.sin(2 * math.pi * breathePhase);
 
-    // Le point suit le meme cycle, decale d'un quart de periode : il finit sa
-    // respiration quand le « R » commence.
+    // Le point suit le meme cycle, decale d'un quart de periode : les pages
+    // finissent leur pulsation quand le chapeau commence la sienne.
     final double dotPulse = 1 +
         RelioCharacterTiming.breatheAmplitude *
             math.sin(
@@ -159,9 +160,9 @@ class RelioCharacterPainter extends CustomPainter {
     final double side = math.min(size.width, size.height);
     if (side <= 0) return;
 
-    // Le zigzag d'accent se deplace de +/- `waveAmplitude` : on reserve cette
-    // place en permanence, sinon le personnage « sauterait » d'une image a
-    // l'autre. La reserve est symetrique, pour que le repos soit centre.
+    // Le gland ondule : on reserve cette place en permanence, sinon le
+    // personnage « sauterait » d'une image a l'autre. La reserve est
+    // symetrique, pour que le repos soit centre.
     const double reserve = RelioCharacterTiming.waveAmplitude;
     final double boxHeight = RelioMarkGeometry.inkHeight + 2 * reserve;
     final double factor = side / RelioMarkGeometry.inkWidth;
@@ -190,37 +191,37 @@ class RelioCharacterPainter extends CustomPainter {
             ..isAntiAlias = true,
         );
 
-    // Le « R » respire : echelle depuis son propre centre.
+    // Le chapeau respire : echelle depuis son propre centre.
     canvas.save();
-    canvas.translate(RelioMarkGeometry.glyph.centerX, RelioMarkGeometry.glyph.centerY);
+    canvas.translate(RelioMarkGeometry.cap.centerX, RelioMarkGeometry.cap.centerY);
     canvas.scale(state.glyphBreathe);
-    canvas.translate(-RelioMarkGeometry.glyph.centerX, -RelioMarkGeometry.glyph.centerY);
-    paintPart(RelioMarkGeometry.glyph, c.base);
+    canvas.translate(-RelioMarkGeometry.cap.centerX, -RelioMarkGeometry.cap.centerY);
+    paintPart(RelioMarkGeometry.cap, c.base);
     canvas.restore();
 
-    // Le second zigzag est immobile : c'est lui qui donne son assiette au
-    // mark pendant que l'accent bouge.
-    paintPart(RelioMarkGeometry.zigzagSecondary, c.base);
+    // Le fût, la courbe et le balayage sont immobiles : c'est eux qui donnent
+    // son assiette au mark pendant que le chapeau bouge.
+    paintPart(RelioMarkGeometry.stem, c.base);
+    paintPart(RelioMarkGeometry.body, c.base);
+    paintPart(RelioMarkGeometry.base, c.base);
 
-    // Le zigzag d'accent ondule : un simple soulevement vertical.
+    // Les pages pulsent, depuis leur propre centre.
+    for (final RelioMarkPart part in <RelioMarkPart>[
+      RelioMarkGeometry.pageUpper,
+      RelioMarkGeometry.pageLower,
+    ]) {
+      canvas.save();
+      canvas.translate(part.centerX, part.centerY);
+      canvas.scale(state.dotPulse);
+      canvas.translate(-part.centerX, -part.centerY);
+      paintPart(part, c.accent);
+      canvas.restore();
+    }
+
+    // Le gland ondule : un simple soulevement vertical.
     canvas.save();
     canvas.translate(0.0, state.accentWave);
-    paintPart(RelioMarkGeometry.zigzagAccent, c.accent);
-    canvas.restore();
-
-    // Le point pulse, depuis son centre.
-    canvas.save();
-    canvas.translate(RelioMarkGeometry.dot.centerX, RelioMarkGeometry.dot.centerY);
-    canvas.scale(state.dotPulse);
-    canvas.translate(-RelioMarkGeometry.dot.centerX, -RelioMarkGeometry.dot.centerY);
-    canvas.drawCircle(
-      Offset(RelioMarkGeometry.dot.centerX, RelioMarkGeometry.dot.centerY),
-      RelioMarkGeometry.dot.radius,
-      Paint()
-        ..color = c.accent
-        ..style = PaintingStyle.fill
-        ..isAntiAlias = true,
-    );
+    paintPart(RelioMarkGeometry.tassel, c.accent);
     canvas.restore();
 
     canvas.restore();

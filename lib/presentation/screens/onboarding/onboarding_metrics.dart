@@ -9,35 +9,28 @@ library;
 import '../../theme/relio_theme.dart';
 
 /// Tailles et durées du parcours d'entrée.
+///
+/// Les tailles de marque vivent dans `entry_kit.dart` ([EntryBrand]) : un
+/// niveau de présence par écran (ouverture 160, bienvenue 100, explication
+/// 80, prénom 64, test 24, clôture 120). Il ne reste ici que les durées et
+/// les dimensions de composants.
 abstract final class OnboardingMetrics {
   // -------------------------------------------------------------------
-  // Le personnage
+  // Transition entre écrans — fondu croisé, 250–300 ms.
   //
-  // Le personnage EST le mark : seule sa taille change d'un écran à
-  // l'autre. Il n'a jamais de visage ni de membre, et ne réagit à rien.
+  // Aucun glissement, aucune mise à l'échelle d'écran. Interruptible par
+  // construction : un nouvel écran relance le fondu.
   // -------------------------------------------------------------------
 
-  /// Grand écran — étapes Prénom et Clôture.
-  static const double characterLarge = 140;
+  /// Durée du fondu croisé entre deux écrans du parcours.
+  static const int entryTransitionMs = 275;
 
-  /// Petit écran (≤ 360 dp de large) — étapes Prénom et Clôture.
-  static const double characterLargeCompact = 120;
-
-  /// Test d'entrée, écran standard.
-  static const double characterSmall = 80;
-
-  /// Test d'entrée, petit écran.
-  static const double characterSmallCompact = 70;
-
-  /// En deçà de cette largeur, les tailles réduites s'appliquent.
+  /// En deçà de cette largeur, les variantes compactes s'appliquent.
+  ///
+  /// Conservée pour les mesures de la marque, qui restent testées
+  /// directement. Les écrans du parcours utilisent des tailles fixes
+  /// ([EntryBrand]), sans variante compacte.
   static const double compactWidthThreshold = 360;
-
-  /// Taille du personnage pour [width], et l'étape concernée.
-  static double characterSize({required double width, required bool large}) {
-    final bool compact = width <= compactWidthThreshold;
-    if (large) return compact ? characterLargeCompact : characterLarge;
-    return compact ? characterSmallCompact : characterSmall;
-  }
 
   // -------------------------------------------------------------------
   // Le champ Prénom
@@ -75,21 +68,19 @@ abstract final class OnboardingMetrics {
   // Le test d'entrée
   // -------------------------------------------------------------------
 
-  /// Hauteur d'une carte de choix.
-  static const double choiceHeight = 60;
+  /// Hauteur d'une carte de choix : 56 dp, rayon 12, écart 12.
+  static const double choiceHeight = 56;
 
   /// Écart entre deux cartes de choix.
   static const double choiceGap = 12;
 
-  /// Distance du personnage au haut de l'écran, en FRACTION DE LA HAUTEUR
-  /// DISPONIBLE.
-  ///
-  /// La spécification dit « ancré à ~15 % depuis le haut » : c'est une
-  /// position dans l'écran, pas dans le personnage. Appliquer ce ratio à la
-  /// TAILLE du personnage donnerait 12 px au lieu de ~15 % de l'écran — le
-  /// personnage serait collé en haut au lieu d'être posé dans le tiers
-  /// supérieur.
-  static const double characterTopRatio = 0.15;
+  // -------------------------------------------------------------------
+  // Le test d'entrée — position et sortie des questions.
+  // -------------------------------------------------------------------
+
+  /// Fondu de sortie des éléments d'une question : 250 ms, dans la plage
+  /// des transitions du parcours (250–300 ms).
+  static const int questionFadeOutMs = 250;
 
   // -------------------------------------------------------------------
   // Chronologie — en millisecondes
@@ -99,22 +90,10 @@ abstract final class OnboardingMetrics {
   // l'écran n'est jamais conditionné à leur écoulement.
   // -------------------------------------------------------------------
 
-  /// Fondu de sortie de l'étape Prénom (titre, champ, bouton).
-  static const int nameFadeOutMs = 250;
-
-  /// Réduction du personnage 140 → 80 à la validation du prénom.
-  static const int nameShrinkMs = 400;
-
-  /// Fondu de sortie des éléments d'une question.
-  static const int questionFadeOutMs = 200;
-
   /// Fondu d'entrée des éléments d'une question.
   static const int questionFadeInMs = 200;
 
-  /// Transition de taille du personnage 80 → 140 à la clôture.
-  static const int closingGrowMs = 400;
-
-  /// Pause après la transition de taille, avant l'apparition du texte.
+  /// Pause avant l'apparition du texte de clôture.
   ///
   /// Le personnage se redresse AVANT que Relio ne parle : sans cette pause,
   /// le texte et l'animation de taille se chevaucheraient.
@@ -170,10 +149,10 @@ abstract final class OnboardingMetrics {
 
   /// Delai avant la sortie, une fois le logo en place.
   ///
-  /// court : le logo doit se poser avant que l'écran change. Il ne s'agit pas
-  /// de faire attendre, mais de ne pas faire disparaître une marque pendant
-  /// qu'elle bouge encore.
-  static const int openingExitMs = 420;
+  /// Court : le logo doit se poser avant que l'écran change. Révélation
+  /// 1600 ms + sortie 200 ms : l'écran dure 1,8 s, puis un tap à tout moment
+  /// le fait sauter à l'étape suivante.
+  static const int openingExitMs = 200;
 
   /// Durée du fondu de sortie vers l'étape Bienvenue.
   static const int openingExitFadeMs = 260;

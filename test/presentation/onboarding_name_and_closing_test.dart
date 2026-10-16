@@ -8,6 +8,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:relio/presentation/screens/onboarding/closing_page.dart';
+import 'package:relio/presentation/screens/onboarding/entry_kit.dart';
 import 'package:relio/presentation/screens/onboarding/name_page.dart';
 import 'package:relio/presentation/screens/onboarding/onboarding_metrics.dart';
 import 'package:relio/presentation/strings/relio_strings.dart';
@@ -200,15 +201,11 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 200));
 
-      // La phrase est EXACTE : elle annonce la suite, et ne restitue aucun
-      // résultat. Ni score, ni « tu as réussi », ni nombre de bonnes réponses.
-      expect(
-        find.text(
-          'Merci Awa ! Je commence à mieux te connaître. '
-          'On va continuer à avancer ensemble, étape par étape.',
-        ),
-        findsOneWidget,
-      );
+      // Le titre reprend le prénom, le corps annonce la suite — et ne
+      // restitue aucun résultat. Ni score, ni « tu as réussi », ni nombre
+      // de bonnes réponses.
+      expect(find.text(RelioStrings.closingTitle('Awa')), findsOneWidget);
+      expect(find.text(RelioStrings.closingBody()), findsOneWidget);
     });
 
     testWidgets('capitalise un prenom venu en minuscules',
@@ -316,18 +313,18 @@ void main() {
     });
   });
 
-  group('Personnage', () {
-    test('tailles prevues : 140 / 80 / 140 dp', () {
-      // Prénom 140, Test 80, Clôture 140 — la regle de la mission.
-      expect(OnboardingMetrics.characterSize(width: 400, large: true), 140);
-      expect(OnboardingMetrics.characterSize(width: 400, large: false), 80);
-      expect(OnboardingMetrics.characterSize(width: 400, large: true), 140);
+  group('Marque', () {
+    test('niveaux de présence : 64 / 24 / 120 dp', () {
+      // Prénom 64 (discrète), Test 24 (en retrait), Clôture 120 (signature).
+      expect(EntryBrand.name, 64);
+      expect(EntryBrand.test, 24);
+      expect(EntryBrand.closing, 120);
     });
 
-    test('tailles prevues sur petit ecran : 120 / 70 / 120 dp', () {
-      expect(OnboardingMetrics.characterSize(width: 320, large: true), 120);
-      expect(OnboardingMetrics.characterSize(width: 320, large: false), 70);
-      expect(OnboardingMetrics.characterSize(width: 320, large: true), 120);
+    test('signature pleine et présence discrète : 160 / 100 / 80 dp', () {
+      expect(EntryBrand.opening, 160);
+      expect(EntryBrand.welcome, 100);
+      expect(EntryBrand.intro, 80);
     });
   });
 }

@@ -100,13 +100,13 @@ void main() {
     await monter(tester);
 
     // D — de l'ouverture à l'écran de présentation.
-    await attendre(tester, RelioStrings.welcomeMessage);
+    await attendre(tester, RelioStrings.welcomeTitle);
     await tester.tap(find.text(RelioStrings.welcomeStart));
     await tester.pump();
     await laisserResoudre(tester);
 
     // E — l'explication du test.
-    await attendre(tester, RelioStrings.entryIntroMessage);
+    await attendre(tester, RelioStrings.entryIntroTitle);
     await tester.tap(find.text(RelioStrings.entryIntroStart));
     await tester.pump();
     await laisserResoudre(tester);
@@ -164,7 +164,7 @@ void main() {
     await laisserResoudre(tester);
 
     expect(find.byType(AppShell), findsOneWidget);
-    expect(find.text(RelioStrings.welcomeMessage), findsNothing);
+    expect(find.text(RelioStrings.welcomeTitle), findsNothing);
     expect(find.text(RelioStrings.nameTitle), findsNothing);
   });
 
@@ -178,18 +178,18 @@ void main() {
 
     // Le parcours NE redemande pas le prénom, et ne rejoue pas l'ouverture.
     expect(find.text(RelioStrings.nameTitle), findsNothing);
-    expect(find.text(RelioStrings.entryIntroMessage), findsNothing);
+    expect(find.text(RelioStrings.entryIntroTitle), findsNothing);
     expect(find.text('1 sur 5'), findsOneWidget);
   });
 
   testWidgets('H — abandon au milieu : le parcours reprend où il s\'est arrêté',
       (WidgetTester tester) async {
     await monter(tester);
-    await attendre(tester, RelioStrings.welcomeMessage);
+    await attendre(tester, RelioStrings.welcomeTitle);
     await tester.tap(find.text(RelioStrings.welcomeStart));
     await tester.pump();
     await laisserResoudre(tester);
-    await attendre(tester, RelioStrings.entryIntroMessage);
+    await attendre(tester, RelioStrings.entryIntroTitle);
     await tester.tap(find.text(RelioStrings.entryIntroStart));
     await tester.pump();
     await laisserResoudre(tester);

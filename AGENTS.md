@@ -249,19 +249,28 @@ La géométrie du mark vit dans **un seul fichier** :
 lib/presentation/branding/relio_mark_geometry.dart
 ```
 
+et celle du mot trace dans son pendant :
+
+```
+lib/presentation/branding/relio_wordmark_geometry.dart
+```
+
 Le mark y est décrit comme une suite de **traces pleines** (`M`, `L`, `Q`,
-`Z`) et un disque. C'est le vocabulaire du SVG : le générateur restitue ces
-commandes telles quelles, et `RelioMarkPainter` les traduit en `Path`. Les
-deux lisent donc **la même définition**, et non deux reconstitutions d'une
-même intention.
+`Z`). C'est le vocabulaire du SVG : le générateur restitue ces
+commandes telles quelles, et `RelioMarkPainter` / `RelioWordmarkPainter` les
+traduisent en `Path`. Les deux lisent donc **la même définition**, et non
+deux reconstitutions d'une même intention.
 
 ### Origine : une spécification versionnée
 
-Les traces viennent de `docs/brand/`, où sont versionnés les deux SVG livrés
-et validés. `test/branding/brand_spec_test.dart` **rejoue l'import** depuis
-ces fichiers et échoue dès que les constantes ont dérivé.
+Les traces viennent de `docs/brand/`, où sont versionnés les visuels livrés
+(`source/`) et les SVG dérivés par l'import mécanique
+(`tool/brand_import.py`, `tool/brand_wordmark.py`).
+`test/branding/brand_spec_test.dart` et
+`test/branding/wordmark_spec_test.dart` **rejouent l'import** depuis
+ces fichiers et échouent dès que les constantes ont dérivé.
 
-> Une retouche manuelle de `relio_mark_geometry.dart` fait donc échouer la
+> Une retouche manuelle de la géométrie fait donc échouer la
 > suite. C'est ce qui rend cette règle opposable plutôt que déclarative.
 
 Le mark n'est paramétrique en rien : ni cercle, ni courbe, ni épaisseur de
@@ -271,15 +280,18 @@ pas**.
 
 ### Ce qu'il faut faire après toute retouche de la marque
 
-1. Modifier **uniquement** `relio_mark_geometry.dart`.
-2. Régénérer :
+1. Déposer le visuel livré dans `docs/brand/source/`.
+2. Importer mécaniquement (`tool/brand_import.py`, `tool/brand_wordmark.py`),
+   relire les aperçus, figer (`tool/brand_emit.py`, `tool/brand_word_emit.py`).
+3. Régénérer :
 
    ```bash
    dart run tool/gen_branding.dart               # SVG
-   flutter test tool/render_branding_test.dart   # PNG launcher et splash
+   python tool/brand_launcher.py                 # PNG du lanceur (icône livrée)
+   flutter test tool/render_branding_test.dart   # PNG références et splash
    ```
 
-3. Vérifier :
+4. Vérifier :
 
    ```bash
    flutter analyze
@@ -290,7 +302,7 @@ pas**.
 
 Un SVG retouché à la main dérive du painter, ou l'inverse. Les deux
 décrivent alors deux marques différentes : l'impression ne correspond plus à
-l'écran, et rien ne le signale. `brand_spec_test.dart` échoue dès que la
+l'écran, et rien ne le signale. Les tests de spec échouent dès que la
 géométrie s'écarte de la spécification.
 
 ### Valeurs figées
@@ -301,19 +313,24 @@ vérifiés un par un ; une correction doit être motivée, pas discrète.
 | Élément | Valeur |
 |---|---|
 | Grille de référence | 100 × 100, mark centré |
-| Encre du mark | 91,194 × 100 — **plus haut que large** |
-| « R » | (9,748 ; 0) → (83,019 ; 96,541), ajouré, `evenOdd` |
-| Zigzag d'accent | (4,403 ; 60,692) → (59,748 ; 100) |
-| Second zigzag | (48,428 ; 33,019) → (95,597 ; 69,497) |
-| Point | centre (89,308 ; 8,805), rayon 6,289 |
-| Launcher adaptatif | grille 108 dp, zone sûre 66 dp, mark à 55 % = 36,3 dp |
-| Icône applicative | coins r = 112/512, fond en retrait de 12/512 |
-| Rapport mark / mot | 1,93 |
-| Signature | corps 31/176 du mot, écartement 0,37 |
-| Couleurs | accent `#F56207`, base `#1F3A6E` |
+| Encre du mark | 87,552 × 100 — **plus haut que large** |
+| Chapeau | (9,985 ; 0) → (74,643 ; 24,142) |
+| Fût | (6,224 ; 22,1) → (22,443 ; 86,057) |
+| Courbe du livre | (25,795 ; 18,948) → (65,425 ; 65,382) |
+| Balayage | (26,2 ; 67,936) → (93,776 ; 100) |
+| Page supérieure | (25,795 ; 44,983) → (76,832 ; 70,45) |
+| Page inférieure | (28,632 ; 59,219) → (86,804 ; 79,976) |
+| Gland | (70,156 ; 12,062) → (77,107 ; 37,861), ondule de ±2 |
+| Mot « relio » | trace pleine, 100 × 39,036 utiles ; « o » ajouré, `evenOdd` |
+| Launcher | icône livrée (`docs/brand/source/icon-app.jpg`), coins r = 0,206, retrait 0,061 |
+| Rapport mark / mot | 1,637 |
+| Signature | « Apprendre aujourd’hui, réussir demain », corps 0,14 du mot, écartement 0,153 |
+| Couleurs | accent `#FE7904`, base `#0E1821` |
 
-Le mark porte **deux couleurs** : la structure en indigo, l'accent en orange.
-La déclinaison dépend du fond — sur fond indigo, la structure passe en blanc.
+Le mark porte **deux couleurs** : la structure en navy, l'accent en orange.
+La déclinaison dépend du fond — sur fond navy, la structure passe en blanc.
+Les pages blanches du lanceur viennent de l'icône livrée, pas de la
+géométrie : sur le logo, les intervalles sont le fond.
 
 ---
 
@@ -334,7 +351,8 @@ L'ouverture est le **premier** écran, et le seul qui n'ait rien à demander :
 | 0 ms | Le logo apparaît : fondu 320 ms |
 | 80 → 540 ms | Il se pose : échelle 0,94 → 1, descente de 10 dp |
 | 1 600 ms | La révélation est finie |
-| 2 020 ms | Passage à l'écran Bienvenue |
+| 1 800 ms | Passage à l'écran Bienvenue |
+| à tout moment | Un tap saute à l'écran suivant |
 
 ### Ce qu'il ne faut PAS faire
 
@@ -348,8 +366,8 @@ L'ouverture est le **premier** écran, et le seul qui n'ait rien à demander :
   animation avortée, une préférence « réduire les animations » ou un retour
   au premier plan ne peuvent pas bloquer l'élève.
 - **Dessiner la marque dans l'écran.** L'ouverture instancie
-  `RelioLockupHorizontal`, le même widget que l'accueil. Si la marque évolue,
-  un seul endroit change.
+  `EntryMark` (le mark seul, 160 dp, sans texte). Si la marque évolue, un
+  seul endroit change.
 - **Ajouter un personnage, un avatar ou une mascotte.** Le sujet est suspendu.
   Le `RelioCharacter` — le mark animé — reste sur le prénom, le test et la
   clôture, où il existait déjà ; il n'est pas étendu.
@@ -432,8 +450,8 @@ exactement ce qui a masqué le blocage de démarrage décrit dans
 | NDK requis | 28.2.13676358 |
 | Persistance | Drift / SQLite, schéma v2 |
 | Marque | `assets/branding/` — spécification dans `docs/brand/`, voir [règle 9](#règle-9--la-marque-est-générée-pas-dessinée) |
-| Tests | 688 (602 applicatifs + 86 marque) |
-| Écran d'entrée | 7 étapes, ~2 s d'ouverture sans bouton — voir règle 10 |
+| Tests | 710 (622 applicatifs + 88 marque) |
+| Écran d'entrée | 7 étapes, 1,8 s d'ouverture sans bouton, tap pour passer — voir règle 10 |
 
 ### Branches
 

@@ -65,11 +65,15 @@ void main() {
   /// prénom, ouverture de session — et chacune a besoin d'un tour de boucle
   /// pour se propager. On pompe donc plusieurs fois plutôt qu'une.
   ///
+  /// Le total dépasse aussi le fondu croisé entre étapes (275 ms) : pendant
+  /// le fondu, l'ancien écran reste dans l'arbre, et un `findsNothing` sur
+  /// son contenu échouerait à tort.
+  ///
   /// `pumpAndSettle` est exclu : le personnage respire en boucle, l'état ne
   /// se stabilise donc jamais, et la boucle expirerait.
   Future<void> laisserResoudre(WidgetTester tester) async {
-    for (int i = 0; i < 8; i++) {
-      await tester.pump(const Duration(milliseconds: 5));
+    for (int i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
     }
   }
 
@@ -107,7 +111,9 @@ void main() {
       await monter(tester);
       await allerABienvenue(tester);
 
-      expect(find.text(RelioStrings.welcomeMessage), findsOneWidget);
+      expect(find.text(RelioStrings.welcomeTitle), findsOneWidget);
+      expect(find.text(RelioStrings.welcomeSubtitle), findsOneWidget);
+      expect(find.text(RelioStrings.welcomeQuestion), findsOneWidget);
       expect(find.text(RelioStrings.welcomeStart), findsOneWidget);
     });
 
@@ -162,7 +168,9 @@ void main() {
       await allerABienvenue(tester);
       await validerBienvenue(tester);
 
-      expect(find.text(RelioStrings.entryIntroMessage), findsOneWidget);
+      expect(find.text(RelioStrings.entryIntroTitle), findsOneWidget);
+      expect(find.text(RelioStrings.entryIntroBody), findsOneWidget);
+      expect(find.text(RelioStrings.entryIntroFinal), findsOneWidget);
       expect(find.text(RelioStrings.entryIntroStart), findsOneWidget);
     });
 
@@ -190,7 +198,7 @@ void main() {
       await monter(tester);
       await laisserResoudre(tester);
 
-      expect(find.text(RelioStrings.entryIntroMessage), findsNothing,
+      expect(find.text(RelioStrings.entryIntroTitle), findsNothing,
           reason: 'l\'explication ne sert qu\'à annoncer une étape à venir');
       expect(find.text(RelioStrings.nameTitle), findsNothing);
       expect(find.text('1 sur 5'), findsOneWidget,
@@ -227,7 +235,7 @@ void main() {
       // Le parcours REPREND : il n'est ni soldé, ni renvoyé à l'accueil. Il
       // repasse par l'introduction, qui annonce une étape qui n'a pas encore
       // eu lieu, puis par le prénom.
-      expect(find.text(RelioStrings.entryIntroMessage), findsOneWidget);
+      expect(find.text(RelioStrings.entryIntroTitle), findsOneWidget);
       expect(await settings.hasCompletedFirstLaunch(), isFalse);
 
       await tester.tap(find.text(RelioStrings.entryIntroStart));

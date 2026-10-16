@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import '../../../domain/entrytest/entry_test_onboarding.dart';
 import '../../../domain/entrytest/entry_test_session.dart';
 import 'closing_page.dart';
+import 'entry_kit.dart';
 import 'entry_test_intro_page.dart';
 import 'entry_test_page.dart';
 import 'name_page.dart';
@@ -226,34 +227,48 @@ class OnboardingFlowState extends State<OnboardingFlow> {
   }
 
   Widget _buildStep() {
+    // Fondu croisé entre les étapes : 275 ms, sans glissement, interruptible.
+    // Le logo ne « vole » pas — chaque écran pose le sien.
     switch (_step) {
       case OnboardingStep.entryIntro:
-        return EntryTestIntroPage(
-          reduceAnimations: widget.reduceAnimations,
-          onStart: () => setState(() => _step = OnboardingStep.name),
+        return EntryTransition(
+          child: EntryTestIntroPage(
+            key: const ValueKey<OnboardingStep>(OnboardingStep.entryIntro),
+            reduceAnimations: widget.reduceAnimations,
+            onStart: () => setState(() => _step = OnboardingStep.name),
+          ),
         );
 
       case OnboardingStep.name:
-        return NamePage(
-          reduceAnimations: widget.reduceAnimations,
-          onSubmit: _onNameSubmitted,
+        return EntryTransition(
+          child: NamePage(
+            key: const ValueKey<OnboardingStep>(OnboardingStep.name),
+            reduceAnimations: widget.reduceAnimations,
+            onSubmit: _onNameSubmitted,
+          ),
         );
 
       case OnboardingStep.test:
         final EntryTestSession? session = _session;
         if (session == null) return const SizedBox.shrink();
-        return EntryTestPage(
-          onboarding: widget.onboarding,
-          session: session,
-          reduceAnimations: widget.reduceAnimations,
-          onFinished: _onTestFinished,
+        return EntryTransition(
+          child: EntryTestPage(
+            key: ValueKey<String>('test-${session.sessionId}'),
+            onboarding: widget.onboarding,
+            session: session,
+            reduceAnimations: widget.reduceAnimations,
+            onFinished: _onTestFinished,
+          ),
         );
 
       case OnboardingStep.closing:
-        return _ClosingHost(
-          onboarding: widget.onboarding,
-          reduceAnimations: widget.reduceAnimations,
-          onConfirm: _onClosingConfirmed,
+        return EntryTransition(
+          child: _ClosingHost(
+            key: const ValueKey<OnboardingStep>(OnboardingStep.closing),
+            onboarding: widget.onboarding,
+            reduceAnimations: widget.reduceAnimations,
+            onConfirm: _onClosingConfirmed,
+          ),
         );
     }
   }
@@ -266,6 +281,7 @@ class OnboardingFlowState extends State<OnboardingFlow> {
 /// foi, pas l'écran qui vient d'être quitté.
 class _ClosingHost extends StatefulWidget {
   const _ClosingHost({
+    super.key,
     required this.onboarding,
     required this.onConfirm,
     required this.reduceAnimations,

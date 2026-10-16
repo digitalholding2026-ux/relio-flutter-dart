@@ -124,13 +124,16 @@ void main() {
   });
 
   group('Étape 2 — Bienvenue', () {
-    testWidgets('affiche le texte exact et le bouton', (WidgetTester tester) async {
+    testWidgets('affiche le titre, le sous-titre, la question et le bouton',
+        (WidgetTester tester) async {
       await monter(
         tester,
         WelcomePage(onStart: () async {}, reduceAnimations: true),
       );
 
-      expect(find.text(RelioStrings.welcomeMessage), findsOneWidget);
+      expect(find.text(RelioStrings.welcomeTitle), findsOneWidget);
+      expect(find.text(RelioStrings.welcomeSubtitle), findsOneWidget);
+      expect(find.text(RelioStrings.welcomeQuestion), findsOneWidget);
       expect(find.text(RelioStrings.welcomeStart), findsOneWidget);
     });
 
@@ -141,6 +144,14 @@ void main() {
         RelioStrings.welcomeMessage,
         'Salut, moi c\u2019est Relio ! On va avancer ensemble en maths, '
         'à ton rythme. Pr\u00eat à découvrir comment je peux t\u2019aider ?',
+      );
+      // L'écran affiche les trois parties séparément : leur concaténation
+      // restitue exactement le texte validé, sans ajout ni retrait.
+      expect(
+        '${RelioStrings.welcomeTitle} '
+        '${RelioStrings.welcomeSubtitle} '
+        '${RelioStrings.welcomeQuestion}',
+        RelioStrings.welcomeMessage,
       );
     });
 
@@ -205,7 +216,12 @@ void main() {
 
       await tester.tap(find.text(RelioStrings.welcomeStart));
       await tester.pump();
-      await tester.tap(find.text(RelioStrings.welcomeStart), warnIfMissed: false);
+      // Pendant l'écriture, l'indicateur remplace le libellé : il n'y a
+      // plus rien à taper. On ne retape que si le bouton est encore là.
+      final Finder bouton = find.text(RelioStrings.welcomeStart);
+      if (bouton.evaluate().isNotEmpty) {
+        await tester.tap(bouton);
+      }
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -228,13 +244,16 @@ void main() {
   });
 
   group('Étape 3 — Introduction au questionnaire', () {
-    testWidgets('affiche le texte exact et le bouton', (WidgetTester tester) async {
+    testWidgets('affiche le titre, le texte, la phrase de fin et le bouton',
+        (WidgetTester tester) async {
       await monter(
         tester,
         EntryTestIntroPage(onStart: () {}, reduceAnimations: true),
       );
 
-      expect(find.text(RelioStrings.entryIntroMessage), findsOneWidget);
+      expect(find.text(RelioStrings.entryIntroTitle), findsOneWidget);
+      expect(find.text(RelioStrings.entryIntroBody), findsOneWidget);
+      expect(find.text(RelioStrings.entryIntroFinal), findsOneWidget);
       expect(find.text(RelioStrings.entryIntroStart), findsOneWidget);
     });
 
@@ -245,6 +264,13 @@ void main() {
         'Faisons connaissance ! Je vais te proposer 5 petites questions de '
         'maths. Elles m\u2019aideront à mieux comprendre ton point de départ '
         'pour t\u2019accompagner dans la suite. Ici, on avance pas à pas.',
+      );
+      // Les trois parties affichées restituent exactement le texte validé.
+      expect(
+        '${RelioStrings.entryIntroTitle} '
+        '${RelioStrings.entryIntroBody} '
+        '${RelioStrings.entryIntroFinal}',
+        RelioStrings.entryIntroMessage,
       );
     });
 
@@ -266,7 +292,9 @@ void main() {
       // Elles sont VIDES : les remplir serait déjà afficher une progression,
       // donc déjà une évaluation. Aucune ne porte d'état de session.
       expect(find.textContaining('sur 5'), findsNothing);
-      expect(find.text(RelioStrings.entryIntroCaption), findsOneWidget);
+      // La légende a été retirée par la refonte : seuls les textes validés
+      // (titre, description, phrase de fin, bouton) restent à l'écran.
+      expect(find.text(RelioStrings.entryIntroCaption), findsNothing);
     });
 
     testWidgets('tient sur 360 × 640 à 1,3', (WidgetTester tester) async {
@@ -301,7 +329,7 @@ void main() {
         EntryTestIntroPage(onStart: () {}, reduceAnimations: true),
       );
 
-      expect(find.text(RelioStrings.entryIntroCaption), findsOneWidget);
+      expect(find.text(RelioStrings.entryIntroFinal), findsOneWidget);
       expect(find.textContaining('%'), findsNothing);
       expect(find.textContaining('sur 5'), findsNothing,
           reason: 'le compteur appartient au test, pas à son annonce');

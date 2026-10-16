@@ -12,7 +12,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:relio/presentation/branding/relio_character.dart';
-import 'package:relio/presentation/branding/relio_lockup.dart';
+import 'package:relio/presentation/branding/relio_mark.dart';
 import 'package:relio/presentation/screens/onboarding/closing_page.dart';
 import 'package:relio/presentation/screens/onboarding/name_page.dart';
 import 'package:relio/presentation/screens/onboarding/welcome_page.dart';
@@ -134,20 +134,20 @@ void main() {
   });
 
   group('Écran de bienvenue', () {
-    testWidgets('le texte ne recouvre pas le lockup',
+    testWidgets('le titre ne recouvre pas le mark',
         (WidgetTester tester) async {
       await monter(
         tester,
         WelcomePage(onStart: () async {}, reduceAnimations: true),
       );
 
-      // L'écran de bienvenue ne montre pas le personnage : il montre le
-      // lockup — mark, mot et signature.
+      // L'écran de bienvenue ne montre plus le lockup : le mark seul
+      // (100 dp), puis le titre.
       attendrePasDeRecouvrement(
         tester,
-        personnage: find.byType(RelioLockupHorizontal),
-        contenu: find.text(RelioStrings.welcomeMessage),
-        quoi: 'texte / lockup',
+        personnage: find.byType(RelioMark),
+        contenu: find.text(RelioStrings.welcomeTitle),
+        quoi: 'titre / mark',
       );
     });
   });

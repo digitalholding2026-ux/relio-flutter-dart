@@ -1,19 +1,24 @@
 /// Onboarding — étape Prénom.
 ///
-/// Écran sans AppBar, contenu centré verticalement. Il ne demande qu'une
-/// chose : le prénom de l'élève.
+/// Écran sans AppBar. Le personnage (64 dp) en haut, le titre et son
+/// sous-titre, le champ de saisie 32 dp plus bas, le bouton ancré en bas.
 ///
 /// AUCUNE VALIDATION BLOQUANTE : pas de message d'erreur, pas de condition de
 /// forme, pas de commentaire du personnage. Le bouton est simplement actif ou
 /// non, et le prénom est capitalisé au passage.
+///
+/// MISE EN PAGE EN COLONNE, jamais en `Stack` : chaque élément reçoit la
+/// place restante, et le titre ne peut pas chevaucher le personnage quel que
+/// soit le nombre de lignes.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../branding/relio_character.dart';
 import '../../strings/relio_strings.dart';
 import '../../theme/relio_theme.dart';
-import '../../branding/relio_character.dart';
+import 'entry_kit.dart';
 import 'name_input.dart';
 import 'onboarding_metrics.dart';
 
@@ -40,8 +45,7 @@ class NamePage extends StatefulWidget {
   State<NamePage> createState() => _NamePageState();
 }
 
-class _NamePageState extends State<NamePage>
-    with SingleTickerProviderStateMixin {
+class _NamePageState extends State<NamePage> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focus = FocusNode();
 
@@ -50,13 +54,6 @@ class _NamePageState extends State<NamePage>
 
   /// Une écriture est-elle en cours ?
   bool _submitting = false;
-
-  late final AnimationController _exit = AnimationController(
-    vsync: this,
-    duration: widget.reduceAnimations
-        ? Duration.zero
-        : const Duration(milliseconds: OnboardingMetrics.nameShrinkMs),
-  );
 
   @override
   void initState() {
@@ -73,7 +70,6 @@ class _NamePageState extends State<NamePage>
     _focus
       ..removeListener(_onFocusChanged)
       ..dispose();
-    _exit.dispose();
     super.dispose();
   }
 
@@ -115,12 +111,6 @@ class _NamePageState extends State<NamePage>
     // tel quel, et il doit donc déjà être dans sa forme finale.
     final String name = capitalizeName(_controller.text.trim());
 
-    // Fondu sortant du titre, du champ et du bouton, pendant que le
-    // personnage se réduit. Les deux avancent ensemble : l'élève ne voit pas
-    // un écran à moitié effacé.
-    await _exit.forward();
-    if (!mounted) return;
-
     await widget.onSubmit(name);
   }
 
@@ -128,131 +118,82 @@ class _NamePageState extends State<NamePage>
   Widget build(BuildContext context) {
     final palette = RelioPaletteScope.of(context);
 
-    // L'écran s'abonne à sa sortie. SANS cet abonnement, `build` ne serait
-    // rejoué que si un AUTRE élément de l'arbre le demandait : le contrôleur
-    // tournerait, mais le rétrécissement du personnage et le fondu du contenu
-    // resteraient peints à leur état initial. L'écran resterait figé.
-    return AnimatedBuilder(
-      animation: _exit,
-      builder: (BuildContext context, _) => Scaffold(
-        backgroundColor: palette.background,
-        body: SafeArea(
-          child: LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-            // Le personnage se réduit de 140 à 80 à la validation, pour
-            // laisser la place à la première question.
-            final double from = OnboardingMetrics.characterSize(
-              width: constraints.maxWidth,
-              large: true,
-            );
-            final double to = OnboardingMetrics.characterSize(
-              width: constraints.maxWidth,
-              large: false,
-            );
-            final double size = Tween<double>(
-              begin: from,
-              end: to,
-            ).evaluate(_exit);
-
-            // Le contenu suit la sortie : il s'efface pendant le rétrécissement.
-            //
-            // AVEC animations réduites, le contenu est visible d'emblée et le
-            // reste : il valait 0, ce qui rendait l'écran INUTILISABLE — pas de
-            // titre, pas de champ, pas de bouton — pour tout élève ayant
-            // demandé à limiter les animations. Réduire les animations doit
-            // retirer le mouvement, jamais l'information.
-            final double contentOpacity =
-                widget.reduceAnimations ? 1 : (1 - _exit.value);
-
-            // MISE EN PAGE EN COLONNE, et non en `Stack`.
-            //
-            // Le `Stack` superposait le personnage et le contenu : les deux
-            // enfants se partageaient le meme rectangle, et le titre venait
-            // CHEVAUCHER le personnage — 50 px de recouvrement mesure a
-            // 360 x 640. Aucun test ne l'avait vu : un `Stack` ne leve
-            // rien quand deux enfants se marchent dessus, seul un debordement
-            // de `Flex` signale.
-            //
-            // La colonne rend ce defaut IMPOSSIBLE : chaque element recoit la
-            // place restante. C'est la meme correction que celle deja appliquee
-            // a `closing_page.dart`, qui portait le meme commentaire.
-            return Column(
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.only(top: RelioSpacing.xxl),
-                  child: RelioCharacter(
-                    size: size,
-                    animate: !widget.reduceAnimations,
-                  ),
+    return Scaffold(
+      backgroundColor: EntryColors.background,
+      body: SafeArea(
+        child: Column(
+          children: <Widget>[
+            const SizedBox(height: EntryGaps.topToLogo),
+            RelioCharacter(
+              size: EntryBrand.name,
+              animate: !widget.reduceAnimations,
+            ),
+            const SizedBox(height: EntryGaps.logoToTitle),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: EntryGaps.horizontal,
+              ),
+              child: Text(
+                RelioStrings.nameTitle,
+                textAlign: TextAlign.center,
+                style: RelioType.title(palette),
+              ),
+            ),
+            const SizedBox(height: EntryGaps.textGap),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: EntryGaps.horizontal,
+              ),
+              child: Text(
+                RelioStrings.nameSubtitle,
+                textAlign: TextAlign.center,
+                style: RelioType.body(palette).copyWith(
+                  color: palette.textSecondary,
                 ),
-                // Le titre et le champ occupent toute la place restante et se
-                // centrent dedans : ils s'ecartent du personnage au lieu de
-                // le traverser.
-                Expanded(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: RelioSpacing.horizontal,
-                        vertical: RelioSpacing.md,
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Opacity(
-                            opacity: contentOpacity,
-                            child: Text(
-                              RelioStrings.nameTitle,
-                              textAlign: TextAlign.center,
-                              style: RelioType.title(palette),
-                            ),
-                          ),
-                          const SizedBox(height: RelioSpacing.xxl),
-                          Opacity(
-                            opacity: contentOpacity,
-                            child: _NameField(
-                              controller: _controller,
-                              focusNode: _focus,
-                              formatter: _formatter,
-                              enabled: !_submitting,
-                            ),
-                          ),
-                        ],
-                      ),
+              ),
+            ),
+            // Le champ occupe la place restante : 32 dp sous le sous-titre,
+            // défilable si la police agrandie l'exige.
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: EntryGaps.horizontal,
+                ),
+                child: Column(
+                  children: <Widget>[
+                    const SizedBox(height: EntryGaps.bodyToField),
+                    _NameField(
+                      controller: _controller,
+                      focusNode: _focus,
+                      formatter: _formatter,
+                      enabled: !_submitting,
                     ),
-                  ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    RelioSpacing.horizontal,
-                    RelioSpacing.md,
-                    RelioSpacing.horizontal,
-                    RelioSpacing.xl,
-                  ),
-                  child: Opacity(
-                    opacity: contentOpacity,
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        // Le bouton est absent du geste tant que le champ
-                        // est vide : il ne s'agit pas de le « désactiver »,
-                        // mais de ne pas proposer une action sans effet.
-                        onPressed: _canSubmit && !_submitting ? _submit : null,
-                        child: const Text(RelioStrings.nameContinue),
-                      ),
-                    ),
-                  ),
+              ),
+            ),
+            EntryAction(
+              child: SizedBox(
+                width: double.infinity,
+                child: EntryButton(
+                  loading: _submitting,
+                  // Le bouton est absent du geste tant que le champ
+                  // est vide : il ne s'agit pas de le « désactiver »,
+                  // mais de ne pas proposer une action sans effet.
+                  onPressed:
+                      _canSubmit && !_submitting ? () => _submit() : null,
+                  label: RelioStrings.nameContinue,
                 ),
-              ],
-            );
-            },
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// Champ de saisie du prénom.
+/// Champ de saisie du prénom : 56 dp, rayon 12.
 class _NameField extends StatelessWidget {
   const _NameField({
     required this.controller,

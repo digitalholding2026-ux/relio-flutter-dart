@@ -1,10 +1,13 @@
-﻿/// Production des declinaisons raster : launcher icon et splash.
+﻿/// Production des declinaisons raster de reference et du splash.
 ///
 /// Le rendu passe par [RelioMarkPainter], donc par la meme geometrie que le
 /// SVG et que l'ecran. Les images produites sont ecrites dans :
 ///  - `assets/branding/launcher/` pour les declinaisons de reference ;
-///  - `android/app/src/main/res/mipmap-*/` pour l'icon Android ;
 ///  - `android/app/src/main/res/drawable-*/` pour le splash.
+///
+/// Les PNG du lanceur Android (`mipmap-*/`) viennent eux de l'icone livree
+/// (`tool/brand_launcher.py`) : eux seuls portent les pages blanches du
+/// livre, qui n'existent pas dans la geometrie vectorielle.
 ///
 /// ```
 /// flutter test tool/render_branding_test.dart
@@ -43,24 +46,10 @@ Future<void> _ecrirePng(ui.Image image, String chemin) async {
 double _cotePourLargeur(double largeur) =>
     largeur * RelioMarkGeometry.inkHeight / RelioMarkGeometry.inkWidth;
 
-/// Aplat de couleur pleine, sans mark.
-Future<ui.Image> _rendreAplat(double cote, Color couleur) async {
-  final ui.PictureRecorder recorder = ui.PictureRecorder();
-  Canvas(recorder).drawRect(
-    Rect.fromLTWH(0, 0, cote, cote),
-    Paint()..color = couleur,
-  );
-  final ui.Picture picture = recorder.endRecording();
-  final ui.Image image = await picture.toImage(cote.round(), cote.round());
-  picture.dispose();
-  return image;
-}
-
 /// Rend le mark seul, centre dans un canvas, sur un fond eventuel.
 ///
 /// [largeurMark] est la largeur REELLE de l'encre du mark dans le canvas.
-/// Le fond, lui, occupe tout le canvas : c'est ce qu'attend Android pour un
-/// calque d'icone adaptative.
+/// Le fond, lui, occupe tout le canvas.
 Future<ui.Image> _rendreMark({
   required double canvas,
   required double largeurMark,
@@ -125,47 +114,45 @@ Future<void> _chargerPolice(String chemin, String famille) async {
 /// signature (rapport `signatureCapRatio`). Le bloc complet est ensuite centre
 /// dans le carre, ce qui garantit qu'il ne déborde sur aucune resolution.
 void _dessinerLockupVertical(Canvas c, double cote) {
-  // Hauteur du bloc, en fraction du cote : le mark occupe 1 unite de hauteur,
-  // le mot 1 / 1.93, la signature 1 / 1.93 x 0.176, plus les deux ecarts.
+  // Hauteur du bloc, en fraction de la hauteur du mark : le mot vaut
+  // 1 / 1.637, la signature 0.14 fois le mot, plus les deux ecarts.
   // On raisonne en unites de hauteur du mark, puis on met a l'echelle.
   const double gapMarkText = RelioBrand.verticalGap / RelioMarkGeometry.grid;
-  const double wordmarkCapRatio = 1 / kMarkToWordmarkRatio;
+  const double wordRatio = 1 / kMarkToWordmarkRatio;
+  final double wordAspect = RelioWordmarkGeometry.inkWidth /
+      RelioWordmarkGeometry.inkHeight;
 
-  final double fontSizeAtMark = 1 / (kMarkToWordmarkRatio * RelioBrand.wordmarkCapHeightEm);
-  final double wordmarkHeightAtMark = fontSizeAtMark * 1.21;
-  final double signatureHeightAtMark =
-      fontSizeAtMark * RelioBrand.signatureCapRatio * 1.21;
+  final double signatureCapAtMark =
+      wordRatio * RelioBrand.signatureCapRatio;
+  final double signatureFontAtMark =
+      signatureCapAtMark / RelioBrand.interCapHeightEm;
   final double blockAtMark = 1 +
       gapMarkText +
-      wordmarkHeightAtMark +
-      wordmarkCapRatio * RelioBrand.signatureGapRatio +
-      signatureHeightAtMark;
+      wordRatio +
+      wordRatio * RelioBrand.signatureGapRatio +
+      signatureFontAtMark;
 
   // Le bloc occupe 78 % de la cote : assez grand pour etre lu, assez petit
   // pour laisser respirer l'ecran.
   final double markHeight = cote * 0.78 / blockAtMark;
-  final double markWidth = markHeight * RelioMarkGeometry.inkWidth / RelioMarkGeometry.inkHeight;
+  final double markWidth =
+      markHeight * RelioMarkGeometry.inkWidth / RelioMarkGeometry.inkHeight;
+  final double wordHeight = markHeight * wordRatio;
+  final double wordWidth = wordHeight * wordAspect;
 
-  final double fontSize = markHeight * fontSizeAtMark;
-  final TextPainter wordmark = _texte(
-    RelioWordmark.text,
-    fontSize,
-    RelioBrand.wordmark,
-    tracking: RelioBrand.wordmarkTracking,
-  );
+  final double fontSize = markHeight * signatureFontAtMark;
   final TextPainter signature = _texte(
     RelioSignature.text,
-    fontSize * RelioBrand.signatureCapRatio,
+    fontSize,
     RelioBrand.wordmark,
   );
 
-  // Centrage du bloc REELLEMENT occupe, et non d'une estimation : les hauteurs
-  // de ligne sont mesurees sur la fonte.
+  // Centrage du bloc REELLEMENT occupe.
   final double block =
       markHeight +
       gapMarkText * markHeight +
-      wordmark.height +
-      wordmarkCapRatio * markHeight * RelioBrand.signatureGapRatio +
+      wordHeight +
+      wordRatio * markHeight * RelioBrand.signatureGapRatio +
       signature.height;
 
   double y = (cote - block) / 2;
@@ -174,13 +161,20 @@ void _dessinerLockupVertical(Canvas c, double cote) {
   c.translate((cote - markWidth) / 2, y);
   RelioMarkPainter(variant: RelioMarkVariant.onLight).paint(
     c,
-    Size(markHeight * RelioMarkGeometry.inkHeight / RelioMarkGeometry.inkWidth, markHeight),
+    Size(markHeight * RelioMarkGeometry.inkHeight / RelioMarkGeometry.inkWidth,
+        markHeight),
   );
   c.restore();
   y += markHeight + gapMarkText * markHeight;
 
-  wordmark.paint(c, Offset((cote - wordmark.width) / 2, y));
-  y += wordmark.height + wordmarkCapRatio * markHeight * RelioBrand.signatureGapRatio;
+  c.save();
+  c.translate((cote - wordWidth) / 2, y);
+  const RelioWordmarkPainter(variant: RelioMarkVariant.onLight).paint(
+    c,
+    Size(wordWidth, wordHeight),
+  );
+  c.restore();
+  y += wordHeight + wordRatio * markHeight * RelioBrand.signatureGapRatio;
 
   signature.paint(c, Offset((cote - signature.width) / 2, y));
 }
@@ -253,18 +247,6 @@ const Map<String, double> _legacyDp = <String, double>{
   'xxxhdpi': 4,
 };
 
-/// Cotes des icones legacy, en dp.
-const double _legacyIconDp = 48;
-
-/// Facteur de densite des icones ADAPTATIVES : grille de 108 dp.
-const Map<String, double> _adaptiveDp = <String, double>{
-  'mdpi': 1,
-  'hdpi': 1.5,
-  'xhdpi': 2,
-  'xxhdpi': 3,
-  'xxxhdpi': 4,
-};
-
 void main() {
   const String launcher = 'assets/branding/launcher';
   const String res = 'android/app/src/main/res';
@@ -276,93 +258,12 @@ void main() {
     await _chargerPolice('assets/fonts/Inter-SemiBold.ttf', 'Inter');
   });
 
-  testWidgets('launcher : icones legacy et adaptatives', (WidgetTester tester) async {
-    await tester.runAsync(() async {
-      // --- Icones legacy : 48 dp, fond indigo, mark en declinaison claire ---
-      //
-      // Le fond porte l'indigo de la marque et le mark y est en blanc : c'est
-      // l'icone fournie dans la specification. Un aplat orange avec un mark
-      // orange y serait illisible.
-      for (final MapEntry<String, double> e in _legacyDp.entries) {
-        final double px = _legacyIconDp * e.value;
-        final double rayon = RelioMarkGeometry.iconCornerRadiusRatio * px;
-        final double inset = RelioMarkGeometry.iconBackgroundInsetRatio * px;
-        final double largeur = px - 2 * inset;
-
-        final ui.Image icon = await _rendreMark(
-          canvas: px,
-          largeurMark: largeur * 0.72,
-          variant: RelioMarkVariant.onIndigo,
-          fond: RelioBrand.iconBackground,
-          rayonFond: rayon,
-        );
-        await _ecrirePng(icon, '$res/mipmap-${e.key}/ic_launcher.png');
-        icon.dispose();
-
-        // La variante « round » est un disque : pas de coins arrondis a
-        //Chooser, le rayon vaut la moitie du cote.
-        final ui.Image rond = await _rendreMark(
-          canvas: px,
-          largeurMark: largeur * 0.62,
-          variant: RelioMarkVariant.onIndigo,
-          fond: RelioBrand.iconBackground,
-          rayonFond: px / 2,
-        );
-        await _ecrirePng(rond, '$res/mipmap-${e.key}/ic_launcher_round.png');
-        rond.dispose();
-      }
-
-      // --- Icone adaptative : 108 dp -------------------------------------
-      // Le mark doit tenir dans la zone sure ET laisser de la respiration :
-      // 55 % de la zone sure, donc 36.3 dp sur la grille de 108 dp.
-      for (final MapEntry<String, double> e in _adaptiveDp.entries) {
-        final double grid = RelioMarkGeometry.androidGridDp * e.value;
-        final double largeurMarkDp = RelioMarkGeometry.androidMarkWidthDp * e.value;
-
-        // Premier plan : mark en declinaison claire, fond TRANSPARENT. La zone
-        // sure reste degagee, conformement aux masques constructeur.
-        final ui.Image fg = await _rendreMark(
-          canvas: grid,
-          largeurMark: largeurMarkDp,
-          variant: RelioMarkVariant.onIndigo,
-        );
-        await _ecrirePng(fg, '$res/mipmap-${e.key}/ic_launcher_foreground.png');
-
-        // Arriere-plan : aplat indigo, sans mark.
-        //
-        // Le fond ne doit porter aucun dessin. Il porte la couleur, et c'est
-        // ce qui rend le mark blanc lisible.
-        final ui.Image aplat = await _rendreAplat(grid, RelioBrand.iconBackground);
-        await _ecrirePng(aplat, '$res/mipmap-${e.key}/ic_launcher_background.png');
-
-        // Couche monochrome : Android 13+ la teinte selon le theme du systeme.
-        // Elle doit porter UNIQUEMENT le mark, en noir, sur fond transparent :
-        // c'est la seule forme qui survive a une teinte appliquee par l'OS.
-        final ui.Image mono = await _rendreMark(
-          canvas: grid,
-          largeurMark: largeurMarkDp,
-          variant: RelioMarkVariant.monoBlack,
-        );
-        await _ecrirePng(mono, '$res/mipmap-${e.key}/ic_launcher_monochrome.png');
-
-        // Copies de reference dans assets, pour documentation et impression.
-        // Elles sont ecrites AVANT toute liberation : une `ui.Image` liberee
-        // ne peut plus etre encodee.
-        await _ecrirePng(fg, '$launcher/adaptive-foreground-${e.key}.png');
-        await _ecrirePng(aplat, '$launcher/adaptive-background-${e.key}.png');
-        await _ecrirePng(mono, '$launcher/adaptive-monochrome-${e.key}.png');
-        fg.dispose();
-        aplat.dispose();
-        mono.dispose();
-      }
-    });
-  }, timeout: const Timeout(Duration(minutes: 5)));
-
-  testWidgets('launcher : declinaisons de taille exportables', (WidgetTester tester) async {
+  testWidgets('declinaisons de taille exportables', (WidgetTester tester) async {
     await tester.runAsync(() async {
       for (final double dp in [1024.0, 512.0, 192.0, 96.0, 48.0, 24.0]) {
-        // Variante presence : fond indigo, mark en declinaison claire. C'est
-        // l'icone de l'application, en grandeur.
+        // Variante presence : fond orange, mark navy. C'est l'icone de
+        // l'application en grandeur (les parties orange s'y confondent avec
+        // le fond, comme sur l'icone livree).
         final ui.Image presence = await _rendreMark(
           canvas: dp,
           largeurMark: dp * 0.72,

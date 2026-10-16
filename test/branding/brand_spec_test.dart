@@ -4,9 +4,10 @@
 /// main. Cette regle ne se verifie pas a la lecture du code : elle se verifie
 /// en REJOUANT l'import.
 ///
-/// Ce test relit `docs/brand/relio_app_icon.svg` — la specification validee —
-/// applique exactement la meme normalisation que celle utilisee lors de
-/// l'import initial, puis compare le resultat aux constantes de
+/// Ce test relit `docs/brand/relio_app_icon.svg` — la specification validee,
+/// produite par l'import mecanique `tool/brand_import.py` depuis les visuels
+/// livres — applique exactement la meme normalisation que celle utilisee lors
+/// de l'import initial, puis compare le resultat aux constantes de
 /// `RelioMarkGeometry`.
 ///
 /// Si quelquun ajuste une coordonnee a la main dans la geometrie, ce test
@@ -39,15 +40,11 @@ class _Pt {
 class _Imported {
   const _Imported({
     required this.chemins,
-    required this.cercle,
     required this.echelle,
   });
 
   /// Les `d` normalises, dans l'ordre du fichier.
   final List<String> chemins;
-
-  /// Centre et rayon normalises du point.
-  final ({double cx, double cy, double r}) cercle;
 
   /// Facteur applique par la normalisation.
   final double echelle;
@@ -56,10 +53,9 @@ class _Imported {
 /// Lit `d`, le reecrit avec les memes commandes absolues que la geometrie, et
 /// renvoie tous ses points — points de controle compris.
 ({String d, List<_Pt> points}) _analyser(String d) {
-  final re = RegExp(r'([MLQCHVZ])([^MLQCHVZ]*)');
+  final re = RegExp(r'([MLQZ])([^MLQZ]*)');
   final List<_Pt> points = <_Pt>[];
   final StringBuffer out = StringBuffer();
-  double cx = 0, cy = 0;
 
   for (final Match m in re.allMatches(d)) {
     final List<double> nums = m
@@ -72,8 +68,6 @@ class _Imported {
 
     void point(double x, double y) {
       points.add(_Pt(x, y));
-      cx = x;
-      cy = y;
     }
 
     switch (m.group(1)) {
@@ -82,16 +76,6 @@ class _Imported {
         for (int i = 0; i + 1 < nums.length; i += 2) {
           point(nums[i], nums[i + 1]);
           out.write('${m.group(1)}${nums[i]} ${nums[i + 1]}');
-        }
-      case 'V':
-        for (final double y in nums) {
-          point(cx, y);
-          out.write('L$cx $y');
-        }
-      case 'H':
-        for (final double x in nums) {
-          point(x, cy);
-          out.write('L$x $cy');
         }
       case 'Q':
         for (int i = 0; i + 3 < nums.length; i += 4) {
@@ -111,14 +95,10 @@ class _Imported {
 /// Rejoue la normalisation : le mark est centre dans la grille, et cale sur sa
 /// plus grande dimension.
 _Imported _importer(String svg) {
-  // Le fond de l'icone est un `rect` : il ne fait pas partie du mark.
-  final List<String> ds = RegExp(r'<path d="([^"]+)"')
+  final List<String> ds = RegExp(r'<path [^>]*d="([^"]+)"')
       .allMatches(svg)
       .map((Match m) => m.group(1)!)
       .toList();
-  final Match cercle = RegExp(
-          r'<circle cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"')
-      .firstMatch(svg)!;
 
   double l = double.infinity, t = double.infinity;
   double r = double.negativeInfinity, b = double.negativeInfinity;
@@ -134,14 +114,6 @@ _Imported _importer(String svg) {
       b = p.y > b ? p.y : b;
     }
   }
-
-  final double dcx = double.parse(cercle.group(1)!);
-  final double dcy = double.parse(cercle.group(2)!);
-  final double dr = double.parse(cercle.group(3)!);
-  l = dcx - dr < l ? dcx - dr : l;
-  t = dcy - dr < t ? dcy - dr : t;
-  r = dcx + dr > r ? dcx + dr : r;
-  b = dcy + dr > b ? dcy + dr : b;
 
   final double w = r - l;
   final double h = b - t;
@@ -201,14 +173,20 @@ _Imported _importer(String svg) {
 
   return _Imported(
     chemins: normalises,
-    cercle: (
-      cx: fx(ox + (dcx - l) * s),
-      cy: fx(oy + (dcy - t) * s),
-      r: fx(dr * s),
-    ),
     echelle: s,
   );
 }
+
+/// Identifiants des sept parties, dans l'ordre de dessin.
+const List<String> kParties = <String>[
+  'cap',
+  'stem',
+  'body',
+  'base',
+  'page-upper',
+  'page-lower',
+  'tassel',
+];
 
 void main() {
   final File spec = File('docs/brand/relio_app_icon.svg');
@@ -219,11 +197,15 @@ void main() {
           reason: 'la specification de marque doit etre versionnee');
     });
 
-    test('elle contient bien le « R », les deux zigzags et le point', () {
+    test('elle contient les sept parties, sans cercle', () {
       final String svg = spec.readAsStringSync();
-      expect('M'.allMatches(svg), isNotEmpty);
+      for (final String id in kParties) {
+        expect(svg, contains('id="$id"'),
+            reason: 'partie $id absente de la specification');
+      }
+      expect(RegExp(r'<circle').hasMatch(svg), isFalse,
+          reason: 'la nouvelle marque ne porte pas de point');
       expect('Q'.allMatches(svg), isNotEmpty);
-      expect(RegExp(r'<circle').hasMatch(svg), isTrue);
     });
   });
 
@@ -240,6 +222,10 @@ void main() {
 
     test('le nombre de traces n\'a pas change', () {
       expect(import.chemins, hasLength(RelioMarkGeometry.parts.length));
+      expect(
+        RelioMarkGeometry.parts.map((RelioMarkPart p) => p.id).toList(),
+        kParties,
+      );
     });
 
     test('chaque trace correspond, coordonnee par coordonnee', () {
@@ -253,37 +239,28 @@ void main() {
       }
     });
 
-    test('le point est a sa place et de son rayon', () {
-      expect(RelioMarkGeometry.dot.centerX,
-          closeTo(import.cercle.cx, kTolerance));
-      expect(RelioMarkGeometry.dot.centerY,
-          closeTo(import.cercle.cy, kTolerance));
-      expect(RelioMarkGeometry.dot.radius,
-          closeTo(import.cercle.r, kTolerance));
-    });
-
     test('la boite englobante decoule de la specification', () {
       expect(RelioMarkGeometry.boundingBox.left,
-          closeTo(4.403, kTolerance));
+          closeTo(6.224, kTolerance));
       expect(RelioMarkGeometry.boundingBox.right,
-          closeTo(95.597, kTolerance));
+          closeTo(93.776, kTolerance));
       expect(RelioMarkGeometry.boundingBox.top, closeTo(0, kTolerance));
       expect(RelioMarkGeometry.boundingBox.bottom, closeTo(100, kTolerance));
     });
 
     test('les boites des parties correspondent aux traces', () {
-      // Le « R » est la partie la plus haute et la plus basse.
-      expect(RelioMarkGeometry.glyph.box.top, closeTo(0, kTolerance));
-      expect(RelioMarkGeometry.glyph.box.bottom,
-          closeTo(96.541, kTolerance));
-      expect(RelioMarkGeometry.glyph.box.left, closeTo(9.748, kTolerance));
-      expect(RelioMarkGeometry.glyph.box.right, closeTo(83.019, kTolerance));
-
-      // L'accent descend jusqu'au bas de la grille.
-      expect(RelioMarkGeometry.zigzagAccent.box.bottom,
-          closeTo(100, kTolerance));
-      expect(RelioMarkGeometry.zigzagSecondary.box.right,
-          closeTo(95.597, kTolerance));
+      // Le chapeau est la partie la plus haute.
+      expect(RelioMarkGeometry.cap.box.top, closeTo(0, kTolerance));
+      // Le balayage descend jusqu'au bas de la grille.
+      expect(RelioMarkGeometry.base.box.bottom, closeTo(100, kTolerance));
+      // Le gland pend a droite du chapeau.
+      expect(RelioMarkGeometry.tassel.box.left,
+          greaterThan(RelioMarkGeometry.cap.centerX));
+      // Les pages sont sous la courbe, au-dessus du balayage.
+      expect(RelioMarkGeometry.pageUpper.box.top,
+          greaterThan(RelioMarkGeometry.body.box.top));
+      expect(RelioMarkGeometry.pageLower.box.bottom,
+          lessThan(RelioMarkGeometry.base.box.bottom));
     });
   });
 }

@@ -63,28 +63,37 @@ String lire(String chemin) {
 
 void main() {
   group('Structure du mark', () {
-    test('le mark est compose de trois traces et d\'un point', () {
-      expect(RelioMarkGeometry.parts, hasLength(3));
+    test('le mark est compose de sept traces', () {
+      expect(RelioMarkGeometry.parts, hasLength(7));
       expect(
         RelioMarkGeometry.parts.map((RelioMarkPart p) => p.id).toList(),
-        <String>['glyph', 'zigzag-accent', 'zigzag-secondary'],
+        <String>[
+          'cap',
+          'stem',
+          'body',
+          'base',
+          'page-upper',
+          'page-lower',
+          'tassel',
+        ],
       );
-      expect(RelioMarkGeometry.dot.id, 'dot');
     });
 
     test('les identifiants sont uniques : ils nomment les noeuds du SVG', () {
       final Set<String> ids = <String>{
         ...RelioMarkGeometry.parts.map((RelioMarkPart p) => p.id),
-        RelioMarkGeometry.dot.id,
       };
-      expect(ids, hasLength(4));
+      expect(ids, hasLength(7));
     });
 
     test('les roles chromatiques sont répartis comme dans la specification', () {
-      expect(RelioMarkGeometry.glyph.role, RelioMarkRole.base);
-      expect(RelioMarkGeometry.zigzagSecondary.role, RelioMarkRole.base);
-      expect(RelioMarkGeometry.zigzagAccent.role, RelioMarkRole.accent);
-      expect(RelioMarkGeometry.dot.role, RelioMarkRole.accent);
+      expect(RelioMarkGeometry.cap.role, RelioMarkRole.base);
+      expect(RelioMarkGeometry.stem.role, RelioMarkRole.base);
+      expect(RelioMarkGeometry.body.role, RelioMarkRole.base);
+      expect(RelioMarkGeometry.base.role, RelioMarkRole.base);
+      expect(RelioMarkGeometry.pageUpper.role, RelioMarkRole.accent);
+      expect(RelioMarkGeometry.pageLower.role, RelioMarkRole.accent);
+      expect(RelioMarkGeometry.tassel.role, RelioMarkRole.accent);
     });
 
     test('chaque trace est fermee', () {
@@ -92,13 +101,6 @@ void main() {
         expect(part.nodes.last, isA<RelioMarkClose>(),
             reason: '${part.id} doit finir par Z');
       }
-    });
-
-    test('le « R » est ajoure : deux contours dans une seule trace', () {
-      final int contours = RelioMarkGeometry.glyph.nodes
-          .whereType<RelioMarkMoveTo>()
-          .length;
-      expect(contours, 2, reason: 'le contre du « R » est un deuxieme contour');
     });
 
     test('aucune trace n\'est vide', () {
@@ -126,19 +128,6 @@ void main() {
         ajouter(p);
       }
 
-      // Le point est un disque : sa boite vaut son centre +/- son rayon.
-      ajouter(RelioMarkPart(
-        id: 'dot',
-        role: RelioMarkRole.accent,
-        nodes: const <RelioMarkNode>[],
-        box: (
-          left: RelioMarkGeometry.dot.centerX - RelioMarkGeometry.dot.radius,
-          top: RelioMarkGeometry.dot.centerY - RelioMarkGeometry.dot.radius,
-          right: RelioMarkGeometry.dot.centerX + RelioMarkGeometry.dot.radius,
-          bottom: RelioMarkGeometry.dot.centerY + RelioMarkGeometry.dot.radius,
-        ),
-      ));
-
       expect(RelioMarkGeometry.boundingBox.left, closeTo(left, 0.002));
       expect(RelioMarkGeometry.boundingBox.top, closeTo(top, 0.002));
       expect(RelioMarkGeometry.boundingBox.right, closeTo(right, 0.002));
@@ -147,7 +136,7 @@ void main() {
 
     test('le mark remplit la grille en hauteur et laisse de l\'air en largeur', () {
       expect(RelioMarkGeometry.inkHeight, closeTo(100, 0.002));
-      expect(RelioMarkGeometry.inkWidth, closeTo(91.194, 0.002));
+      expect(RelioMarkGeometry.inkWidth, closeTo(87.552, 0.002));
       expect(RelioMarkGeometry.inkWidth, lessThan(100));
       expect(RelioMarkGeometry.inkHeight, greaterThan(RelioMarkGeometry.inkWidth));
     });
@@ -168,26 +157,28 @@ void main() {
         expect(part.box.right, lessThanOrEqualTo(100 + epsilon), reason: part.id);
         expect(part.box.bottom, lessThanOrEqualTo(100 + epsilon), reason: part.id);
       }
-      expect(
-        RelioMarkGeometry.dot.centerX + RelioMarkGeometry.dot.radius,
-        lessThanOrEqualTo(100 + epsilon),
-      );
     });
   });
 
-  group('Point d\'accent', () {
-    test('il est en haut a droite, hors de la structure', () {
-      expect(RelioMarkGeometry.dot.centerX, greaterThan(60));
-      expect(RelioMarkGeometry.dot.centerY, lessThan(20));
-      expect(RelioMarkGeometry.dot.radius, greaterThan(4));
-      expect(RelioMarkGeometry.dot.radius, lessThan(10));
+  group('Composition du mark', () {
+    test('le chapeau coiffe la structure', () {
+      expect(RelioMarkGeometry.cap.box.top, closeTo(0, 0.002));
+      expect(RelioMarkGeometry.cap.box.bottom,
+          lessThan(RelioMarkGeometry.body.box.top + 10));
     });
 
-    test('il ne touche pas le « R »', () {
-      final double distance = (RelioMarkGeometry.dot.centerX -
-              RelioMarkGeometry.glyph.box.right)
-          .abs();
-      expect(distance, greaterThan(0));
+    test('le gland pend a droite, au-dessus des pages', () {
+      expect(RelioMarkGeometry.tassel.box.top,
+          greaterThan(RelioMarkGeometry.cap.box.top));
+      expect(RelioMarkGeometry.tassel.box.bottom,
+          lessThan(RelioMarkGeometry.pageUpper.box.top));
+    });
+
+    test('les pages s\'ouvrent entre la courbe et le balayage', () {
+      expect(RelioMarkGeometry.pageUpper.box.top,
+          greaterThan(RelioMarkGeometry.body.box.top));
+      expect(RelioMarkGeometry.pageLower.box.bottom,
+          lessThan(RelioMarkGeometry.base.box.bottom));
     });
   });
 
@@ -216,8 +207,8 @@ void main() {
 
   group('Icone applicative', () {
     test('le fond est un carre a coins arrondis, en retrait', () {
-      expect(RelioMarkGeometry.iconCornerRadiusRatio, closeTo(112 / 512, epsilon));
-      expect(RelioMarkGeometry.iconBackgroundInsetRatio, closeTo(12 / 512, epsilon));
+      expect(RelioMarkGeometry.iconCornerRadiusRatio, closeTo(0.206, 0.005));
+      expect(RelioMarkGeometry.iconBackgroundInsetRatio, closeTo(0.061, 0.005));
       expect(RelioMarkGeometry.iconCornerRadiusRatio, greaterThan(0.15));
       expect(RelioMarkGeometry.iconCornerRadiusRatio, lessThan(0.3));
     });
@@ -226,11 +217,12 @@ void main() {
   group('SVG generes', () {
     test('les couleurs sont en hexadecimal exact, jamais en nom', () {
       final String svg = lire('assets/branding/mark/mark-primary.svg');
-      expect(svg, contains('#F56207'));
-      expect(svg, contains('#1F3A6E'));
+      expect(svg, contains('#FE7904'));
+      expect(svg, contains('#0E1821'));
       expect(svg, isNot(contains('orange')));
+      expect(svg, isNot(contains('navy')));
       expect(svg, isNot(contains('indigo')));
-      expect(svg, isNot(contains('fill="F56207"')), reason: 'le # est obligatoire');
+      expect(svg, isNot(contains('fill="FE7904"')), reason: 'le # est obligatoire');
     });
 
     test('le SVG principal porte exactement les traces de la geometrie', () {
@@ -241,12 +233,8 @@ void main() {
         expect(svg, contains('d="${_attendu(part.nodes)}"'),
             reason: 'trace ${part.id} divergente : le SVG est perime');
       }
-      expect(
-        svg,
-        contains('cx="${_n(RelioMarkGeometry.dot.centerX)}" '
-            'cy="${_n(RelioMarkGeometry.dot.centerY)}" '
-            'r="${_n(RelioMarkGeometry.dot.radius)}"'),
-      );
+      expect(svg, isNot(contains('<circle')),
+          reason: 'la nouvelle marque ne porte pas de point');
     });
 
     test('toutes les declinaisons portent la MEME geometrie', () {
@@ -260,7 +248,7 @@ void main() {
         for (final String f in fichiers)
           lire('assets/branding/mark/$f')
               .split('\n')
-              .where((String l) => l.contains('<path') || l.contains('<circle'))
+              .where((String l) => l.contains('<path'))
               .map((String l) => l.replaceAll(RegExp(r'fill="#[0-9A-F]{6}"'), ''))
               .join(),
       };
@@ -268,10 +256,10 @@ void main() {
           reason: 'les declinaisons ne doivent differer que par la couleur');
     });
 
-    test('la declinaison inverse est blanche sur fond indigo', () {
+    test('la declinaison inverse est blanche sur fond navy', () {
       final String svg = lire('assets/branding/mark/mark-inverse.svg');
       expect(svg, contains('#FFFFFF'));
-      expect(svg, contains('#F56207'));
+      expect(svg, contains('#FE7904'));
     });
 
     test('les declinaisons monochrome existent en noir et en blanc', () {
@@ -279,7 +267,7 @@ void main() {
       expect(lire('assets/branding/mark/mark-mono-white.svg'), contains('#FFFFFF'));
     });
 
-    test('le « R » est ajoure dans le SVG : fill-rule evenodd', () {
+    test('les traces sont pleines : fill-rule evenodd', () {
       expect(lire('assets/branding/mark/mark-primary.svg'),
           contains('fill-rule="evenodd"'));
     });
@@ -297,11 +285,15 @@ void main() {
       expect(svg, contains('viewBox="0 0 100.0 100.0"'));
     });
 
-    test('l\'icone applicative est generee : fond indigo a coins arrondis', () {
+    test('l\'icone applicative est generee : fond orange a coins arrondis', () {
       final String svg = lire('assets/branding/icon/relio-app-icon.svg');
       expect(svg, contains('viewBox="0 0 512.0 512.0"'));
-      expect(svg, contains('rx="112.0"'));
-      expect(svg, contains('fill="#1F3A6E"'));
+      expect(
+        svg,
+        contains('rx="${_n(RelioMarkGeometry.iconCornerRadiusRatio * 512)}"'),
+      );
+      expect(svg, contains('fill="#FE7904"'));
+      expect(svg, contains('fill="#0E1821"'));
     });
 
     test('les lockups existent et ne contiennent que la geometrie', () {
@@ -314,7 +306,7 @@ void main() {
         'lockup-vertical-mono-white.svg',
       ]) {
         final String svg = lire('assets/branding/lockup/$f');
-        expect(svg, contains('id="${RelioMarkGeometry.glyph.id}"'), reason: f);
+        expect(svg, contains('id="${RelioMarkGeometry.cap.id}"'), reason: f);
         expect(svg, isNot(contains('<text')),
             reason: 'le mot est pose par l\'application, pas dans le SVG ($f)');
       }
@@ -323,6 +315,16 @@ void main() {
     test('le lockup cite la signature qu\'il decrit', () {
       expect(lire('assets/branding/lockup/lockup-horizontal.svg'),
           contains(RelioSignature.text));
+    });
+
+    test('le wordmark genere porte exactement les lettres tracees', () {
+      final String svg = lire('assets/branding/mark/wordmark-primary.svg');
+      for (final RelioMarkPart part in RelioWordmarkGeometry.parts) {
+        expect(svg, contains('id="${part.id}"'),
+            reason: 'lettre ${part.id} absente du SVG');
+        expect(svg, contains('d="${_attendu(part.nodes)}"'),
+            reason: 'lettre ${part.id} divergente : le SVG est perime');
+      }
     });
   });
 
@@ -333,7 +335,7 @@ void main() {
           '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
 
       expect(gen, contains("cOrange = '${hexOf(RelioBrand.mark)}'"));
-      expect(gen, contains("cIndigo = '${hexOf(RelioBrand.wordmark)}'"));
+      expect(gen, contains("cNavy = '${hexOf(RelioBrand.wordmark)}'"));
       expect(gen, contains("cBlack = '${hexOf(RelioBrand.monoBlack)}'"));
       expect(gen, contains("cWhite = '${hexOf(RelioBrand.monoWhite)}'"));
     });
@@ -355,13 +357,12 @@ void main() {
       expect(generateur('relioLockupGapVertical'),
           closeTo(RelioBrand.verticalGap, epsilon));
 
-      // Les deux rapports sont ecrits comme des fractions de la specification
-      // (31/176 pour la signature, mesuree dans le logo de reference). On
-      // compare donc la fraction elle-meme, pas sa valeur formelle.
-      expect(RelioBrand.signatureCapRatio, closeTo(31 / 176, 1e-12));
-      expect(RelioBrand.signatureGapRatio, closeTo(0.37, 1e-12));
-      expect(gen, contains('const double relioSignatureRatio = 31 / 176;'));
-      expect(gen, contains('const double relioSignatureGapRatioText = 0.37;'));
+      // Les rapports sont mesures sur le logo livre. On compare les valeurs,
+      // pas leur forme textuelle.
+      expect(RelioBrand.signatureCapRatio, closeTo(0.14, 1e-12));
+      expect(RelioBrand.signatureGapRatio, closeTo(0.153, 1e-12));
+      expect(gen, contains('const double relioSignatureRatio = 0.14;'));
+      expect(gen, contains('const double relioSignatureGapRatioText = 0.153;'));
 
       expect(RelioBrand.horizontalGap, kHorizontalGap);
       expect(RelioBrand.verticalGap, kVerticalGap);
@@ -371,11 +372,13 @@ void main() {
       // Si une espece de noeud nouvelle etait ajoutee a la geometrie sans etre
       // traitee, le rendu s'arreterait au dernier noeud connu. On verifie donc
       // que la `Path` construite couvre toute la trace.
-      final Path path = relioMarkPath(RelioMarkGeometry.glyph.nodes);
-      expect(path.computeMetrics().length, greaterThan(1),
-          reason: 'le « R » doit produire deux contours');
-      expect(path.contains(Offset(9.748, 50)), isTrue);
-      expect(path.contains(Offset(83.019, 96.541)), isTrue);
+      final Path path = relioMarkPath(RelioMarkGeometry.stem.nodes);
+      expect(path.computeMetrics().length, greaterThanOrEqualTo(1),
+          reason: 'le fût doit produire au moins un contour');
+      expect(path.contains(const Offset(10, 50)), isTrue);
+      final Rect bounds = path.getBounds();
+      expect(bounds.left, closeTo(RelioMarkGeometry.stem.box.left, 0.5));
+      expect(bounds.right, closeTo(RelioMarkGeometry.stem.box.right, 0.5));
     });
 
     test('les declinaisons ne different que par la couleur', () {

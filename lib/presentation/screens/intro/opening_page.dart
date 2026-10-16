@@ -1,18 +1,10 @@
 /// Ouverture de Relio — révélation de la marque.
 ///
-/// L'ouverture ne RACONTE rien. Elle montre le logo, le laisse se poser, puis
-/// s'efface vers l'écran Bienvenue. Il n'y a ni bouton, ni attente : passé le
-/// temps d'un mouvement, la suite est affichée.
+/// L'ouverture ne RACONTE rien. Elle montre le logo — le mark seul, 160 dp,
+/// centré, sans aucun texte — le laisse se poser, puis s'efface vers l'écran
+/// Bienvenue. Durée 1,8 s. Un tap n'importe où saute à l'écran suivant.
 ///
-/// AUCUN PERSONNAGE. L'ouverture montre la marque — le lockup horizontal, tel
-/// que l'application l'utilise partout ailleurs — et rien d'autre. C'est le
-/// même widget que sur l'accueil : si la marque évolue, un seul endroit
-/// change.
-///
-/// L'INTÉGRATION EST REMPLAÇABLE. L'écran ne dessine aucun glyphe et ne
-/// connaît aucune coordonnée : il ne fait qu'instantier [RelioLockupHorizontal]
-/// et le faire apparaître. Le jour où la marque change, ce widget change, et
-/// l'ouverture suit sans être touchée.
+/// AUCUN PERSONNAGE. L'ouverture montre la marque et rien d'autre.
 ///
 /// L'ANIMATION N'EST JAMAIS UNE CONDITION DE NAVIGATION. Le passage à
 /// l'étape suivante est déclenché par une minuterie bornée, pas par la fin
@@ -24,8 +16,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../branding/relio_lockup.dart';
-import '../../branding/relio_mark.dart';
+import '../onboarding/entry_kit.dart';
 import '../onboarding/onboarding_metrics.dart';
 
 /// Écran d'ouverture : le logo, puis l'écran Bienvenue.
@@ -147,63 +138,60 @@ class OpeningPageState extends State<OpeningPage>
       onPopInvokedWithResult: (bool didPop, Object? _) {
         if (!didPop) _onBack();
       },
-      child: Scaffold(
-        backgroundColor: RelioBrand.splashBackground,
-        body: SafeArea(
-          child: LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              final double cap = constraints.maxWidth <=
-                      OnboardingMetrics.compactWidthThreshold
-                  ? OnboardingMetrics.welcomeLockupCapHeightCompact
-                  : OnboardingMetrics.welcomeLockupCapHeight;
+      // Un tap n'importe où saute à l'écran suivant : la transition est
+      // interruptible, et personne n'attend 1,8 s contre son gré.
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _finish(),
+        child: Scaffold(
+          backgroundColor: EntryColors.background,
+          body: SafeArea(
+            child: Center(
+              child: AnimatedBuilder(
+                animation: _reveal,
+                builder: (BuildContext context, Widget? child) {
+                  final double t = _reveal.value;
+                  final double fade = Curves.easeOut.transform(
+                    Curves.easeOut.transform(_interval(
+                      t,
+                      0,
+                      OnboardingMetrics.openingFadeMs,
+                      OnboardingMetrics.openingTotalMs,
+                    )),
+                  );
+                  final double scale = Curves.easeOutBack.transform(
+                    Curves.easeOut.transform(_interval(
+                      t,
+                      OnboardingMetrics.openingScaleDelayMs,
+                      OnboardingMetrics.openingScaleMs,
+                      OnboardingMetrics.openingTotalMs,
+                    )),
+                  );
 
-              return Center(
-                child: AnimatedBuilder(
-                  animation: _reveal,
-                  builder: (BuildContext context, Widget? child) {
-                    final double t = _reveal.value;
-                    final double fade = Curves.easeOut.transform(
-                      Curves.easeOut.transform(_interval(
-                        t,
+                  return Opacity(
+                    opacity: fade,
+                    child: Transform.translate(
+                      // Le logo descend de `openingRise` dp vers sa place :
+                      // le « mouvement graphique subtil » de l'ouverture. Il
+                      // n'a lieu qu'une fois, à l'arrivée — aucun mouvement
+                      // permanent.
+                      offset: Offset(
                         0,
-                        OnboardingMetrics.openingFadeMs,
-                        OnboardingMetrics.openingTotalMs,
-                      )),
-                    );
-                    final double scale = Curves.easeOutBack.transform(
-                      Curves.easeOut.transform(_interval(
-                        t,
-                        OnboardingMetrics.openingScaleDelayMs,
-                        OnboardingMetrics.openingScaleMs,
-                        OnboardingMetrics.openingTotalMs,
-                      )),
-                    );
-
-                    return Opacity(
-                      opacity: fade,
-                      child: Transform.translate(
-                        // Le logo descend de `openingRise` dp vers sa place :
-                        // le « mouvement graphique subtil » de l'ouverture. Il
-                        // n'a lieu qu'une fois, à l'arrivée — aucun mouvement
-                        // permanent.
-                        offset: Offset(
-                          0,
-                          OnboardingMetrics.openingRise * (1 - scale),
-                        ),
-                        child: Transform.scale(
-                          scale: OnboardingMetrics.openingScaleFrom +
-                              (1 - OnboardingMetrics.openingScaleFrom) * scale,
-                          child: child,
-                        ),
+                        OnboardingMetrics.openingRise * (1 - scale),
                       ),
-                    );
-                  },
-                  // Le lockup est construit UNE FOIS, hors du builder :
-                  // l'animer ne doit pas le reconstruire à chaque image.
-                  child: RelioLockupHorizontal(markSize: cap),
-                ),
-              );
-            },
+                      child: Transform.scale(
+                        scale: OnboardingMetrics.openingScaleFrom +
+                            (1 - OnboardingMetrics.openingScaleFrom) * scale,
+                        child: child,
+                      ),
+                    ),
+                  );
+                },
+                // Le mark est construit UNE FOIS, hors du builder :
+                // l'animer ne doit pas le reconstruire à chaque image.
+                child: const EntryMark(size: EntryBrand.opening),
+              ),
+            ),
           ),
         ),
       ),

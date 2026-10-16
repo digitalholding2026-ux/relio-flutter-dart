@@ -1,26 +1,25 @@
 /// Onboarding — écran de bienvenue.
 ///
-/// L'élève entre dans Relio. L'écran est Composition : une forme géométrique
-/// discrète, un lockup, le texte d'accueil, puis le bouton.
+/// L'élève entre dans Relio. Le mark (100 dp) en haut, le titre en Display,
+/// le sous-titre et la question en Body, puis le bouton ancré en bas.
 ///
 /// AUCUN PERSONNAGE. L'écran montre la marque et du texte. Il n'introduit ni
 /// avatar, ni mascotte, ni figure : ce sujet est suspendu.
 ///
-/// LE TEXTE EST EXACT. Il vit dans `RelioStrings.welcomeMessage` et n'est ni
-/// raccourci, ni reformulé, ni décliné selon la taille de l'écran. C'est la
-/// mise en page qui s'adapte, jamais la phrase.
+/// LE TEXTE EST EXACT. Titre, sous-titre et question vivent dans
+/// `RelioStrings` et ne sont ni raccourcis, ni reformulés. C'est la mise en
+/// page qui s'adapte, jamais la phrase.
 ///
-/// LE TEXTE NE DÉBORDE JAMAIS. La zone de texte est défilable et occupe la
-/// place restante entre le logo et le bouton : le bouton reste atteignable,
-/// y compris avec la police système agrandie à 1,3.
+/// LE TEXTE NE DÉBORDE JAMAIS. La zone médiane est défilable : le bouton
+/// reste atteignable, y compris avec la police système agrandie à 1,3.
 library;
 
 import 'package:flutter/material.dart';
 
-import '../../branding/relio_lockup.dart';
 import '../../branding/relio_mark.dart';
 import '../../strings/relio_strings.dart';
 import '../../theme/relio_theme.dart';
+import 'entry_kit.dart';
 import 'onboarding_metrics.dart';
 
 /// Accueil de l'élève, et entrée dans le parcours.
@@ -46,7 +45,7 @@ class WelcomePage extends StatefulWidget {
 
 class _WelcomePageState extends State<WelcomePage>
     with SingleTickerProviderStateMixin {
-  /// Arrivée progressive du contenu : forme, lockup, texte, bouton.
+  /// Arrivée progressive du contenu : logo, titre, texte, bouton.
   late final AnimationController _reveal = AnimationController(
     vsync: this,
     duration: widget.reduceAnimations
@@ -123,139 +122,82 @@ class _WelcomePageState extends State<WelcomePage>
     return AnimatedBuilder(
       animation: _reveal,
       builder: (BuildContext context, _) => Scaffold(
-        backgroundColor: palette.background,
+        backgroundColor: EntryColors.background,
         body: SafeArea(
-          child: LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              final bool compact = constraints.maxWidth <=
-                  OnboardingMetrics.compactWidthThreshold;
-              final double cap = compact
-                  ? OnboardingMetrics.welcomeLockupCapHeightCompact
-                  : OnboardingMetrics.welcomeLockupCapHeight;
-
-              return Column(
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.only(top: RelioSpacing.xxl),
-                    child: _arriving(
-                      0,
-                      _Composition(palette: palette),
+          child: Column(
+            children: <Widget>[
+              const SizedBox(height: EntryGaps.topToLogo),
+              _arriving(
+                0,
+                const EntryMark(size: EntryBrand.welcome),
+              ),
+              const SizedBox(height: EntryGaps.logoToTitle),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: EntryGaps.horizontal,
+                ),
+                child: _arriving(
+                  1,
+                  Text(
+                    RelioStrings.welcomeTitle,
+                    textAlign: TextAlign.center,
+                    style: RelioType.display(palette).copyWith(
+                      color: RelioBrand.wordmark,
                     ),
                   ),
-                  const SizedBox(height: RelioSpacing.xl),
-                  _arriving(
-                    1,
-                    RelioLockupHorizontal(markSize: cap),
+                ),
+              ),
+              // Le texte médian prend TOUTE la place restante : il ne peut ni
+              // pousser le bouton hors de l'écran, ni remonter sur le logo,
+              // quel que soit le nombre de lignes.
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: EntryGaps.horizontal,
                   ),
-                  // Le texte prend TOUTE la place restante et se centre dedans.
-                  // Il ne peut donc ni pousser le bouton hors de l'écran, ni
-                  // chevaucher le logo, quel que soit le nombre de lignes.
-                  Expanded(
-                    child: Center(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: RelioSpacing.horizontal,
-                          vertical: RelioSpacing.md,
-                        ),
-                        child: _arriving(
-                          2,
-                          Text(
-                            RelioStrings.welcomeMessage,
-                            textAlign: TextAlign.center,
-                            style: RelioType.title(palette),
+                  child: Column(
+                    children: <Widget>[
+                      const SizedBox(height: EntryGaps.textGap),
+                      _arriving(
+                        2,
+                        Text(
+                          RelioStrings.welcomeSubtitle,
+                          textAlign: TextAlign.center,
+                          style: RelioType.body(palette).copyWith(
+                            color: palette.textSecondary,
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      RelioSpacing.horizontal,
-                      RelioSpacing.md,
-                      RelioSpacing.horizontal,
-                      RelioSpacing.xl,
-                    ),
-                    child: _arriving(
-                      3,
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: _busy ? null : _start,
-                          child: const Text(RelioStrings.welcomeStart),
+                      const SizedBox(height: EntryGaps.beforeFinal),
+                      _arriving(
+                        2,
+                        Text(
+                          RelioStrings.welcomeQuestion,
+                          textAlign: TextAlign.center,
+                          style: RelioType.body(palette),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+              ),
+              EntryAction(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: _arriving(
+                    3,
+                    EntryButton(
+                      label: RelioStrings.welcomeStart,
+                      loading: _busy,
+                      onPressed: _busy ? null : () => _start(),
                     ),
                   ),
-                ],
-              );
-            },
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-}
-
-/// Forme géométrique discrète, au-dessus du lockup.
-///
-/// Trois formes, deux couleurs de marque, aucune animation permanente :
-/// l'écran d'entrée ne doit pas devenir un fond animé. Elles sont décoratives
-/// et n'ont aucune fonction d'information — c'est pourquoi elles ne sont ni
-/// annoncées ni exposées au lecteur d'écran.
-class _Composition extends StatelessWidget {
-  const _Composition({required this.palette});
-
-  final RelioPalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 56,
-      child: Stack(
-        alignment: Alignment.center,
-        children: <Widget>[
-          Align(
-            alignment: Alignment.centerLeft,
-            child: _Shape(
-              size: 40,
-              color: palette.primary.withValues(alpha: 0.10),
-              radius: 20,
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: _Shape(
-              size: 24,
-              color: palette.brand.withValues(alpha: 0.18),
-              radius: 8,
-            ),
-          ),
-          const _Shape(size: 10, color: RelioBrand.mark, radius: 5),
-        ],
-      ),
-    );
-  }
-}
-
-/// Une forme de la composition.
-class _Shape extends StatelessWidget {
-  const _Shape({
-    required this.size,
-    required this.color,
-    required this.radius,
-  });
-
-  final double size;
-  final Color color;
-  final double radius;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(radius),
-        ),
-      );
 }

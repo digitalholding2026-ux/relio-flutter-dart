@@ -1,4 +1,4 @@
-/// Lockups Relio — mark, wordmark et signature assembles.
+/// Lockups Relio — mark, wordmark trace et signature assembles.
 ///
 /// Les deux dispositions prevues par la specification :
 ///  - horizontale, pour en-tete, splash et ecran large ;
@@ -8,10 +8,9 @@
 /// baseline du lockup, pas un element flottant. Ils sont donc poses dans la
 /// meme colonne et l'ecartement se mesure depuis le bas du mot.
 ///
-/// L'alignement est calcule, pas approche : la hauteur de capitale du
-/// wordmark vient de la fonte embarquee (`RelioBrand.wordmarkCapHeightEm`),
-/// ce qui garantit que le centre du mark tombe exactement a mi-hauteur du
-/// mot, quelle que soit la taille demandee.
+/// Le mot est TRACE, pas compose : `RelioWordmark` peint la geometrie
+/// `RelioWordmarkGeometry`, a la hauteur demandee. Le rapport entre le mark
+/// et le mot est mesure sur le logo livre.
 library;
 
 import 'dart:math' as math;
@@ -21,37 +20,45 @@ import 'package:flutter/material.dart';
 import 'relio_mark.dart';
 
 /// Ecarts de la specification, re-exposes ici pour les tests.
-const double kHorizontalGap = 20;
-const double kVerticalGap = 12;
+const double kHorizontalGap = 4.5;
+const double kVerticalGap = 4.5;
 
-/// Rapport entre la hauteur du mark et la hauteur de capitale du wordmark.
+/// Rapport entre la hauteur du mark et la hauteur du wordmark.
 ///
-/// Mesure sur la specification : le mark fait 100 unites de haut dans sa
-/// grille, le mot 128,5 unites de capitale dans le logo de reference. Le
-/// rapport est donc de 100 / 128,5. Il ne depend pas du mot : il sert a
-/// caler le mark sur la hauteur du mot.
-const double kMarkToWordmarkRatio = 1.93;
+/// Mesure sur le logo livre : mark de 491 px pour un mot de 300 px.
+const double kMarkToWordmarkRatio = 1.637;
 
 /// Le mot et la signature, empiles.
 ///
 /// Ce bloc est le second element des deux lockups : le poser une seule fois
 /// evite que les deux dispositions ne divergent.
 class _WordBlock extends StatelessWidget {
-  const _WordBlock({required this.capHeight, required this.color});
+  const _WordBlock({
+    required this.wordHeight,
+    required this.variant,
+    this.color,
+  });
 
-  final double capHeight;
-  final Color color;
+  final double wordHeight;
+  final RelioMarkVariant variant;
+
+  /// Couleur du mot et de la signature, par defaut celle de la declinaison.
+  final Color? color;
 
   @override
   Widget build(BuildContext context) => Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          RelioWordmark(capHeight: capHeight, color: color),
-          SizedBox(height: capHeight * RelioBrand.signatureGapRatio),
+          RelioWordmark(
+            wordHeight: wordHeight,
+            variant: variant,
+            wordmarkColor: color,
+          ),
+          SizedBox(height: wordHeight * RelioBrand.signatureGapRatio),
           RelioSignature(
-            capHeight: capHeight * RelioBrand.signatureCapRatio,
-            color: color,
+            capHeight: wordHeight * RelioBrand.signatureCapRatio,
+            color: color ?? relioMarkColors(variant).base,
           ),
         ],
       );
@@ -67,21 +74,21 @@ class RelioLockupHorizontal extends StatelessWidget {
     super.key,
     required this.markSize,
     this.variant = RelioMarkVariant.onLight,
-    this.wordmarkColor = RelioBrand.wordmark,
+    this.wordmarkColor,
     this.gapUnits = kHorizontalGap,
   });
 
-  /// Hauteur de capitale du wordmark, en pixels logiques.
+  /// Hauteur du wordmark, en pixels logiques.
   ///
   /// C'est aussi la commande de taille du lockup entier : le mark se cale sur
-  /// cette hauteur.
+  /// cette hauteur via [kMarkToWordmarkRatio].
   final double markSize;
 
   /// Declinaison chromatique du mark.
   final RelioMarkVariant variant;
 
-  /// Couleur du mot et de la signature.
-  final Color wordmarkColor;
+  /// Couleur du mot et de la signature, par defaut celle de la declinaison.
+  final Color? wordmarkColor;
 
   /// Ecartement mark ↔ bloc de texte, en unites de grille du mark.
   final double gapUnits;
@@ -97,7 +104,11 @@ class RelioLockupHorizontal extends StatelessWidget {
       children: <Widget>[
         RelioMark(size: markHeight, variant: variant),
         SizedBox(width: gap),
-        _WordBlock(capHeight: markSize, color: wordmarkColor),
+        _WordBlock(
+          wordHeight: markSize,
+          variant: variant,
+          color: wordmarkColor,
+        ),
       ],
     );
   }
@@ -113,7 +124,7 @@ class RelioLockupVertical extends StatelessWidget {
     super.key,
     required this.markSize,
     this.variant = RelioMarkVariant.onLight,
-    this.wordmarkColor = RelioBrand.wordmark,
+    this.wordmarkColor,
     this.gapUnits = kVerticalGap,
   });
 
@@ -123,8 +134,8 @@ class RelioLockupVertical extends StatelessWidget {
   /// Declinaison chromatique du mark.
   final RelioMarkVariant variant;
 
-  /// Couleur du mot et de la signature.
-  final Color wordmarkColor;
+  /// Couleur du mot et de la signature, par defaut celle de la declinaison.
+  final Color? wordmarkColor;
 
   /// Ecartement mark ↔ bloc de texte, en unites de grille du mark.
   final double gapUnits;
@@ -132,9 +143,9 @@ class RelioLockupVertical extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double gap = gapUnits * markSize / RelioMarkGeometry.grid;
-    // Le mark est bien plus large que le mot : le lockup vertical se
-    // dimensionne sur le mark, et le bloc se centre dessous.
-    final double wordmarkCap = markSize / kMarkToWordmarkRatio;
+    // Le mark est plus haut que large : le lockup vertical se dimensionne
+    // sur le mark, et le bloc se centre dessous.
+    final double wordHeight = markSize / kMarkToWordmarkRatio;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -142,7 +153,11 @@ class RelioLockupVertical extends StatelessWidget {
       children: <Widget>[
         RelioMark(size: markSize, variant: variant),
         SizedBox(height: math.max(gap, 8)),
-        _WordBlock(capHeight: wordmarkCap, color: wordmarkColor),
+        _WordBlock(
+          wordHeight: wordHeight,
+          variant: variant,
+          color: wordmarkColor,
+        ),
       ],
     );
   }

@@ -44,9 +44,9 @@ class RelioPalette {
 
   /// Palette de référence.
   factory RelioPalette.standard() => const RelioPalette._(
-        primary: Color(0xFF1F3A6E),
-        primaryContainer: Color(0xFFE6ECF7),
-        brand: Color(0xFFF56207),
+        primary: Color(0xFF0E1821),
+        primaryContainer: Color(0xFFE7E8E9),
+        brand: Color(0xFFFE7904),
         hintText: Color(0xFFB45309),
         hintBackground: Color(0xFFFEF3C7),
         successText: Color(0xFF15803D),
@@ -68,9 +68,9 @@ class RelioPalette {
   /// principal et les couleurs sémantiques sont déjà au-dessus d'AA et ne
   /// changent pas — les foncer davantage dégraderait la lecture.
   factory RelioPalette.contrast() => const RelioPalette._(
-        primary: Color(0xFF14264B),
-        primaryContainer: Color(0xFFD7E0F0),
-        brand: Color(0xFFC24704),
+        primary: Color(0xFF060A10),
+        primaryContainer: Color(0xFFD4D6D9),
+        brand: Color(0xFFC45D03),
         hintText: Color(0xFF7C3D06),
         hintBackground: Color(0xFFFCE9B6),
         successText: Color(0xFF14532D),
@@ -89,7 +89,7 @@ class RelioPalette {
   factory RelioPalette.of({required bool highContrast}) =>
       highContrast ? RelioPalette.contrast() : RelioPalette.standard();
 
-  /// Indigo principal : barre de navigation active, bouton principal, focus.
+  /// Navy principal : barre de navigation active, bouton principal, focus.
   final Color primary;
 
   /// Fond des zones sélectionnées.

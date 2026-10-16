@@ -64,10 +64,10 @@ void main() {
       expect(RelioCharacterState.rest.leanDegrees, 0);
     });
 
-    test('le temps zero n\'est PAS le repos du point', () {
-      // Le point est decale d'un quart de cycle : a t = 0 il est deja au
-      // maximum de sa pulsation, quand le « R » est au repos. C'est le decalage
-      // voulu, et il faut le savoir pour ne pas ecrire un test faux.
+    test('le temps zero n\'est PAS le repos des pages', () {
+      // Les pages sont decalees d'un quart de cycle : a t = 0 elles sont deja
+      // au maximum de leur pulsation, quand le chapeau est au repos. C'est le
+      // decalage voulu, et il faut le savoir pour ne pas ecrire un test faux.
       final s = RelioCharacterState.at(Duration.zero);
       expect(s.glyphBreathe, closeTo(1, 1e-12));
       expect(s.dotPulse, closeTo(1 + RelioCharacterTiming.breatheAmplitude, 1e-6));
@@ -75,7 +75,7 @@ void main() {
     });
   });
 
-  group('Respiration du « R »', () {
+  group('Respiration du chapeau', () {
     test('le cycle dure 4 s', () {
       expect(RelioCharacterTiming.breathePeriod, 4.0);
       final double a = RelioCharacterState.at(Duration.zero).glyphBreathe;
@@ -99,11 +99,11 @@ void main() {
     });
   });
 
-  group('Pulsation du point', () {
-    test('le point atteint son maximum un quart de cycle AVANT le « R »', () {
+  group('Pulsation des pages', () {
+    test('les pages atteignent leur maximum un quart de cycle AVANT le chapeau', () {
       // Decalage de 0,25 cycle sur un cycle de 4 s : une seconde exactement.
-      // Le point bat en avance sur le « R » : c'est ce qui les rend lisibles
-      // comme deux mouvements distincts plutot que comme un seul.
+      // Les pages battent en avance sur le chapeau : c'est ce qui les rend
+      // lisibles comme deux mouvements distincts plutot que comme un seul.
       final double quart = RelioCharacterTiming.breathePeriod *
           RelioCharacterTiming.dotPhaseShift;
 
@@ -119,7 +119,7 @@ void main() {
       expect(t1.glyphBreathe,
           closeTo(1 + RelioCharacterTiming.breatheAmplitude, 1e-6));
 
-      // Le point est deja redescendu quand le « R » atteint son maximum.
+      // Les pages sont deja redescendues quand le chapeau atteint son maximum.
       expect(t1.dotPulse, closeTo(1, 1e-6));
     });
 
@@ -145,10 +145,13 @@ void main() {
       expect((somme(0.5) - somme(1.5)).abs(), greaterThan(0.015));
     });
 
-    test('le point est plus petit que le « R » : il doit rester un accent', () {
-      final double largeurGlyphe =
-          RelioMarkGeometry.glyph.box.right - RelioMarkGeometry.glyph.box.left;
-      expect(RelioCharacterGeometry.dot.radius, lessThan(largeurGlyphe / 4));
+    test('le gland reste un accent face au chapeau', () {
+      final double largeurChapeau = RelioMarkGeometry.cap.box.right -
+          RelioMarkGeometry.cap.box.left;
+      final double largeurGland =
+          RelioCharacterGeometry.tassel.box.right -
+              RelioCharacterGeometry.tassel.box.left;
+      expect(largeurGland, lessThan(largeurChapeau / 4));
     });
   });
 
@@ -170,17 +173,19 @@ void main() {
     });
 
     test('l\'ondulation reste un frémissement, pas un deplacement', () {
-      // 2 unites sur 100 : l'accent glisse sur le « R », il ne le quitte pas.
+      // 2 unites sur 100 : le gland glisse sous le chapeau, il ne le quitte pas.
       expect(
           RelioCharacterTiming.waveAmplitude / RelioMarkGeometry.grid,
           lessThan(0.05));
     });
 
     test('l\'ondulation ne sort jamais de la grille', () {
-      // Le zigzag d'accent descend jusqu'a y = 100 : meme au repos, une
-      // reserve doit rester sous lui, sinon le personnage deborderait.
-      expect(RelioMarkGeometry.zigzagAccent.box.bottom,
-          closeTo(RelioMarkGeometry.grid, 1e-9));
+      // Le gland pend a mi-hauteur : meme au plus bas de son ondulation,
+      // il reste dans la grille, et la reserve du painter absorbe le reste.
+      expect(
+          RelioMarkGeometry.tassel.box.bottom +
+              RelioCharacterTiming.waveAmplitude,
+          lessThan(RelioMarkGeometry.grid));
     });
   });
 
@@ -206,8 +211,8 @@ void main() {
   });
 }
 
-/// Rappel de l'acces a la geometrie du point, isole ici pour que le test
-/// exprime une intention — « le point est un accent » — et non une formule.
+/// Rappel de l'acces a la geometrie du gland, isole ici pour que le test
+/// exprime une intention — « le gland est un accent » — et non une formule.
 abstract final class RelioCharacterGeometry {
-  static RelioMarkDot get dot => RelioMarkGeometry.dot;
+  static RelioMarkPart get tassel => RelioMarkGeometry.tassel;
 }

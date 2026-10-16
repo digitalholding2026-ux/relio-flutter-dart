@@ -1,27 +1,27 @@
 /// Onboarding — écran de clôture.
 ///
-/// Le personnage grandit de 80 à 140 dp, se repose, puis Relio remercie
-/// l'élève par son prénom.
+/// Le personnage (120 dp), puis Relio remercie l'élève par son prénom :
+/// titre en Display, corps centré, bouton ancré en bas.
 ///
 /// AUCUN BILAN. Ni score, ni « tu as réussi », ni nombre de bonnes réponses :
 /// le test d'entrée a enregistré des faits, et la clôture ne les restitue
 /// pas. L'élève ne repart pas avec une note — il repart avec un tuteur.
+///
+/// MISE EN PAGE EN COLONNE, jamais en `Stack` superposé : chaque élément
+/// reçoit la place restante, et le texte ne peut pas remonter sur le
+/// personnage quel que soit le nombre de lignes.
 library;
 
 import 'package:flutter/material.dart';
 
+import '../../branding/relio_character.dart';
 import '../../strings/relio_strings.dart';
 import '../../theme/relio_theme.dart';
-import '../../branding/relio_character.dart';
+import 'entry_kit.dart';
 import 'name_input.dart';
 import 'onboarding_metrics.dart';
 
 /// Remercie l'élève et propose de découvrir Relio.
-///
-/// `TickerProviderStateMixin` et NON `SingleTickerProviderStateMixin` : cette
-/// page anime TROIS séquence (croissance du personnage, texte, bouton). Un
-/// `SingleTickerProvider` n'autorise qu'un contrôleur et aurait levé à la
-/// construction.
 class ClosingPage extends StatefulWidget {
   /// Crée l'écran de clôture.
   const ClosingPage({
@@ -49,18 +49,11 @@ class ClosingPage extends StatefulWidget {
 
 class _ClosingPageState extends State<ClosingPage>
     with TickerProviderStateMixin {
-  /// Croissance du personnage, puis apparition du texte, puis du bouton.
+  /// Apparition du texte, puis du bouton.
   ///
-  /// Les trois temps sont SÉQUENTIELS : le personnage se redresse avant que
+  /// Les deux temps sont SÉQUENTIELS : le personnage s'installe avant que
   /// Relio ne parle. Sans cette attente, la phrase arriverait par-dessus une
   /// forme encore en mouvement.
-  late final AnimationController _grow = AnimationController(
-    vsync: this,
-    duration: widget.reduceAnimations
-        ? Duration.zero
-        : const Duration(milliseconds: OnboardingMetrics.closingGrowMs),
-  );
-
   late final AnimationController _text = AnimationController(
     vsync: this,
     duration: widget.reduceAnimations
@@ -85,7 +78,7 @@ class _ClosingPageState extends State<ClosingPage>
   }
 
   Future<void> _play() async {
-    // Réduction des animations : les trois éléments apparaissent
+    // Réduction des animations : les deux éléments apparaissent
     // IMMÉDIATEMENT, sans aucune temporisation.
     //
     // Aucune temporisation n'est même planifiée dans ce cas : un
@@ -93,15 +86,12 @@ class _ClosingPageState extends State<ClosingPage>
     // détruit l'arbre le trouverait encore en attente. Les delays sont donc
     // carrément absents, pas réduits à zéro.
     if (widget.reduceAnimations) {
-      _grow.value = 1;
       _text.value = 1;
       _button.value = 1;
       return;
     }
 
-    await _grow.forward();
-    if (!mounted) return;
-    // 1,5 s de pause : le personnage s'installe avant que le texte arrive.
+    // Le personnage s'installe avant que le texte arrive.
     await Future<void>.delayed(
       const Duration(milliseconds: OnboardingMetrics.closingTextDelayMs),
     );
@@ -118,7 +108,6 @@ class _ClosingPageState extends State<ClosingPage>
 
   @override
   void dispose() {
-    _grow.dispose();
     _text.dispose();
     _button.dispose();
     super.dispose();
@@ -145,64 +134,38 @@ class _ClosingPageState extends State<ClosingPage>
   Widget build(BuildContext context) {
     final palette = RelioPaletteScope.of(context);
 
-    // L'écran s'abonne à ses trois animations. SANS cet abonnement, `build`
+    // L'écran s'abonne à ses deux animations. SANS cet abonnement, `build`
     // ne serait rejoué que si un AUTRE élément de l'arbre le demandait : les
     // contrôleurs tourneraient, mais le texte et le bouton resteraient peints
     // à leur état INITIAL — donc transparents. Un élève aurait vu le
     // personnage seul, sans phrase ni bouton, et n'aurait pas pu sortir.
     return AnimatedBuilder(
-      animation: Listenable.merge(<Listenable>[_grow, _text, _button]),
+      animation: Listenable.merge(<Listenable>[_text, _button]),
       builder: (BuildContext context, _) => Scaffold(
-        backgroundColor: palette.background,
+        backgroundColor: EntryColors.background,
         body: SafeArea(
-          child: LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              final double from = OnboardingMetrics.characterSize(
-                width: constraints.maxWidth,
-                large: false,
-              );
-              final double to = OnboardingMetrics.characterSize(
-                width: constraints.maxWidth,
-                large: true,
-              );
-              final double size = Tween<double>(
-                begin: from,
-                end: to,
-              ).evaluate(_grow);
-
-              // MISE EN PAGE EN COLONNE, et non en `Stack` superpose.
-              //
-              // Le `Stack` positionnait le personnage et le texte par des
-              // decalages ABSOLUS, chacun ignorant l'autre. Sur un petit ecran
-              // (360 x 640) avec la police a 1,3, la phrase de cloture occupe
-              // quatre lignes et venaiT CHEVAUCHER le personnage : les deux se
-              // trouvaient dans la meme bande verticale.
-              //
-              // La colonne rend ce defaut IMPOSSIBLE : chaque element recoit la
-              // place restante, et le texte ne peut pas remonter sur le
-              // personnage quel que soit le nombre de lignes.
-              return Column(
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.only(top: RelioSpacing.xxl),
-                    child: RelioCharacter(
-                      size: size,
-                      animate: !widget.reduceAnimations,
+          child: Column(
+            children: <Widget>[
+              const SizedBox(height: EntryGaps.topToLogo),
+              RelioCharacter(
+                size: EntryBrand.closing,
+                animate: !widget.reduceAnimations,
+              ),
+              const SizedBox(height: EntryGaps.logoToTitle),
+              // Le texte occupe toute la place restante et se centre dedans :
+              // il s'écarte du personnage au lieu de le traverser.
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: EntryGaps.horizontal,
                     ),
-                  ),
-                  // Le texte occupe toute la place restante et se centre dedans :
-                  // il s'ecarte du personnage au lieu de le traverser.
-                  Expanded(
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: RelioSpacing.horizontal,
-                          vertical: RelioSpacing.md,
-                        ),
-                        child: Opacity(
-                          opacity: _text.value,
-                          child: Text(
-                            RelioStrings.closingMessage(
+                    child: Opacity(
+                      opacity: _text.value,
+                      child: Column(
+                        children: <Widget>[
+                          Text(
+                            RelioStrings.closingTitle(
                               // Le prénom est capitalisé ici aussi : une
                               // installation antérieure, ou une saisie passée
                               // par l'écran Profil, peut l'avoir laissé en
@@ -210,40 +173,41 @@ class _ClosingPageState extends State<ClosingPage>
                               capitalizeName(widget.name),
                             ),
                             textAlign: TextAlign.center,
-                            style: RelioType.title(palette),
+                            style: RelioType.display(palette),
                           ),
-                        ),
+                          const SizedBox(height: EntryGaps.textGap),
+                          Text(
+                            RelioStrings.closingBody(),
+                            textAlign: TextAlign.center,
+                            style: RelioType.body(palette),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      RelioSpacing.horizontal,
-                      RelioSpacing.md,
-                      RelioSpacing.horizontal,
-                      RelioSpacing.xl,
+                ),
+              ),
+              EntryAction(
+                child: Opacity(
+                  opacity: _button.value,
+                  child: Transform.translate(
+                    // Glissement vertical de 8 dp à l'apparition.
+                    offset: Offset(
+                      0,
+                      OnboardingMetrics.slideOffset * (1 - _button.value),
                     ),
-                    child: Opacity(
-                      opacity: _button.value,
-                      child: Transform.translate(
-                        // Glissement vertical de 8 dp à l'apparition.
-                        offset: Offset(
-                          0,
-                          OnboardingMetrics.slideOffset * (1 - _button.value),
-                        ),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: FilledButton(
-                            onPressed: _busy ? null : _confirm,
-                            child: const Text(RelioStrings.closingDiscover),
-                          ),
-                        ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: EntryButton(
+                        label: RelioStrings.closingDiscover,
+                        loading: _busy,
+                        onPressed: _busy ? null : () => _confirm(),
                       ),
                     ),
                   ),
-                ],
-              );
-            },
+                ),
+              ),
+            ],
           ),
         ),
       ),

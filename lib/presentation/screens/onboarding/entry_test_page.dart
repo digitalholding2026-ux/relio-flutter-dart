@@ -3,9 +3,13 @@
 /// Cet écran pose CINQ questions et enregistre CINQ réponses. Il ne dit
 /// jamais si une réponse est juste ou fausse.
 ///
+/// La marque est en retrait : mark de 24 dp dans le coin supérieur gauche,
+/// sur la même barre que les cinq points de progression. « N sur 5 » reste
+/// en dessous, en Caption.
+///
 /// INTERDITS, tenus par construction :
 ///  - aucun feedback de correction, aucun indice, aucun chiffre autre que
-///    la progression « N sur 5 » ;
+///    la progression et ses cinq points ;
 ///  - aucun score, pourcentage ou diagnostic ;
 ///  - aucun chronomètre ;
 ///  - aucun retour vers une question déjà soumise ;
@@ -21,10 +25,11 @@ import 'package:flutter/services.dart';
 import '../../../domain/entrytest/entry_test_onboarding.dart';
 import '../../../domain/entrytest/entry_test_question.dart';
 import '../../../domain/entrytest/entry_test_session.dart';
+import '../../branding/relio_character.dart';
 import '../../strings/relio_strings.dart';
 import '../../theme/relio_theme.dart';
-import '../../branding/relio_character.dart';
 import '../../widgets/math_text.dart';
+import 'entry_kit.dart';
 import 'onboarding_metrics.dart';
 
 /// Phase d'affichage d'une question.
@@ -74,8 +79,7 @@ class EntryTestPage extends StatefulWidget {
   State<EntryTestPage> createState() => _EntryTestPageState();
 }
 
-class _EntryTestPageState extends State<EntryTestPage>
-    with SingleTickerProviderStateMixin {
+class _EntryTestPageState extends State<EntryTestPage> {
   late EntryTestSession _session = widget.session;
 
   final TextEditingController _answer = TextEditingController();
@@ -226,7 +230,7 @@ class _EntryTestPageState extends State<EntryTestPage>
     widget.onFinished();
   }
 
-  /// Fondu de sortie avant d'afficher la question suivante (200 ms).
+  /// Fondu de sortie avant d'afficher la question suivante.
   Future<void> _leaveQuestion() async {
     if (widget.reduceAnimations) return;
     setState(() => _leaving = true);
@@ -251,69 +255,71 @@ class _EntryTestPageState extends State<EntryTestPage>
     }
 
     return Scaffold(
-      backgroundColor: palette.background,
+      backgroundColor: EntryColors.background,
       body: SafeArea(
         child: Column(
           children: <Widget>[
+            const SizedBox(height: EntryGaps.topToLogo),
+            // Barre supérieure : la marque en retrait à gauche, les cinq
+            // points de progression au centre.
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: EntryGaps.horizontal,
+              ),
+              child: Row(
+                children: <Widget>[
+                  RelioCharacter(
+                    size: EntryBrand.test,
+                    animate: !widget.reduceAnimations,
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: EntryDots(filled: _answered),
+                    ),
+                  ),
+                  const SizedBox(width: EntryBrand.test),
+                ],
+              ),
+            ),
+            const SizedBox(height: EntryGaps.textGap),
+            // « N sur 5 », en Caption sous la barre.
+            Text(
+              RelioStrings.entryProgress(
+                _answered + 1,
+                _session.questions.length,
+              ),
+              textAlign: TextAlign.center,
+              style: RelioType.caption(palette),
+            ),
             Expanded(
-              child: LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) {
-                  final double size = OnboardingMetrics.characterSize(
-                    width: constraints.maxWidth,
-                    large: false,
-                  );
-
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: RelioSpacing.horizontal,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: EntryGaps.horizontal,
+                ),
+                child: Column(
+                  children: <Widget>[
+                    const SizedBox(height: EntryGaps.aboveCard),
+                    // `AnimatedOpacity` porte le fondu : l'écran NE FABRIQUE pas le délai —
+                    // `_leaveQuestion` le fait, et attend qu'il soit écoulé. Un fondu ici
+                    // suffirait, mais il rendrait l'état visible dépendant d'une frame.
+                    AnimatedOpacity(
+                      opacity: _leaving ? 0 : 1,
+                      duration: widget.reduceAnimations
+                          ? Duration.zero
+                          : const Duration(
+                              milliseconds:
+                                  OnboardingMetrics.questionFadeOutMs,
+                            ),
+                      child: Column(
+                        children: <Widget>[
+                          _statementCard(palette, question),
+                          const SizedBox(height: EntryGaps.textGap),
+                          _answerZone(palette, question),
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      children: <Widget>[
-                        // Le personnage est ancré à ~15 % depuis le HAUT DE
-                        // L'ÉCRAN, pas à 15 % de sa propre taille.
-                        SizedBox(
-                          height: constraints.maxHeight *
-                              OnboardingMetrics.characterTopRatio,
-                        ),
-                        RelioCharacter(
-                          size: size,
-                          animate: !widget.reduceAnimations,
-                        ),
-                        const SizedBox(height: RelioSpacing.xl),
-
-                        // SEULE progression visible : « N sur 5 ».
-                        Text(
-                          RelioStrings.entryProgress(
-                            _answered + 1,
-                            _session.questions.length,
-                          ),
-                          style: RelioType.caption(palette),
-                        ),
-                        const SizedBox(height: RelioSpacing.xl),
-
-                        // `AnimatedOpacity` porte le fondu : l'écran NE FABRIQUE pas le délai —
-// `_leaveQuestion` le fait, et attend qu'il soit écoulé. Un fondu ici
-// suffirait, mais il rendrait l'état visible dépendant d'une frame.
-                        AnimatedOpacity(
-                          opacity: _leaving ? 0 : 1,
-                          duration: widget.reduceAnimations
-                              ? Duration.zero
-                              : const Duration(
-                                  milliseconds:
-                                      OnboardingMetrics.questionFadeOutMs,
-                                ),
-                          child: Column(
-                            children: <Widget>[
-                              _statementCard(palette, question),
-                              const SizedBox(height: RelioSpacing.xl),
-                              _answerZone(palette, question),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                  ],
+                ),
               ),
             ),
             _bottomBar(palette, question),
@@ -323,7 +329,7 @@ class _EntryTestPageState extends State<EntryTestPage>
     );
   }
 
-  /// Carte d'énoncé, identique en présentation à celle de S2.
+  /// Carte d'énoncé : fond blanc, rayon 12, padding 20.
   Widget _statementCard(RelioPalette palette, EntryTestQuestion question) {
     return Card(
       child: Padding(
@@ -369,7 +375,7 @@ class _EntryTestPageState extends State<EntryTestPage>
     );
   }
 
-  /// Carte de choix.
+  /// Carte de choix : hauteur 56 dp, rayon 12.
   ///
   /// Ni radio, ni coche : l'état se lit au trait et au fond, et le texte
   /// reste lisible dans les deux cas.
@@ -421,13 +427,7 @@ class _EntryTestPageState extends State<EntryTestPage>
   Widget _bottomBar(RelioPalette palette, EntryTestQuestion question) {
     final bool failed = _phase == _QuestionPhase.errorSaving;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        RelioSpacing.horizontal,
-        RelioSpacing.md,
-        RelioSpacing.horizontal,
-        RelioSpacing.xl,
-      ),
+    return EntryAction(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -437,20 +437,21 @@ class _EntryTestPageState extends State<EntryTestPage>
             const SizedBox(height: RelioSpacing.md),
             SizedBox(
               width: double.infinity,
-              child: FilledButton(
-                onPressed: _submit,
-                child: const Text(RelioStrings.entryRetry),
+              child: EntryButton(
+                label: RelioStrings.entryRetry,
+                onPressed: () => _submit(),
               ),
             ),
           ] else
             SizedBox(
               width: double.infinity,
-              child: FilledButton(
+              child: EntryButton(
+                label: RelioStrings.entryContinue,
+                loading: _phase == _QuestionPhase.submitting,
                 onPressed: _hasAnswer &&
                         _phase != _QuestionPhase.submitting
-                    ? _submit
+                    ? () => _submit()
                     : null,
-                child: const Text(RelioStrings.entryContinue),
               ),
             ),
         ],
@@ -476,11 +477,11 @@ class _EntryTestPageState extends State<EntryTestPage>
   /// Aucune question disponible, session pourtant incomplète.
   Widget _noQuestion(RelioPalette palette) {
     return Scaffold(
-      backgroundColor: palette.background,
+      backgroundColor: EntryColors.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: RelioSpacing.horizontal,
+            horizontal: EntryGaps.horizontal,
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -490,12 +491,12 @@ class _EntryTestPageState extends State<EntryTestPage>
                 textAlign: TextAlign.center,
                 style: RelioType.title(palette),
               ),
-              const SizedBox(height: RelioSpacing.xxl),
+              const SizedBox(height: EntryGaps.aboveCard),
               SizedBox(
                 width: double.infinity,
-                child: FilledButton(
+                child: EntryButton(
+                  label: RelioStrings.entryContinue,
                   onPressed: widget.onFinished,
-                  child: const Text(RelioStrings.entryContinue),
                 ),
               ),
             ],

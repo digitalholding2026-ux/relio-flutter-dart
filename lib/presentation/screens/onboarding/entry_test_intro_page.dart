@@ -15,8 +15,10 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../branding/relio_mark.dart';
 import '../../strings/relio_strings.dart';
 import '../../theme/relio_theme.dart';
+import 'entry_kit.dart';
 import 'onboarding_metrics.dart';
 
 /// Explication de l'étape questionnaire, avant le prénom.
@@ -40,7 +42,7 @@ class EntryTestIntroPage extends StatefulWidget {
 
 class _EntryTestIntroPageState extends State<EntryTestIntroPage>
     with SingleTickerProviderStateMixin {
-  /// Arrivée décalée : pastilles, texte, bouton.
+  /// Arrivée décalée : logo et pastilles, texte, bouton.
   late final AnimationController _reveal = AnimationController(
     vsync: this,
     duration: widget.reduceAnimations
@@ -99,59 +101,66 @@ class _EntryTestIntroPageState extends State<EntryTestIntroPage>
     return AnimatedBuilder(
       animation: _reveal,
       builder: (BuildContext context, _) => Scaffold(
-        backgroundColor: palette.background,
+        backgroundColor: EntryColors.background,
         body: SafeArea(
           child: Column(
             children: <Widget>[
-              const SizedBox(height: RelioSpacing.xxl),
-              _arriving(0, _chips(palette)),
-              const SizedBox(height: RelioSpacing.xl),
+              const SizedBox(height: EntryGaps.topToLogo),
+              _arriving(0, const EntryMark(size: EntryBrand.intro)),
+              const SizedBox(height: EntryGaps.logoToTitle),
               Expanded(
-                child: Center(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: RelioSpacing.horizontal,
-                      vertical: RelioSpacing.md,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        _arriving(
-                          1,
-                          Text(
-                            RelioStrings.entryIntroMessage,
-                            textAlign: TextAlign.center,
-                            style: RelioType.title(palette),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: EntryGaps.horizontal,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      _arriving(
+                        1,
+                        Text(
+                          RelioStrings.entryIntroTitle,
+                          textAlign: TextAlign.left,
+                          style: RelioType.title(palette),
+                        ),
+                      ),
+                      const SizedBox(height: EntryGaps.textGap),
+                      _arriving(
+                        1,
+                        Text(
+                          RelioStrings.entryIntroBody,
+                          textAlign: TextAlign.left,
+                          style: RelioType.body(palette),
+                        ),
+                      ),
+                      const SizedBox(height: EntryGaps.beforeFinal),
+                      _arriving(
+                        1,
+                        Text(
+                          RelioStrings.entryIntroFinal,
+                          textAlign: TextAlign.left,
+                          style: RelioType.bodyStrong(palette).copyWith(
+                            color: RelioBrand.wordmark,
                           ),
                         ),
-                        const SizedBox(height: RelioSpacing.md),
-                        _arriving(
-                          1,
-                          Text(
-                            RelioStrings.entryIntroCaption,
-                            textAlign: TextAlign.center,
-                            style: RelioType.caption(palette),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: EntryGaps.beforeFinal),
+                      _arriving(
+                        0,
+                        const Center(child: EntryDots()),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  RelioSpacing.horizontal,
-                  RelioSpacing.md,
-                  RelioSpacing.horizontal,
-                  RelioSpacing.xl,
-                ),
-                child: _arriving(
-                  2,
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
+              EntryAction(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: _arriving(
+                    2,
+                    EntryButton(
+                      label: RelioStrings.entryIntroStart,
                       onPressed: widget.onStart,
-                      child: const Text(RelioStrings.entryIntroStart),
                     ),
                   ),
                 ),
@@ -159,36 +168,6 @@ class _EntryTestIntroPageState extends State<EntryTestIntroPage>
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  /// Les cinq pastilles : une par question, toutes vides.
-  ///
-  /// Elles ne se remplissent JAMAIS. Les remplir reviendrait à afficher une
-  /// progression dans une étape où aucune réponse n'est encore attendue — et
-  /// à suggérer un décompte.
-  Widget _chips(RelioPalette palette) {
-    return Semantics(
-      // Les pastilles sont purement décoratives : la légende ci-dessous en
-      // dit déjà « cinq questions, une par une ». Les annoncer une par une
-      // ferait entendre cinq fois la même chose.
-      excludeSemantics: true,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          for (int i = 0; i < OnboardingMetrics.introChipCount; i++) ...<Widget>[
-            if (i > 0) const SizedBox(width: OnboardingMetrics.introChipGap),
-            Container(
-              width: OnboardingMetrics.introChipSize,
-              height: OnboardingMetrics.introChipSize,
-              decoration: BoxDecoration(
-                color: i.isEven ? palette.brand : palette.primary,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ],
-        ],
       ),
     );
   }

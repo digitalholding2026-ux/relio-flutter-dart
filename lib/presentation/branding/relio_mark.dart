@@ -14,8 +14,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import 'relio_mark_geometry.dart';
+import 'relio_wordmark_geometry.dart';
 
 export 'relio_mark_geometry.dart';
+export 'relio_wordmark_geometry.dart';
 
 /// Couleurs et declinaisons de la marque.
 ///
@@ -23,87 +25,80 @@ export 'relio_mark_geometry.dart';
 /// nom de couleur : la specification l'exige pour les SVG, et l'usage unique
 /// doit etre le meme partout.
 abstract final class RelioBrand {
-  /// Accent orange : zigzag et point. Couleur unique de l'accent : ni degrade,
+  /// Accent orange : pages et gland. Couleur unique de l'accent : ni degrade,
   /// ni ombre, ni transparence.
-  static const Color mark = Color(0xFFF56207);
+  static const Color mark = Color(0xFFFE7904);
 
-  /// Indigo du « R », du second zigzag et du wordmark — identique au `primary`
-  /// de `RelioPalette`.
-  static const Color wordmark = Color(0xFF1F3A6E);
+  /// Navy de la structure, du wordmark et de la signature — identique au
+  /// `primary` de `RelioPalette`.
+  static const Color wordmark = Color(0xFF0E1821);
+
+  /// Navy d'appui : fond pressé du bouton principal.
+  ///
+  /// Dérivé du navy par assombrissement (~0,75), comme l'ancien
+  /// `#172C56` l'était de l'ancien indigo.
+  static const Color wordmarkPressed = Color(0xFF0A1219);
 
   /// Noir des declinaisons monochrome.
   static const Color monoBlack = Color(0xFF000000);
 
-  /// Blanc des declinaisons monochrome et du mark inverse sur fond indigo.
+  /// Blanc des declinaisons monochrome et du mark inverse sur fond navy.
   static const Color monoWhite = Color(0xFFFFFFFF);
 
   /// Fond du splash et de l'icone applicative.
   static const Color splashBackground = Color(0xFFFFFFFF);
 
-  /// Fond de l'icone applicative : meme indigo que le wordmark.
-  static const Color iconBackground = Color(0xFF1F3A6E);
+  /// Fond de l'icone applicative : orange de la marque.
+  static const Color iconBackground = Color(0xFFFE7904);
 
-  /// Interlettrage du wordmark : -1,5 %.
-  static const double wordmarkTracking = -0.015;
+  /// Interlettrage du wordmark : les lettres sont tracees, pas composees.
+  ///
+  /// L'espacement est fige dans la geometrie, et non ajuste au rendu.
+  static const double wordmarkTracking = 0.0;
 
   /// Interlettrage de la signature.
   static const double signatureTracking = 0.0;
 
   /// Ecartement mark ↔ wordmark en disposition horizontale, en unites.
-  static const double horizontalGap = 20;
+  ///
+  /// Mesure sur le logo livre : 22 px pour un mark de 491 px, soit 4,5
+  /// unites de grille.
+  static const double horizontalGap = 4.5;
 
   /// Ecartement mark ↔ wordmark en disposition verticale, en unites.
-  static const double verticalGap = 12;
-
-  /// Taille de la signature, en fraction de la hauteur de capitale du mot.
   ///
-  /// Mesure sur la specification : le mot est pose a 176 unites de corps et la
-  /// signature a 31. Les deux partagent la meme fonte, donc le rapport des
-  /// corps vaut celui des hauteurs de capitale.
-  static const double signatureCapRatio = 31 / 176;
+  /// Sans reference livree : meme valeur qu'en horizontal.
+  static const double verticalGap = 4.5;
+
+  /// Taille de la signature, en fraction de la hauteur du mot.
+  ///
+  /// Mesure sur le logo livre : capitale du « A » de 42 px pour un mot de
+  /// 300 px.
+  static const double signatureCapRatio = 0.14;
 
   /// Ecartement entre le bas du mot et le haut de la signature, en fraction
-  /// de la hauteur de capitale du mot.
+  /// de la hauteur du mot.
   ///
-  /// Ce n'est pas un ecartement de grille du mark : il se mesure entre deux
-  /// lignes de texte, donc depuis la ligne de base du mot. Dans la
-  /// specification, la ligne de base du mot est a y = 218 et le haut de
-  /// capitale de la signature a y = 265,45, soit 47,45 unites, pour une
-  /// hauteur de capitale de mot de 128,08.
-  static const double signatureGapRatio = 0.37;
-
-  /// Largeur du wordmark « Relio » en Inter SemiBold, en em.
-  ///
-  /// Mesure sur la fonte embarquee (`assets/fonts/Inter-SemiBold.ttf`,
-  /// 2048 unites/em) : somme des avances de R, e, l, i et o, soit
-  /// 1990/2048 em, avant interlettrage.
-  ///
-  /// Recalcule par `test/branding/wordmark_metrics_test.dart` : si la fonte
-  /// change, ce test echoue plutot que de laisser un lockup mal aligne.
-  static const double wordmarkAdvanceEm = 1990 / 2048;
-
-  /// Largeur du wordmark avec interlettrage applique, en em.
-  ///
-  /// L'interlettrage s'applique aux 4 intervalles du mot.
-  static const double wordmarkWidthEm =
-      wordmarkAdvanceEm + wordmarkTracking * 4;
+  /// Mesure sur le logo livre : 46 px pour un mot de 300 px.
+  static const double signatureGapRatio = 0.153;
 
   /// Hauteur de capitale d'Inter SemiBold, en em.
   ///
-  /// Lue dans la table `OS/2` de la fonte embarquee (1490/2048 em).
-  static const double wordmarkCapHeightEm = 1490 / 2048;
+  /// Lue dans la table `OS/2` de la fonte embarquee (1490/2048 em). Ne sert
+  /// qu'a la signature, qui reste composee en fonte : le mot est trace.
+  static const double interCapHeightEm = 1490 / 2048;
 }
 
 /// Ce sur quoi le mark est pose, et donc de quelles couleurs il separe.
 ///
-/// Le mark n'est pas monochrome : le « R » et le second zigzag portent la
-/// couleur de base, le zigzag et le point portent l'accent. La declinaison
-/// depend donc du fond, pas du mark seul.
+/// Le mark n'est pas monochrome : le chapeau, le fût, la courbe et le balayage
+/// portent la couleur de base, les pages et le gland portent l'accent. La
+/// declinaison depend donc du fond, pas du mark seul.
 enum RelioMarkVariant {
-  /// Sur fond clair : « R » et second zigzag en indigo, accent orange.
+  /// Sur fond clair : structure en navy, accent orange.
   onLight,
 
-  /// Sur fond indigo : « R » et second zigzag en blanc, accent orange.
+  /// Sur fond navy : structure en blanc, accent orange.
   ///
   /// C'est la declinaison de l'icone applicative.
   onIndigo,
@@ -147,8 +142,9 @@ Path relioMarkPath(List<RelioMarkNode> nodes) {
         path.close();
     }
   }
-  // `evenOdd` sur TOUTES les traces : le « R » est ajoure, et son contre doit
-  // disparaitre. Sur une trace simple, le remplissage est inchange.
+  // `evenOdd` sur TOUTES les traces : les remplissages restent corrects meme
+  // si une trace porte plusieurs contours. Sur une trace simple, le
+  // remplissage est inchange.
   path.fillType = PathFillType.evenOdd;
   return path;
 }
@@ -219,15 +215,6 @@ class RelioMarkPainter extends CustomPainter {
       );
     }
 
-    canvas.drawCircle(
-      Offset(RelioMarkGeometry.dot.centerX, RelioMarkGeometry.dot.centerY),
-      RelioMarkGeometry.dot.radius,
-      Paint()
-        ..color = c.accent
-        ..style = PaintingStyle.fill
-        ..isAntiAlias = true,
-    );
-
     canvas.restore();
   }
 
@@ -283,59 +270,108 @@ class RelioMark extends StatelessWidget {
 class RelioWordmark extends StatelessWidget {
   /// Texte du wordmark.
   ///
-  /// Source unique : le generateur de SVG s'en sert pour ses libelles, afin
-  /// que l'ecran et le fichier ne puissent pas diverger.
-  static const String text = 'Relio';
+  /// Source unique du mot : le generateur de SVG s'en sert pour ses libelles,
+  /// afin que l'ecran et le fichier ne puissent pas diverger. Les lettres
+  /// sont tracees, pas composees.
+  static const String text = 'relio';
 
   /// Cree le wordmark a une hauteur donnee.
   const RelioWordmark({
     super.key,
-    required this.capHeight,
-    this.color = RelioBrand.wordmark,
+    required this.wordHeight,
+    this.variant = RelioMarkVariant.onLight,
+    this.wordmarkColor,
   });
 
-  /// Hauteur de capitale souhaitee, en pixels logiques.
-  final double capHeight;
-
-  /// Couleur du texte.
-  final Color color;
-
-  /// Corps de police correspondant à [capHeight].
+  /// Hauteur du mot souhaitee, en pixels logiques.
   ///
-  /// La hauteur de capitale d'Inter SemiBold vaut 1490/2048 em : c'est elle,
-  /// et non le corps, qui commande la taille optique du mot.
-  double get fontSize => capHeight / RelioBrand.wordmarkCapHeightEm;
+  /// C'est la commande de taille du bloc de texte : la signature se cale
+  /// dessus via [RelioBrand.signatureCapRatio].
+  final double wordHeight;
+
+  /// Declinaison chromatique des lettres.
+  final RelioMarkVariant variant;
+
+  /// Couleur de la structure, par defaut celle de la declinaison.
+  ///
+  /// Permet au lockup d'imposer sa couleur sans changer de declinaison.
+  final Color? wordmarkColor;
 
   @override
-  Widget build(BuildContext context) => Text(
-        text,
-        textAlign: TextAlign.left,
-        // `height: 1` et une gouttière forcée fixent la boîte à `fontSize`.
-        //
-        // Le mot occupe alors une place RÉELLE dans la mise en page. Ce n'était
-        // pas le cas avant : le texte était peint par un `CustomPaint` dont
-        // l'enfant valait zéro, donc la boîte mesurait zéro de large, et le mot
-        // se superposait au mark avant de sortir de l'écran.
-        style: TextStyle(
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.w600,
-          fontSize: fontSize,
-          color: color,
-          letterSpacing: RelioBrand.wordmarkTracking * fontSize,
-          height: 1,
+  Widget build(BuildContext context) {
+    final double width = wordHeight *
+        RelioWordmarkGeometry.inkWidth /
+        RelioWordmarkGeometry.inkHeight;
+    return SizedBox(
+      width: width,
+      height: wordHeight,
+      child: CustomPaint(
+        painter: RelioWordmarkPainter(
+          variant: variant,
+          wordmarkColor: wordmarkColor,
         ),
-        strutStyle: StrutStyle.fromTextStyle(
-          TextStyle(fontSize: fontSize),
-          forceStrutHeight: true,
-        ),
+      ),
+    );
+  }
+}
+
+/// Peint le wordmark « relio » trace.
+///
+/// Meme source que le SVG : [RelioWordmarkGeometry]. Les roles chromatiques
+/// suivent les declinaisons du mark.
+class RelioWordmarkPainter extends CustomPainter {
+  /// Cree le painter du wordmark.
+  const RelioWordmarkPainter({
+    this.variant = RelioMarkVariant.onLight,
+    this.wordmarkColor,
+  });
+
+  /// Declinaison chromatique.
+  final RelioMarkVariant variant;
+
+  /// Couleur de la structure, par defaut celle de la declinaison.
+  final Color? wordmarkColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = RelioWordmarkGeometry.inkWidth;
+    final double h = RelioWordmarkGeometry.inkHeight;
+    if (w <= 0 || h <= 0) return;
+    final double factor = size.height / h;
+    final double drawnWidth = w * factor;
+
+    canvas.save();
+    canvas.translate((size.width - drawnWidth) / 2, 0.0);
+    canvas.scale(factor);
+    canvas.translate(-RelioWordmarkGeometry.wordBox.left,
+        -RelioWordmarkGeometry.wordBox.top);
+
+    final ({Color base, Color accent}) c = relioMarkColors(variant);
+    final Color base = wordmarkColor ?? c.base;
+
+    for (final RelioMarkPart part in RelioWordmarkGeometry.parts) {
+      canvas.drawPath(
+        relioMarkPath(part.nodes),
+        Paint()
+          ..color = part.role == RelioMarkRole.accent ? c.accent : base
+          ..style = PaintingStyle.fill
+          ..isAntiAlias = true,
       );
+    }
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(RelioWordmarkPainter old) =>
+      old.variant != variant || old.wordmarkColor != wordmarkColor;
 }
 
 /// La signature de marque, sous le wordmark.
 ///
-/// « Les maths, c'est ton terrain ! » pose en Inter SemiBold, dans l'indigo du
-/// wordmark. C'est une baseline : elle appartient au lockup, jamais au mark
-/// seul — un mark sur un lanceur n'a pas de signature.
+/// « Apprendre aujourd’hui, réussir demain » pose en Inter SemiBold, dans le
+/// navy du wordmark. C'est une baseline : elle appartient au lockup, jamais
+/// au mark seul — un mark sur un lanceur n'a pas de signature.
 ///
 /// [RelioSignature.text] est la seule source du texte : le generateur SVG
 /// s'en sert aussi, pour que le SVG et l'ecran ne puissent pas diverger.
@@ -343,7 +379,7 @@ class RelioSignature extends StatelessWidget {
   const RelioSignature({super.key, required this.capHeight, this.color = RelioBrand.wordmark});
 
   /// Texte de la signature.
-  static const String text = 'Les maths, c\u2019est ton terrain !';
+  static const String text = 'Apprendre aujourd\u2019hui, réussir demain';
 
   /// Hauteur de capitale souhaitee, en pixels logiques.
   final double capHeight;
@@ -353,7 +389,7 @@ class RelioSignature extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double fontSize = capHeight / RelioBrand.wordmarkCapHeightEm;
+    final double fontSize = capHeight / RelioBrand.interCapHeightEm;
     return Text(
       text,
       textAlign: TextAlign.left,

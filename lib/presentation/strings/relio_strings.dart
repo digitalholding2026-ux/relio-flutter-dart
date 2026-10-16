@@ -170,9 +170,25 @@ abstract final class RelioStrings {
   ///
   /// Texte EXACT : il ne se reformule pas, et aucune variante n'existe pour
   /// un écran plus étroit. La mise en page s'adapte, le texte non.
+  ///
+  /// L'écran affiche les trois parties SÉPARÉMENT (titre, sous-titre,
+  /// question), avec leur propre style et leur propre espacement. Leur
+  /// concaténation restitue EXACTEMENT [welcomeMessage] : aucun mot n'est
+  /// ajouté, aucun n'est retiré.
   static const String welcomeMessage =
       'Salut, moi c\u2019est Relio ! On va avancer ensemble en maths, '
       'à ton rythme. Pr\u00eat à découvrir comment je peux t\u2019aider ?';
+
+  /// Étape Bienvenue — titre, en Display.
+  static const String welcomeTitle = 'Salut, moi c\u2019est Relio !';
+
+  /// Étape Bienvenue — sous-titre, en Body secondaire.
+  static const String welcomeSubtitle =
+      'On va avancer ensemble en maths, à ton rythme.';
+
+  /// Étape Bienvenue — question d'entrée dans le parcours, en Body.
+  static const String welcomeQuestion =
+      'Pr\u00eat à découvrir comment je peux t\u2019aider ?';
 
   /// Étape Bienvenue — bouton d'entrée dans le parcours.
   static const String welcomeStart = 'Commencer';
@@ -185,10 +201,26 @@ abstract final class RelioStrings {
   // ---------------------------------------------------------------------
 
   /// Introduction au questionnaire — texte.
+  ///
+  /// L'écran affiche les trois parties SÉPARÉMENT (titre, description,
+  /// phrase de fin), avec leur propre style et leur propre espacement. Leur
+  /// concaténation restitue EXACTEMENT [entryIntroMessage].
   static const String entryIntroMessage =
       'Faisons connaissance ! Je vais te proposer 5 petites questions de '
       'maths. Elles m\u2019aideront à mieux comprendre ton point de départ '
       'pour t\u2019accompagner dans la suite. Ici, on avance pas à pas.';
+
+  /// Introduction au questionnaire — titre, en Title.
+  static const String entryIntroTitle = 'Faisons connaissance !';
+
+  /// Introduction au questionnaire — description, en Body aligné à gauche.
+  static const String entryIntroBody =
+      'Je vais te proposer 5 petites questions de maths. '
+      'Elles m\u2019aideront à mieux comprendre ton point de départ '
+      'pour t\u2019accompagner dans la suite.';
+
+  /// Introduction au questionnaire — phrase de fin, en BodyStrong indigo.
+  static const String entryIntroFinal = 'Ici, on avance pas à pas.';
 
   /// Introduction au questionnaire — légende sous les pastilles.
   ///
@@ -231,6 +263,9 @@ abstract final class RelioStrings {
   /// Étape Prénom — titre de l'écran.
   static const String nameTitle = 'Comment tu t’appelles ?';
 
+  /// Étape Prénom — sous-titre, en Body secondaire.
+  static const String nameSubtitle = 'Pour que je puisse te parler comme il faut.';
+
   /// Étape Prénom — placeholder du champ.
   static const String namePlaceholder = 'Ton prénom';
 
@@ -264,8 +299,20 @@ abstract final class RelioStrings {
   ///
   /// AUCUN bilan : ni score, ni « tu as réussi », ni nombre de bonnes
   /// réponses. La phrase annonce la suite, pas un résultat.
+  ///
+  /// L'écran affiche le titre et le corps SÉPARÉMENT : [closingTitle] en
+  /// Display, [closingBody] centré en dessous. Le titre reprend le prénom
+  /// avec un point final, comme validé pour la refonte.
   static String closingMessage(String name) =>
       'Merci $name ! Je commence à mieux te connaître. '
+      'On va continuer à avancer ensemble, étape par étape.';
+
+  /// Clôture — titre, en Display : « Merci {prénom}. »
+  static String closingTitle(String name) => 'Merci $name.';
+
+  /// Clôture — corps centré sous le titre, en Body.
+  static String closingBody() =>
+      'Je commence à mieux te connaître. '
       'On va continuer à avancer ensemble, étape par étape.';
 
   /// Clôture — bouton de sortie du parcours.
