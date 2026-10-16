@@ -7,7 +7,8 @@ télécharger et l'installer sur un téléphone.
 
 | Fichier | Taille | Contenu |
 |---|---|---|
-| `apk/relio-socle-v0.4.2-prenom.apk` | ~22,1 Mo | **Dernier build.** Correction du chevauchement sur l'écran du prénom |
+| `apk/relio-socle-v0.4.2-refonte-parcours-marque.apk` | ~22,4 Mo | **Dernier build.** Refonte du parcours d'entrée + nouvelle marque |
+| `apk/relio-socle-v0.4.2-prenom.apk` | ~22,1 Mo | Correction du chevauchement sur l'écran du prénom |
 | `apk/relio-socle-v0.4.1-demarrage.apk` | ~22,1 Mo | Démarrage corrigé — mais titre et personnage superposés |
 | `apk/relio-socle-v0.4.0-parcours-entree.apk` | ~22,1 Mo | ⚠️ **Ne pas installer** — écran d'introduction invisible |
 | `apk/relio-socle-v0.3.9-marque.apk` | ~22,1 Mo | Nouveau mark, icône d'application et logo principal |
@@ -64,6 +65,25 @@ publication réelle reste à créer (voir `docs/ARCHITECTURE.md`, point à
 arbitrer n° 6).
 
 ## Contenu du dernier build
+
+`relio-socle-v0.4.2-refonte-parcours-marque.apk` — **refonte UX du parcours
+d'entrée et nouvelle marque**.
+
+Parcours : logo à trois niveaux de présence (160 / 100 / 80 / 64 / 24 /
+120 dp), bouton navy solide sans contour (normal, pressé, désactivé,
+chargement), cinq pastilles de progression sur l'écran de test, grille
+commune (24 / 32 / 12), bouton ancré en bas, fondu croisé 275 ms entre
+écrans, tap pour sauter l'ouverture. Textes inchangés, mot pour mot.
+
+Marque : nouveau mark (chapeau, fût, livre, pages, gland — navy `#0E1821`,
+orange `#FE7904`), mot « relio » tracé, signature « Apprendre aujourd’hui,
+réussir demain », icône orange et splash régénérés. Le personnage animé
+garde trois mouvements : le chapeau respire, les pages pulsent décalées,
+le gland ondule.
+
+`flutter analyze` propre, 710 tests verts. Non vérifié sur appareil réel.
+
+### Précédent build
 
 `relio-socle-v0.4.2-prenom.apk` — **fin de la série de correctifs**.
 
