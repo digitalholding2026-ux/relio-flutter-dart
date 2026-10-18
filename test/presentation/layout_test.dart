@@ -16,6 +16,7 @@ import 'package:relio/presentation/widgets/answer_field.dart';
 import 'package:relio/presentation/widgets/feedback_panel.dart';
 
 import '../helpers/test_database.dart';
+import '../helpers/hint_gestures.dart';
 
 /// Taille d'ecran cible : petit telephone d'entree de gamme.
 const Size kSmallPhone = Size(360, 640);
@@ -102,10 +103,8 @@ void main() {
         (tester) async {
       await openOnSmallPhone(tester);
 
-      await tester.tap(find.text(RelioStrings.askHint));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(RelioStrings.askHint));
-      await tester.pumpAndSettle();
+      await askHintAndClose(tester);
+      await askHintAndClose(tester, label: 'Indice final');
 
       // Deux indices + enonce : la barre d'action reste en place.
       expect(find.byType(AnswerField), findsOneWidget);

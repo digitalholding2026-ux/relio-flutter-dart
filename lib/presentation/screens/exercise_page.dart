@@ -20,6 +20,8 @@ import 'package:flutter/material.dart';
 import '../../core/id.dart';
 import '../../domain/curriculum/chapter1_service.dart';
 import '../../domain/curriculum/exercise.dart';
+import '../../domain/curriculum/rich_hint.dart';
+import '../../domain/curriculum/rich_hint_adapter.dart';
 import '../rules/feedback_selection.dart';
 import '../rules/v1_screen_rules.dart';
 import '../strings/relio_strings.dart';
@@ -28,6 +30,7 @@ import '../widgets/answer_field.dart';
 import '../widgets/feedback_panel.dart';
 import '../widgets/hint_area.dart';
 import '../widgets/math_text.dart';
+import '../widgets/rich_hint_sheet.dart';
 
 /// Brouillon d'une tentative en cours.
 ///
@@ -67,6 +70,10 @@ class ExercisePage extends StatefulWidget {
     required this.onGoToNext,
     this.requestFocusOnOpen = false,
     this.onFullscreenChanged,
+    this.reviewConsumedHints = false,
+    this.onBackFromReview,
+    this.returnLabel,
+    this.reviewOrigin,
   });
 
   final Chapter1Service service;
@@ -100,6 +107,26 @@ class ExercisePage extends StatefulWidget {
   /// paramètre, aucun masquage n'est demandé — l'écran reste utilisable seul,
   /// ce qui permet de le tester isolément.
   final ValueChanged<bool>? onFullscreenChanged;
+
+  /// Ouvrir immediatement, au montage, la fiche EMPILANT tous les indices
+  /// deja consommes sur cet exercice.
+  ///
+  /// Vrai uniquement en relecture (« Revoir l'exercice N ») : l'eleve veut
+  /// relire ses explications, pas avancer. Faux sur toute ouverture ordinaire,
+  /// ou une fiche automatique masquerait l'enonce a l'arrivee sur S2.
+  final bool reviewConsumedHints;
+
+  /// « Retour a l'exercice en cours » : sort de la relecture.
+  final VoidCallback? onBackFromReview;
+
+  /// Libelle du bouton de retour, affiche seulement en relecture.
+  final String? returnLabel;
+
+  /// Exercice depuis lequel la relecture a ete ouverte, ou `null`.
+  ///
+  /// Sert au bandeau (« Voici les explications de l'exercice N ») et a savoir
+  /// que cet ecran est une consultation, non une progression.
+  final Exercise? reviewOrigin;
 
   @override
   State<ExercisePage> createState() => _ExercisePageState();
@@ -157,6 +184,55 @@ class _ExercisePageState extends State<ExercisePage> {
         if (mounted && !_locked) _focusNode.requestFocus();
       });
     }
+
+    // Relecture (« Revoir l'exercice N ») : la fiche s'ouvre seule, une fois
+    // l'ecran monte et la premiere frame peinte.
+    //
+    // L'eleve a demande a RELIRE : afficher l'enonce seul lui ferait croire
+    // qu'il doit refaire l'exercice. La fiche empilee s'y ajoute donc
+    // immediatement — mais elle ne consomme RIEN : ce sont des indices deja
+    // consultes, et rien n'est enregistre ici.
+    if (widget.reviewConsumedHints) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _openReviewSheet();
+      });
+    }
+  }
+
+  /// Ouvre la fiche EMPILANT tous les indices deja consommes sur cet exercice.
+  ///
+  /// Une seule fiche, pas une par indice : l'eleve veut l'ensemble de ses
+  /// explications relues d'un coup, pas une serie de panneaux a faire
+  /// defiler. Aucun indice n'est enregistre — ce sont des fiches DEJA
+  /// consommees.
+  Future<void> _openReviewSheet() async {
+    final consumed = _draft.consumedHintOrders;
+    final hints = richHintsOf(widget.exercise, consumedOrders: consumed);
+    if (hints.isEmpty) return;
+
+    // Tous les fragments des fiches consumed, dans l'ordre de la banque.
+    final blocks = <HintBlock>[
+      for (final hint in hints) ...hint.blocks,
+    ];
+
+    final origin = widget.reviewOrigin;
+    final originNumber =
+        origin == null ? null : V1ScreenRules.positionOf(origin.id);
+
+    await showRichHintSheet(
+      context,
+      hint: RichHint(
+        order: 0,
+        title: RelioStrings.richHintTitle,
+        blocks: blocks,
+        isFinal: true,
+      ),
+      reviewBanner: originNumber == null
+          ? null
+          : RelioStrings.richHintReviewBanner(originNumber),
+      backToCurrentLabel: widget.returnLabel,
+      onBackToCurrent: widget.onBackFromReview,
+    );
   }
 
   @override
@@ -187,10 +263,14 @@ class _ExercisePageState extends State<ExercisePage> {
   // Actions
   // ---------------------------------------------------------------------
 
-  /// Demande l'indice suivant au moteur.
+  /// Demande l'indice suivant au moteur, et ouvre la fiche correspondante.
   ///
   /// Ne modifie NI la saisie, NI le focus, NI la position de defilement.
-  void _askForHint() {
+  ///
+  /// La fiche s'OUVRE d'abord, l'enregistrement vient apres : l'eleve voit ce
+  /// qu'il a demande. L'enregistrement est lui-meme asynchrone et ne doit
+  /// jamais bloquer l'affichage.
+  Future<void> _askForHint() async {
     // Aucune action d'aide apres validation : demander un indice sous un
     // panneau transforme une reussite assistee en indichee, et le brouillon
     // ne le saurait plus.
@@ -200,16 +280,97 @@ class _ExercisePageState extends State<ExercisePage> {
         widget.service.nextHint(widget.exercise, _draft.consumedHintOrders);
     if (hint == null) return; // Plus d'indice : le bouton disparait.
 
-    setState(() {
-      _draft.consumedHintOrders.add(hint.order);
-      _draft.shownHints.add(hint);
-    });
+    // Budget AVANT ouverture : sert a savoir si la fiche qu'on va ouvrir est
+    // la derniere, et a pouvoir redemander le budget au moteur apres coup.
+    final budgetBefore = _budget();
 
-    // Enregistrement asynchrone : ne doit jamais bloquer l'affichage.
-    widget.service.recordHintRequested(
-      attemptKey: _draft.answerKey,
-      exercise: widget.exercise,
-      hintOrder: hint.order,
+    await showRichHintSheet(
+      context,
+      hint: hint.asRichHint(
+        isFinal: budgetBefore.remaining == 1,
+      ),
+      // La consommation est notifiee AU MOMENT DE L'AFFICHAGE, pas a la
+      // fermeture : ouvrir puis refermer sans lire consomme l'indice.
+      //
+      // L'enregistrement passe par le service : l'interface ne decremente donc
+      // jamais le budget elle-meme, elle redemande ensuite le budget au
+      // moteur et affiche le libelle qu'il renvoie.
+      onShown: () => _recordHintConsumed(hint.order),
+    );
+  }
+
+  /// Notifie le coeur qu'un indice a ete affiche.
+  ///
+  /// L'ecran ne fait qu'appeler le moteur et redemander le budget. Aucune
+  /// valeur n'est comptee ici.
+  Future<void> _recordHintConsumed(int hintOrder) async {
+    try {
+      await widget.service.recordHintRequested(
+        attemptKey: _draft.answerKey,
+        exercise: widget.exercise,
+        hintOrder: hintOrder,
+      );
+    } catch (_) {
+      // L'historique est une garantie, pas un confort : un echec
+      // d'enregistrement ne doit pas bloquer l'eleve sur sa fiche. L'indice
+      // reste affiche ; seule la trace dans l'historique est perdue.
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _draft.consumedHintOrders.add(hintOrder);
+      final hint = widget.exercise.orderedHints
+          .where((h) => h.order == hintOrder)
+          .firstOrNull;
+      if (hint != null && !_draft.shownHints.contains(hint)) {
+        _draft.shownHints.add(hint);
+      }
+    });
+  }
+
+  /// Budget d'aide demande au moteur.
+  HintBudget _budget() => widget.service.hintBudget(
+        widget.exercise,
+        _draft.consumedHintOrders,
+        previousExerciseId: _previous?.id,
+      );
+
+  /// Exercice de reference, propose une fois le budget epuise.
+  Exercise? get _previous => V1ScreenRules.previousBefore(widget.exercise);
+
+  /// « Revoir l'exercice N » : ouvre l'exercice precedent et y empile les
+  /// fiches deja consommees.
+  Future<void> _reviewPreviousExercise() async {
+    final previous = _previous;
+    if (previous == null) return;
+
+    final origin = widget.exercise;
+
+    // La pile REFLECTE le parcours : l'exercice consulte est empile au-dessus
+    // de l'exercice en cours, et « Retour a l'exercice en cours » redescend
+    // dessus. La saisie de l'exercice en cours n'est donc jamais perdue.
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => ExercisePage(
+          service: widget.service,
+          exercise: previous,
+          drafts: widget.drafts,
+          onExit: () => Navigator.of(context).pop(),
+          // L'exercice consulte ne fait PAS partie de la progression : il ne
+          // peut pas mener a « Exercice suivant », sinon l'eleve pourrait
+          // valider l'exercice precedent et perdre sa place dans le parcours.
+          onGoToNext: () => Navigator.of(context).pop(),
+          onFullscreenChanged: widget.onFullscreenChanged,
+          // Ouverture immediate de la fiche, en mode EMPILAGE.
+          reviewConsumedHints: true,
+          onBackFromReview: () => Navigator.of(context).pop(),
+          returnLabel: RelioStrings.richHintBackToCurrent,
+          // L'exercice consulte est-il une relecture ? On le dit, pour que le
+          // bandeau et le bouton de retour ne s'affichent pas sur une ouverture
+          // ordinaire du parcours.
+          reviewOrigin: origin,
+        ),
+      ),
     );
   }
 
@@ -307,8 +468,6 @@ class _ExercisePageState extends State<ExercisePage> {
     final palette = RelioPaletteScope.of(context);
     final keyboard = V1ScreenRules.keyboardFor(exercise.id);
     final transparency = V1ScreenRules.transparencyNote(exercise.id);
-    final canAskHint =
-        widget.service.nextHint(exercise, _draft.consumedHintOrders) != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -381,7 +540,7 @@ class _ExercisePageState extends State<ExercisePage> {
                 ],
               ),
             ),
-            _bottomBar(keyboard, canAskHint: canAskHint),
+            _bottomBar(keyboard),
           ],
         ),
       ),
@@ -418,7 +577,7 @@ class _ExercisePageState extends State<ExercisePage> {
   ///
   /// Hors de la zone defilante : le champ reste visible au-dessus du
   /// clavier et « Valider » n'est jamais masque.
-  Widget _bottomBar(AnswerKeyboard keyboard, {required bool canAskHint}) {
+  Widget _bottomBar(AnswerKeyboard keyboard) {
     final palette = RelioPaletteScope.of(context);
 
     return Container(
@@ -464,16 +623,9 @@ class _ExercisePageState extends State<ExercisePage> {
             const SizedBox(height: 8),
             _inlineMessage(),
           ],
-          if (canAskHint) ...<Widget>[
+          if (_hintButton() != null) ...<Widget>[
             const SizedBox(height: 4),
-            TextButton(
-              // Le bouton RESTE VISIBLE s'il etait affiche au moment de la
-              // validation : seule sa disponibilite change. Le retirer
-              // modifierait la hauteur de la barre d'action apres chaque
-              // reponse, ce qui serait plus derangeant qu'un bouton inactif.
-              onPressed: _locked ? null : _askForHint,
-              child: const Text(RelioStrings.askHint),
-            ),
+            _hintButton()!,
           ],
           const SizedBox(height: 8),
           FilledButton(
@@ -503,6 +655,49 @@ class _ExercisePageState extends State<ExercisePage> {
                     ),
                   ),
           ),
+        ],
+      ),
+    );
+  }
+
+  /// Bouton d'aide, ou `null` s'il n'a rien a offrir.
+///
+/// LE LIBELLE VIENT DU BUDGET, PAS DE L'ECRAN.
+///
+/// `HintBudget.cta` est un enonce ferme : le bouton ne peut donc pas
+/// inventer un cas, ni diverger du compte rendu du moteur. L'ecran ne
+/// recompte rien — il lit le budget, affiche le libelle correspondant.
+///
+/// Le bouton RESTE VISIBLE s'il etait affiche au moment de la validation :
+/// seule sa disponibilite change. Le retirer modifierait la hauteur de la barre
+/// d'action apres chaque reponse, ce qui serait plus derangeant qu'un bouton
+/// inactif.
+Widget? _hintButton() {
+    final budget = _budget();
+    final previous = _previous;
+
+    if (budget.cta == HintCta.none) return null;
+
+    final previousNumber = previous == null
+        ? null
+        : V1ScreenRules.positionOf(previous.id);
+    final label = RelioStrings.hintCta(budget.cta, previousExerciseNumber: previousNumber);
+
+    // Budget epuise : on ne demande plus un indice, on propose de relire.
+    final isReview = budget.cta == HintCta.reviewPrevious;
+
+    return TextButton(
+      onPressed: _locked
+          ? null
+          : (isReview ? _reviewPreviousExercise : _askForHint),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          if (isReview) ...<Widget>[
+            const Icon(Icons.arrow_back, size: 18),
+            const SizedBox(width: 6),
+          ],
+          Flexible(child: Text(label, textAlign: TextAlign.center)),
         ],
       ),
     );

@@ -53,6 +53,18 @@ abstract final class V1ScreenRules {
     return list[index + 1];
   }
 
+  /// Exercice precedent dans la leçon, ou `null` si c'est le premier.
+  ///
+  /// Symetrique de [nextAfter]. Utilise par « Revoir l'exercice N » : une fois
+  /// le budget d'aide epuise, l'eleve peut relire les explications d'un
+  /// exercice qu'il a deja vu.
+  static Exercise? previousBefore(Exercise exercise) {
+    final list = exercises;
+    final index = list.indexWhere((e) => e.id == exercise.id);
+    if (index <= 0) return null;
+    return list[index - 1];
+  }
+
   /// Premier exercice d'une lecon.
   ///
   /// S2 s'ouvre toujours sur le premier exercice de la lecon.

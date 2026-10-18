@@ -28,6 +28,7 @@ import 'diagnostic_case.dart';
 import 'diagnostic_engine.dart';
 import 'exercise.dart';
 import 'hint_trajectory.dart';
+import 'rich_hint.dart';
 
 /// Type d'Ã©vÃ©nement Â« consultation d'indice Â».
 ///
@@ -271,6 +272,31 @@ class Chapter1Service {
   /// d'inventer une aide supplÃ©mentaire.
   ExerciseHint? nextHint(Exercise exercise, Set<int> consumedOrders) =>
       exercise.nextHintAfter(consumedOrders);
+
+  /// Budget d'aide de l'exercice, a l'instant presente.
+  ///
+  /// LE MOTEUR PORTE LE CALCUL, L'ECRAN NE FAIT QU'LE LIRE.
+  ///
+  /// L'interface ne decremente jamais le budget elle-meme : apres avoir
+  /// enregistre une consultation, elle redemande ce budget et affiche le
+  /// nouveau libelle. Cette methode est donc l'unique source du nombre affiche
+  /// dans le bouton.
+  ///
+  /// DERIVATION TEMPORAIRE. Le budget est ici calcule par le nombre
+  /// d'indices de la banque, faute d'un regle de depense propre au moteur.
+  /// C'est une DERIVATION, pas une decision pedagogique : la signature de
+  /// cette methode est celle que le coeur prendra des qu'il calculera
+  /// lui-meme, et l'appel dans l'interface n'aura pas a changer.
+  HintBudget hintBudget(
+    Exercise exercise,
+    Set<int> consumedOrders, {
+    String? previousExerciseId,
+  }) =>
+      HintBudget(
+        maxHintsAllowed: exercise.orderedHints.length,
+        hintsConsumed: consumedOrders.length,
+        previousExerciseId: previousExerciseId,
+      );
 
   // ---------------------------------------------------------------------
   // Enregistrement

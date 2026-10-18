@@ -21,6 +21,7 @@ import 'package:relio/presentation/screens/exercise_page.dart';
 import 'package:relio/presentation/strings/relio_strings.dart';
 
 import '../helpers/test_database.dart';
+import '../helpers/hint_gestures.dart';
 
 /// Ouvre l'application reelle et aboutit sur le premier exercice de la
 /// lecon 1 (PGCD de 18 et 12).
@@ -255,8 +256,7 @@ void main() {
     testWidgets('« Réessayer » vide, déverrouille et reprend le focus',
         (tester) async {
       await ouvrirParcours(tester);
-      await tester.tap(find.text(RelioStrings.askHint));
-      await tester.pumpAndSettle();
+      await askHintAndClose(tester);
       await repondre(tester, '9');
 
       expect(find.text(RelioStrings.noInformation), findsOneWidget);
@@ -308,8 +308,7 @@ void main() {
 
     testWidgets('panneau B — réussite assistée', (tester) async {
       await ouvrirParcours(tester);
-      await tester.tap(find.text(RelioStrings.askHint));
-      await tester.pumpAndSettle();
+      await askHintAndClose(tester);
       await repondre(tester, '6');
 
       expect(find.text(RelioStrings.successAssisted), findsOneWidget);

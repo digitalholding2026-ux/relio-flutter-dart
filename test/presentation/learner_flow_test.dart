@@ -19,6 +19,7 @@ import 'package:relio/presentation/theme/relio_theme.dart';
 import 'package:relio/presentation/widgets/hint_area.dart';
 
 import '../helpers/test_database.dart';
+import '../helpers/hint_gestures.dart';
 
 /// Surface de test : une base reelle et le service du chapitre 1.
 class Harness {
@@ -192,17 +193,23 @@ void main() {
         (tester) async {
       await openExercise(tester, 0);
 
-      // Premier indice.
-      await tester.tap(find.text(RelioStrings.askHint));
-      await tester.pumpAndSettle();
-      expect(find.text(RelioStrings.hintLabel(1)), findsOneWidget);
-      expect(find.text(RelioStrings.askHint), findsOneWidget);
+      // L'exercice 1 porte DEUX indices : c'est le budget de reference.
+      const total = 2;
 
-      // Second indice : le bouton disparait.
-      await tester.tap(find.text(RelioStrings.askHint));
-      await tester.pumpAndSettle();
+      // Premier indice : la zone d'indices s'alimente, le bouton reste.
+      await askHintAndClose(tester);
+      expect(find.text(RelioStrings.hintLabel(1)), findsOneWidget);
+      expect(find.text('Indice final'), findsOneWidget);
+
+      // Second indice : budget épuisé, le bouton disparaît. L'exercice 1 est
+      // le premier du chapitre : il n'a pas de précédent, donc aucune relecture
+      // n'est proposée.
+      await askHintAndClose(tester, label: 'Indice final');
       expect(find.text(RelioStrings.hintLabel(2)), findsOneWidget);
+      expect(find.byType(HintArea), findsOneWidget);
       expect(find.text(RelioStrings.askHint), findsNothing);
+      expect(find.text('Indice final'), findsNothing);
+      expect(total, 2);
     });
 
     testWidgets('ne modifie ni la saisie ni le focus', (tester) async {
@@ -210,8 +217,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField), '6');
       await tester.pump();
-      await tester.tap(find.text(RelioStrings.askHint));
-      await tester.pumpAndSettle();
+      await askHintAndClose(tester);
 
       // La saisie est preservee.
       expect(find.text('6'), findsWidgets);
@@ -222,10 +228,8 @@ void main() {
     testWidgets('les indices précédents restent visibles', (tester) async {
       await openExercise(tester, 0);
 
-      await tester.tap(find.text(RelioStrings.askHint));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(RelioStrings.askHint));
-      await tester.pumpAndSettle();
+      await askHintAndClose(tester);
+      await askHintAndClose(tester, label: 'Indice final');
 
       expect(find.text(RelioStrings.hintLabel(1)), findsOneWidget);
       expect(find.text(RelioStrings.hintLabel(2)), findsOneWidget);
@@ -276,8 +280,7 @@ void main() {
         (tester) async {
       await openExercise(tester, 0);
 
-      await tester.tap(find.text(RelioStrings.askHint));
-      await tester.pumpAndSettle();
+      await askHintAndClose(tester);
       await tester.enterText(find.byType(TextField), '6');
       await tester.pump();
       await tester.tap(find.text(RelioStrings.validate));
@@ -499,9 +502,10 @@ void main() {
     testWidgets('retour puis réouverture : indices conservés', (tester) async {
       await openExercise(tester, 0);
 
-      await tester.tap(find.text(RelioStrings.askHint));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.arrow_back));
+      await askHintAndClose(tester);
+      // La fleche de retour est celle de l'AppBar : celle du bouton
+      // « Revoir l'exercice » a le meme glyphe, mais vit dans la barre d'action.
+      await tester.tap(backIconInAppBar());
       await tester.pumpAndSettle();
       await tester.tap(find.byType(LessonCard).at(0));
       await tester.pumpAndSettle();

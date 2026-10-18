@@ -40,6 +40,10 @@ class RelioPalette {
     required this.background,
     required this.surface,
     required this.shadow,
+    required this.hintMathBackground,
+    required this.hintHighlightBackground,
+    required this.hintHighlightAccent,
+    required this.hintHandoffText,
   });
 
   /// Palette de référence.
@@ -59,6 +63,10 @@ class RelioPalette {
         background: Color(0xFFFAFBFC),
         surface: Color(0xFFFFFFFF),
         shadow: Color(0x0F000000),
+        hintMathBackground: Color(0xFFF3F4F6),
+        hintHighlightBackground: Color(0xFFFEF0E6),
+        hintHighlightAccent: Color(0xFFF56207),
+        hintHandoffText: Color(0xFF1F3A6E),
       );
 
   /// Palette à contraste renforcé.
@@ -83,6 +91,12 @@ class RelioPalette {
         background: Color(0xFFFFFFFF),
         surface: Color(0xFFFFFFFF),
         shadow: Color(0x1F000000),
+        // Palette a contraste renforce : les fonds sont eclaircis, les textes
+        // fonces. Meme separation de sens, contraste superieur.
+        hintMathBackground: Color(0xFFEBEEF2),
+        hintHighlightBackground: Color(0xFFFBE3D2),
+        hintHighlightAccent: Color(0xFFB34500),
+        hintHandoffText: Color(0xFF12264C),
       );
 
   /// Palette correspondant à la préférence [highContrast] de l'élève.
@@ -136,6 +150,18 @@ class RelioPalette {
 
   /// Ombre portée des cartes, en alpha.
   final Color shadow;
+
+  /// Fond de l'encadre d'un bloc mathematique.
+  final Color hintMathBackground;
+
+  /// Fond du bloc « point a retenir ».
+  final Color hintHighlightBackground;
+
+  /// Liseré gauche du bloc « point a retenir ».
+  final Color hintHighlightAccent;
+
+  /// Texte du bloc de retour vers l'eleve.
+  final Color hintHandoffText;
 }
 
 /// Diffusion de la palette courante dans l'arbre des widgets.

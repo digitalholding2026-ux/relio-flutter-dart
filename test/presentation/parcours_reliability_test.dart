@@ -21,6 +21,7 @@ import 'package:relio/presentation/strings/relio_strings.dart';
 import 'package:relio/presentation/widgets/answer_field.dart';
 
 import '../helpers/test_database.dart';
+import '../helpers/hint_gestures.dart';
 
 /// Ouvre S2 sur le premier exercice de la leçon 1 (PGCD 18 et 12).
 Future<AppDatabase> openFirstExercise(WidgetTester tester) async {
@@ -222,8 +223,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField), '18-12');
       await tester.pumpAndSettle();
-      await tester.tap(find.text(RelioStrings.askHint));
-      await tester.pumpAndSettle();
+      await askHintAndClose(tester);
       expect(find.text(RelioStrings.hintLabel(1)), findsOneWidget);
 
       await tester.tap(find.byTooltip(RelioStrings.back));
@@ -277,8 +277,7 @@ void main() {
 
     testWidgets('réussite APRÈS indice → panneau B, jamais A', (tester) async {
       await openFirstExercise(tester);
-      await tester.tap(find.text(RelioStrings.askHint));
-      await tester.pumpAndSettle();
+      await askHintAndClose(tester);
       await tester.enterText(find.byType(TextField), '6');
       await tester.pumpAndSettle();
       await tester.tap(find.text(RelioStrings.validate));

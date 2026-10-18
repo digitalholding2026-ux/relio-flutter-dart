@@ -7,6 +7,8 @@
 /// passe par cette classe.
 library;
 
+import '../../domain/curriculum/rich_hint.dart';
+
 /// Libelles de l'interface du parcours eleve — chapitre 1.
 abstract final class RelioStrings {
   const RelioStrings._();
@@ -34,6 +36,43 @@ abstract final class RelioStrings {
 
   /// Prefixe d'un indice : « Indice 1 », « Indice 2 »…
   static String hintLabel(int order) => 'Indice $order';
+
+  // ---------------------------------------------------------------------
+  // S2 — Fiche d'aide riche (Bottom Sheet)
+  // ---------------------------------------------------------------------
+
+  /// Titre de la fiche d'aide.
+  static const String richHintTitle = '💡 Comprendre cette étape';
+
+  /// Bouton de fermeture de la fiche.
+  static const String richHintUnderstood = 'J’ai compris';
+
+  /// Bandeau affiche quand la fiche est ouverte sur un EXERCICE PRECEDENT.
+  static String richHintReviewBanner(int exerciseNumber) =>
+      'Voici les explications de l’exercice $exerciseNumber. '
+      'Prends le temps de les relire.';
+
+  /// Bouton de retour depuis la relecture d'un exercice precedent.
+  static const String richHintBackToCurrent = 'Retour à l’exercice en cours';
+
+  /// Libelle du bouton d'aide, deduit du budget.
+  ///
+  /// `askFirst` → premier clic ; `next` → des fiches restent ; `finalOne` →
+  /// la prochaine sera la derniere ; `reviewPrevious` → budget epuise.
+  static String hintCta(HintCta cta, {int? previousExerciseNumber}) {
+    switch (cta) {
+      case HintCta.askFirst:
+        return askHint;
+      case HintCta.next:
+        return 'Indice suivant';
+      case HintCta.finalOne:
+        return 'Indice final';
+      case HintCta.reviewPrevious:
+        return 'Revoir l’exercice ${previousExerciseNumber ?? ''}'.trim();
+      case HintCta.none:
+        return askHint;
+    }
+  }
 
   // ---------------------------------------------------------------------
   // S2 — Etats techniques
