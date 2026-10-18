@@ -7,7 +7,8 @@ télécharger et l'installer sur un téléphone.
 
 | Fichier | Taille | Contenu |
 |---|---|---|
-| `apk/relio-socle-v0.4.2-refonte-parcours-marque.apk` | ~22,4 Mo | **Dernier build.** Refonte du parcours d'entrée + nouvelle marque |
+| `apk/relio-socle-v0.4.2-indices-riches.apk` | ~22,5 Mo | **Dernier build.** Fiches d'indices riches (Bottom Sheet) et budget d'aide |
+| `apk/relio-socle-v0.4.2-refonte-parcours-marque.apk` | ~22,4 Mo | Refonte du parcours d'entrée + nouvelle marque |
 | `apk/relio-socle-v0.4.2-prenom.apk` | ~22,1 Mo | Correction du chevauchement sur l'écran du prénom |
 | `apk/relio-socle-v0.4.1-demarrage.apk` | ~22,1 Mo | Démarrage corrigé — mais titre et personnage superposés |
 | `apk/relio-socle-v0.4.0-parcours-entree.apk` | ~22,1 Mo | ⚠️ **Ne pas installer** — écran d'introduction invisible |
@@ -65,6 +66,40 @@ publication réelle reste à créer (voir `docs/ARCHITECTURE.md`, point à
 arbitrer n° 6).
 
 ## Contenu du dernier build
+
+`relio-socle-v0.4.2-indices-riches.apk` — **fiches d'indices riches et
+budget d'aide**.
+
+Les indices ne sont plus de simples phrases affichées sous l'énoncé : ils
+s'ouvrent dans une **fiche** en panneau glissant, et leur consommation suit un
+budget.
+
+- **Fiche** — panneau blanc, rayon 16 dp, poignée de glissement, **75 %** de la
+  hauteur de l'écran au maximum : l'énoncé reste visible au-dessus. Contenu
+  défilable, bouton « J'ai compris » fixe, jamais perdu de vue.
+- **Quatre natures de blocs**, chacune avec son style — texte en corps 16,
+  formule encadrée en gris et passée au formateur mathématique, point à retenir
+  sur fond orange avec liseré, et retour vers l'élève en indigo gras.
+- **Bouton d'aide** — son libellé suit le budget restant : « Demander un
+  indice », « Indice suivant », « Indice final », puis « Revoir l'exercice N »
+  avec une flèche une fois le budget épuisé.
+- **Consommation** — un indice ouvert est un indice consommé, même si la fiche
+  est refermée sans être lue. L'élève ne peut donc pas « essayer » une fiche
+  pour voir ce que ça donne.
+- **Relecture** — « Revoir l'exercice N » remonte à l'exercice précédent et y
+  ouvre ses explications d'un seul geste, avec un bouton « Retour à l'exercice
+  en cours ».
+
+`flutter analyze` propre, **756 tests verts** (710 d'origine, 46 ajoutés).
+Non vérifié sur appareil réel.
+
+> **Le contenu des fiches reste celui de la banque existante.** Les textes
+> d'indice actuels sont affichés tels quels, sans reformulation. Les blocs
+> point à retenir et retour vers l'élève sont implémentés et testés, mais
+> restent vides tant que le contenu pédagogique validé n'est pas fourni —
+> voir `docs/FORMAT_RICH_HINTS.md` sur `main`.
+
+### Précédent build
 
 `relio-socle-v0.4.2-refonte-parcours-marque.apk` — **refonte UX du parcours
 d'entrée et nouvelle marque**.
