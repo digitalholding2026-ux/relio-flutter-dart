@@ -164,6 +164,14 @@ ou dans un champ séparé si tu préfères.
 
 ## 7. Reste à faire après réception
 
-1. Intégration des fiches dans `chapter1_bank.dart`.
-2. `flutter analyze` + `flutter test` (les 756 tests doivent rester verts).
-3. Build de l'APK et publication sur `apk-build`.
+> **Fait.** Les fiches des leçons 1 et 2 sont intégrées dans
+> `chapter1_bank.dart` sous `richHints`. Voir le commit
+> « Intégration du budget progressif et des fiches définitives ».
+
+1. ~~Intégration des fiches dans `chapter1_bank.dart`.~~ — **fait**.
+2. `flutter analyze` + `flutter test` — **774 tests verts**.
+3. Build de l'APK et publication en **GitHub Release** (règle 2).
+
+> Reste ouvert : les fiches de la **leçon 3** (relation PPCM–PGCD) ne sont pas
+> encore rédigées. Ces exercices n'offrent donc aucune aide tant qu'elles
+> manquent.

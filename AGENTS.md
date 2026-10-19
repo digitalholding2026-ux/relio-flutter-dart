@@ -60,83 +60,97 @@ est préféré pour l'installation sur téléphone.
 
 ---
 
-## Règle 2 — Publier l'APK sur `apk-build` (automatique)
+## Règle 2 — Publier l'APK en GitHub Release (automatique)
 
-> **À la fin de tout travail, publier l'APK sur la branche `apk-build`.**
+> **À la fin de tout travail, publier l'APK dans une GitHub Release.**
 >
 > Cette publication est **autorisée d'office**, sans demande explicite de
 > l'utilisateur, et **ne doit jamais être retardée** en attendant une
-> confirmation. C'est la seule action `git push` que l'agent effectue de
-> sa propre initiative.
+> confirmation. C'est la seule action `git push` — et le seul `gh` — que
+> l'agent effectue de sa propre initiative.
 
 Cette publication ne dispense pas de la règle 1 : le build reste obligatoire
 avant publication. En résumé, à la fin de chaque tâche : build → tests verts →
-publication sur `apk-build` → retour sur `main`.
+Release → retour sur `main`.
 
-### Répartition des rôles
+### Pourquoi une Release et non une branche
 
-| Branche | Contenu | Usage |
-|---|---|---|
-| `main` | Code source uniquement | Développement, tests, documentation |
-| `apk-build` | Binaire(s) APK + `apk/README.md` | Distribution et téléchargement |
+> **Un binaire ne doit JAMAIS entrer dans l'historique git.**
 
-**`main` ne doit JAMAIS contenir de fichier `.apk` ou `.aab`.** Le code et
-les binaires sont séparés pour que l'historique de `main` reste lisible et
-léger.
+`apk-build` a porté les APK jusqu'à 23 fichiers, soit **plus de 500 Mo**
+d'historique git : chaque `git clone` les retélécharge, chaque commit de
+binaire est définitif. C'est le défaut classique du stockage de binaires dans
+un dépôt de code.
+
+Une **GitHub Release** résout le problème : le binaire est téléchargeable par
+son URL, versionné par un tag, et **n'entre dans aucun historique**. Le dépôt
+reste léger et rapide à cloner.
+
+**La branche `apk-build` n'est donc plus un lieu de stockage de binaires.**
+Elle ne conserve que `apk/README.md`, qui pointe vers les Releases.
 
 ### Ce qu'il faut faire
 
-1. Se placer sur `apk-build` :
+1. Vérifier la version dans `pubspec.yaml`, puis **incrémenter le
+   `versionCode`** (règle 7) :
 
-   ```bash
-   git checkout apk-build
+   ```yaml
+   version: 0.4.2+18   # -> 0.4.2+19 au prochain build
    ```
 
-2. Y copier l'APK sous un nom **versionné**, dans `apk/` :
+2. Copier l'APK sous un nom **versionné**, hors du dépôt suivi :
 
-   ```bash
-   Copy-Item build\app\outputs\flutter-apk\app-release.apk apk\relio-socle-v0.1.0.apk -Force
+   ```powershell
+   Copy-Item build\app\outputs\flutter-apk\app-release.apk `
+             $env:TEMP\relio-socle-v0.4.2-19.apk -Force
    ```
 
-   Convention de nom : `relio-socle-v<version>.apk`, où `<version>` reprend
-   la version de `pubspec.yaml`.
+   Convention : `relio-socle-v<versionName>-v<versionCode>.apk`. **Le nom de
+   fichier est obligatoire** : `gh release create` dérive le nom du fichier
+   source, et `app-release.apk` écraserait le précédent.
 
-3. **Forcer l'ajout**, car `.gitignore` exclut `*.apk` par défaut :
+3. Publier la Release (le tag reprend le `versionCode`) :
 
-   ```bash
-   git add -f apk/relio-socle-v0.1.0.apk
+   ```powershell
+   gh release create "apk-v0.4.2-19" $env:TEMP\relio-socle-v0.4.2-19.apk `
+     --title "APK v0.4.2+19 — <titre du travail>" `
+     --notes-file $env:TEMP\notes.md
    ```
 
-4. Mettre à jour `apk/README.md` si nécessaire (taille, prérequis).
+4. Vérifier que l'actif est bien nommé et télégeable :
 
-5. Commiter et pousser :
-
-   ```bash
-   git commit -m "APK de distribution v<version>"
-   git push origin apk-build
+   ```powershell
+   gh release view apk-v0.4.2-19 --json assets
    ```
 
-6. Revenir sur `main` pour poursuivre le développement :
+5. Si un actif s'est mal nommé, le supprimer et le téléverser à nouveau sous
+   le bon nom :
 
-   ```bash
-   git checkout main
+   ```powershell
+   gh api repos/digitalholding2026-ux/relio-flutter-dart/releases/assets/<id> -X DELETE
+   gh release upload apk-v0.4.2-19 $env:TEMP\relio-socle-v0.4.2-19.apk --clobber
    ```
+
+6. Ne rien commiter : les binaires ne vont pas dans le dépôt.
 
 ### Pourquoi cette règle existe
 
-L'utilisateur récupère l'application **depuis GitHub**, pas depuis la
-machine de développement. Sans cette étape, le code est poussé mais
-l'installable n'est pas disponible : l'utilisateur ne peut rien tester.
+L'utilisateur récupère l'application **depuis GitHub**, pas depuis la machine
+de développement. Sans cette étape, le code est poussé mais l'installable
+n'est pas disponible : l'utilisateur ne peut rien tester.
 
 ### À savoir
 
-- Chaque build ajoute ~20 Mo à `apk-build`. Cette branche est une branche de
-  **distribution**, pas de développement : ne jamais y coder.
-- Si le volume devient gênant, la solution propre est une **GitHub Release**
-  (les binaires n'entrent alors pas dans l historic git). Elle nécessite le
-  CLI GitHub (`winget install GitHub.cli`), absent de la machine actuelle.
-- Ne pas supprimer les anciens APK sans demande explicite : l'utilisateur
-  peut être en train d'en télécharger un.
+- Le CLI GitHub est **installé et authentifié** sur la machine de
+  développement (`gh`, compte `digitalholding2026-ux`, scope `repo`). Si
+  `gh auth status` échoue, ne pas tenter de publier autrement : le signaler.
+- **Ne jamais commiter d'APK**, ni sur `main`, ni sur `apk-build`. Les seuls
+  APK déjà dans l'historique sont ceux de `apk-build` avant la bascule ; ils
+  y restent, on ne réécrit pas l'historique.
+- Ne pas supprimer une Release existante sans demande explicite : l'utilisateur
+  peut être en train de la télécharger.
+- Le tag `apk-v<versionName>-v<versionCode>` est la référence de livraison.
+  Deux builds de même `versionName` restent donc distinguables.
 
 ---
 
@@ -194,8 +208,9 @@ Deux périmètres nettement séparés. Ne pas les confondre.
 | Action | Autorisation |
 |---|---|
 | Commit de **code source** sur `main` | ⛔ Sur demande explicite uniquement |
-| Commit + push de l'**APK** sur `apk-build` | ✅ **Automatique, en fin de travail** (règle 2) |
-| Suppression d'un APK déjà publié | ⛔ Sur demande explicite |
+| Publication de l'**APK** en GitHub Release | ✅ **Automatique, en fin de travail** (règle 2) |
+| Commit d'un **binaire** (`.apk`, `.aab`) | ⛔ **Interdit**, sur toute branche (règle 2) |
+| Suppression d'une **Release** existante | ⛔ Sur demande explicite |
 
 ### Le code ne bouge pas sans demande
 
@@ -207,7 +222,8 @@ pousser le code source** sans qu'il l'ait demandé.
 C'est l'**exception unique et permanente**. À la fin de chaque tâche, une fois
 `flutter analyze` et `flutter test` verts et l'APK construit :
 
-1. commiter et pousser l'APK sur `apk-build` **sans attendre de confirmation** ;
+1. publier l'APK dans une **GitHub Release** via `gh` **sans attendre de
+   confirmation** — et **sans commiter le binaire** ;
 2. revenir sur `main`.
 
 Ne pas demander « dois-je pousser l'APK ? ». La question est déjà tranchée.
@@ -450,7 +466,7 @@ exactement ce qui a masqué le blocage de démarrage décrit dans
 | NDK requis | 28.2.13676358 |
 | Persistance | Drift / SQLite, schéma v2 |
 | Marque | `assets/branding/` — spécification dans `docs/brand/`, voir [règle 9](#règle-9--la-marque-est-générée-pas-dessinée) |
-| Tests | 710 (622 applicatifs + 88 marque) |
+| Tests | 774 (dont 18 sur la règle de budget, `test/curriculum/hint_budget_rule_test.dart`) |
 | Écran d'entrée | 7 étapes, 1,8 s d'ouverture sans bouton, tap pour passer — voir règle 10 |
 
 ### Branches
@@ -458,11 +474,15 @@ exactement ce qui a masqué le blocage de démarrage décrit dans
 | Branche | Rôle | Poussée |
 |---|---|---|
 | `main` | Code source, tests, documentation | Sur demande explicite |
-| `apk-build` | APK de distribution dans `apk/` | **Automatique en fin de travail** (règle 2) |
+| `apk-build` | Historique de distribution, figé — **plus de binaires** (règle 2) |
 
-### Récupérer l'APK depuis GitHub
+### Récupérer l'APK
 
-<https://github.com/digitalholding2026-ux/relio-flutter-dart/tree/apk-build/apk>
+L'APK n'est plus dans le dépôt : il est publié en **Release**.
+
+<https://github.com/digitalholding2026-ux/relio-flutter-dart/releases>
+
+Release courante : [`apk-v0.4.2-18`](https://github.com/digitalholding2026-ux/relio-flutter-dart/releases/tag/apk-v0.4.2-18)
 
 Détail complet dans `docs/ARCHITECTURE.md` et `docs/BUILD.md`.
 
