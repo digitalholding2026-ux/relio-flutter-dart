@@ -1,47 +1,30 @@
 # Relio — APK de démonstration
 
-Cette branche contient uniquement l'**artefact compilé**, pratique pour le
-télécharger et l'installer sur un téléphone.
+Cette branche contient uniquement les **artefacts compilés**, pratique pour les
+télécharger et les installer sur un téléphone.
+
+Les anciens APK ont été retirés de cette branche : elle servait de fourre-tout
+et atteignait un poids qui rendait le dépôt pénible à cloner. Seuls les
+derniers builds sont conservés ici. Le code, lui, est sur `main`.
 
 ## Fichiers
 
 | Fichier | Taille | Contenu |
 |---|---|---|
-| `apk/relio-socle-v0.4.2-indices-riches.apk` | ~22,5 Mo | **Dernier build.** Fiches d'indices riches (Bottom Sheet) et budget d'aide |
-| `apk/relio-socle-v0.4.2-refonte-parcours-marque.apk` | ~22,4 Mo | Refonte du parcours d'entrée + nouvelle marque |
-| `apk/relio-socle-v0.4.2-prenom.apk` | ~22,1 Mo | Correction du chevauchement sur l'écran du prénom |
-| `apk/relio-socle-v0.4.1-demarrage.apk` | ~22,1 Mo | Démarrage corrigé — mais titre et personnage superposés |
-| `apk/relio-socle-v0.4.0-parcours-entree.apk` | ~22,1 Mo | ⚠️ **Ne pas installer** — écran d'introduction invisible |
-| `apk/relio-socle-v0.3.9-marque.apk` | ~22,1 Mo | Nouveau mark, icône d'application et logo principal |
-| `apk/relio-socle-v0.3.9-audit.apk` | ~22,1 Mo | Audit onboarding : trois corrections d'affichage |
-| `apk/relio-socle-v0.3.8-onboarding.apk` | ~22,1 Mo | Onboarding complet : prénom, test d'entrée, clôture |
-| `apk/relio-socle-v0.3.7-marqueurs-onboarding.apk` | ~21,9 Mo | Marqueurs d'onboarding |
-| `apk/relio-socle-v0.3.6-test-entree.apk` | ~21,9 Mo | Test d'entrée de cinq questions |
-| `apk/relio-socle-v0.3.5-bouton-entree.apk` | ~21,9 Mo | Bouton d'entrée |
-| `apk/relio-socle-v0.3.4-logo.apk` | ~21,9 Mo | Ancienne marque : deux points et une courbe |
-| `apk/relio-socle-v0.3.4-navigation.apk` | ~21,9 Mo | Navigation à trois onglets, Accueil, Apprendre, Profil |
-| `apk/relio-socle-v0.3.4-relation-ppcm.apk` | ~21,7 Mo | Contrat « relation PPCM–PGCD appliquée » |
-| `apk/relio-socle-v0.3.4-ecran-entree.apk` | ~21,9 Mo | Écran d'entrée animé |
-| `apk/relio-socle-v0.3.4-corrections.apk` | ~21,9 Mo | Corrections d'affichage |
-| `apk/relio-socle-v0.3.3-typographie.apk` | ~21,7 Mo | Police Inter + formateur typographique |
-| `apk/relio-socle-v0.3.2-verification-transfert.apk` | ~21,9 Mo | Cœur de la vérification de transfert |
-| `apk/relio-socle-v0.3.1-verrouillage.apk` | ~21,9 Mo | Verrouillage du champ après validation |
-| `apk/relio-socle-v0.3.0-fiabilisation.apk` | ~21,9 Mo | Fiabilisation du parcours et des réponses |
-| `apk/relio-socle-v0.3.0-parcours-ch1.apk` | ~21,5 Mo | Écrans S1 / S2 |
-| `apk/relio-socle-v0.2.0-mission2.apk` | ~20,3 Mo | Moteur pédagogique du chapitre 1 |
-| `apk/relio-socle-v0.1.0.apk` | ~20,3 Mo | Socle technique |
+| `apk/relio-socle-v0.4.2-budget-fiches-definitives.apk` | 22,5 Mo | **Dernier build.** Budget progressif et fiches définitives des leçons 1 et 2 |
+| `apk/relio-socle-v0.4.2-indices-riches.apk` | 22,5 Mo | Fiches d'indices riches (Bottom Sheet) et budget d'aide |
 
 ## Téléchargement
 
 Ouvrir le fichier choisi depuis cette branche sur GitHub, puis **Raw** pour
 télécharger le binaire.
 
-## ⚠️ Installer dans l'ordre
+## ⚠️ Installer le dernier
 
-Les `versionCode` increases à chaque build (1 → 2). Android **refuse**
-d'installer un APK dont le `versionCode` est inférieur ou égal à celui déjà
-installé. Pour mettre à jour, installer le **dernier** fichier, dans l'ordre
-chronologique ci-dessus.
+Les `versionCode` augmentent à chaque build. Android **refuse** d'installer un
+APK dont le `versionCode` est inférieur ou égal à celui déjà installé :
+**installez `relio-socle-v0.4.2-budget-fiches-definitives.apk`**, pas
+l'avant-dernier.
 
 ## Installation
 
@@ -54,312 +37,84 @@ chronologique ci-dessus.
 
 - **Android 7.0 (API 24) minimum** — imposé par la dépendance SQLite, pas
   par Relio lui-même.
-- Architecture `arm64-v8a` : couvre la quasi-totalité des téléphones
-  Android actuels. Les anciennes architectures 32 bits ne sont pas incluses
-  dans ce build.
+- `versionCode` 18, `targetSdk` 36.
+- L'APK embarque les architectures `arm64-v8a`, `armeabi-v7a` et `x86_64` :
+  il s'installe sur la quasi-totalité des téléphones Android actuels.
 
 ## Signature
 
-Le fichier est signé avec une **clé de debug**. C'est suffisant pour un
-essai local, mais ce n'est pas publiable sur le Play Store. La clé de
-publication réelle reste à créer (voir `docs/ARCHITECTURE.md`, point à
-arbitrer n° 6).
+Le fichier est signé avec une **clé de debug**. C'est suffisant pour un essai
+local, mais ce n'est pas publiable sur le Play Store. La clé de publication
+réelle reste à créer (voir `docs/ARCHITECTURE.md` sur `main`).
 
 ## Contenu du dernier build
 
-`relio-socle-v0.4.2-indices-riches.apk` — **fiches d'indices riches et
-budget d'aide**.
+`relio-socle-v0.4.2-budget-fiches-definitives.apk` — **budget progressif et
+fiches définitives**.
+
+### Les fiches sont définitives
+
+Les leçons 1 et 2 (exercices 1 à 7) portent leur contenu rédigé, et non plus
+une phrase générique par indice :
+
+- **texte** en corps 16 ;
+- **formule encadrée** en gris, passée au formateur mathématique (les signes
+  `−`, `×`, `÷` sont ceux de la source) ;
+- **point à retenir** sur fond orange avec liseré ;
+- **retour vers l'élève** en indigo gras, qui attend une action et non une
+  lecture.
+
+Chaque fiche s'ouvre dans le panneau glissant déjà connu, à 75 % de la hauteur
+maximum, avec l'énoncé qui reste visible au-dessus.
+
+### L'aide se retire vraiment dans la leçon
+
+Le budget n'est plus le nombre de fiches du dossier : il décroît d'exercice en
+exercice, de `M` fiches au premier à 1 au dernier.
+
+- Leçon 1 (PGCD par soustractions) : **3 → 2 → 1 → 1**
+- Leçon 2 (algorithme d'Euclide) : **3 → 2 → 1**
+- Leçon 3 (relation PPCM–PGCD) : **aucune fiche**, donc aucune aide
+
+Le libellé du bouton suit le budget restant : « Demander un indice », puis
+« Indice suivant », puis « Indice final ».
+
+> **Une règle arithmétique à connaître pour lire l'application** : un exercice
+> ne peut jamais proposer plus d'aides que le nombre de fiches qu'il possède.
+> C'est pourquoi l'exercice 3, qui n'a qu'une fiche, s'arrête à une seule aide
+> même si la règle de la leçon lui en accorde deux.
+
+### L'interface passe en indigo et orange officiels
+
+Boutons, navigation et titres sont désormais en **indigo `#1F3A6E`** et
+**orange `#F56207`**.
+
+Le **logo garde ses couleurs mesurées** (`#0E1821` et `#FE7904`) : ce sont deux
+usages distincts — la marque livrée et l'interface — et non une dérive.
+
+### Vérifications
+
+- `flutter analyze` : **No issues found !**
+- `flutter test` : **774 tests verts** (756 + 18 nouveaux)
+- `versionCode` 18 — Android refusera toute installation antérieure
+
+Non vérifié sur appareil réel.
+
+### Précédent build
+
+`relio-socle-v0.4.2-indices-riches.apk` — **fiches d'indices riches et budget
+d'aide**.
 
 Les indices ne sont plus de simples phrases affichées sous l'énoncé : ils
 s'ouvrent dans une **fiche** en panneau glissant, et leur consommation suit un
-budget.
-
-- **Fiche** — panneau blanc, rayon 16 dp, poignée de glissement, **75 %** de la
-  hauteur de l'écran au maximum : l'énoncé reste visible au-dessus. Contenu
-  défilable, bouton « J'ai compris » fixe, jamais perdu de vue.
-- **Quatre natures de blocs**, chacune avec son style — texte en corps 16,
-  formule encadrée en gris et passée au formateur mathématique, point à retenir
-  sur fond orange avec liseré, et retour vers l'élève en indigo gras.
-- **Bouton d'aide** — son libellé suit le budget restant : « Demander un
-  indice », « Indice suivant », « Indice final », puis « Revoir l'exercice N »
-  avec une flèche une fois le budget épuisé.
-- **Consommation** — un indice ouvert est un indice consommé, même si la fiche
-  est refermée sans être lue. L'élève ne peut donc pas « essayer » une fiche
-  pour voir ce que ça donne.
-- **Relecture** — « Revoir l'exercice N » remonte à l'exercice précédent et y
-  ouvre ses explications d'un seul geste, avec un bouton « Retour à l'exercice
-  en cours ».
-
-`flutter analyze` propre, **756 tests verts** (710 d'origine, 46 ajoutés).
-Non vérifié sur appareil réel.
-
-> **Le contenu des fiches reste celui de la banque existante.** Les textes
-> d'indice actuels sont affichés tels quels, sans reformulation. Les blocs
-> point à retenir et retour vers l'élève sont implémentés et testés, mais
-> restent vides tant que le contenu pédagogique validé n'est pas fourni —
-> voir `docs/FORMAT_RICH_HINTS.md` sur `main`.
-
-### Précédent build
-
-`relio-socle-v0.4.2-refonte-parcours-marque.apk` — **refonte UX du parcours
-d'entrée et nouvelle marque**.
-
-Parcours : logo à trois niveaux de présence (160 / 100 / 80 / 64 / 24 /
-120 dp), bouton navy solide sans contour (normal, pressé, désactivé,
-chargement), cinq pastilles de progression sur l'écran de test, grille
-commune (24 / 32 / 12), bouton ancré en bas, fondu croisé 275 ms entre
-écrans, tap pour sauter l'ouverture. Textes inchangés, mot pour mot.
-
-Marque : nouveau mark (chapeau, fût, livre, pages, gland — navy `#0E1821`,
-orange `#FE7904`), mot « relio » tracé, signature « Apprendre aujourd’hui,
-réussir demain », icône orange et splash régénérés. Le personnage animé
-garde trois mouvements : le chapeau respire, les pages pulsent décalées,
-le gland ondule.
-
-`flutter analyze` propre, 710 tests verts. Non vérifié sur appareil réel.
-
-### Précédent build
-
-`relio-socle-v0.4.2-prenom.apk` — **fin de la série de correctifs**.
-
-Reprend tout le `0.4.1` et corrige le dernier défaut connu : sur l'écran du
-prénom, le titre « Comment tu t'appelles ? » passait **sur le personnage**,
-avec 50 px de recouvrement.
-
-L'écran est passé d'une superposition à une disposition en colonne —
-personnage en haut, titre et champ dans la place restante, bouton en bas.
-Aucun changement de design par rapport à `0.4.1` : c'est la même
-répartition, sans que les deux éléments se marchent dessus.
-
-> Les versions précédentes restent utilisables mais portent ce défaut :
-> **`0.4.0` est bloqué**, **`0.4.1` fonctionne mais le prénom est mal
-> composé**. Installez `0.4.2`.
-
-### Précédent build
-
-`relio-socle-v0.4.1-demarrage.apk` — **correction du démarrage bloqué**.
-
-Sur la version précédente, l'application s'ouvrait sur un écran presque
-blanc : cinq petits points en haut, aucun texte, aucun bouton, et plus
-rien. **Le parcours était inutilisable.**
-
-La cause : quatre écrans lisaient la valeur de leur animation directement
-dans `build()`, sans s'abonner à l'animation. Le contrôleur tournait, mais
-l'écran ne se redessinait jamais — et comme tout le contenu apparaissait par
-un fondu, il restait invisible. Aucun message, aucune erreur : seulement un
-écran vide.
-
-Trois défauts corrigés :
-
-- **le contenu ne s'affichait plus** sur l'introduction au questionnaire, la
-  bienvenue, le prénom et la clôture ;
-- **« réduire les animations » masquait l'écran du prénom** — ni titre, ni
-  champ, ni bouton ;
-- **le mot « Relio » et sa signature n'occupaient aucune largeur**, et se
-  superposaient à la marque avant de sortir de l'écran. Visible aussi sur
-  l'accueil.
-
-> ⚠️ **`relio-socle-v0.4.0-parcours-entree.apk` est défectueux** : c'est la
-> version du blocage ci-dessus. L'installer ne fait que reproduire l'écran
-> blanc. Il est conservé pour la trace ; **installez la 0.4.2 à la place**.
-
-Cette série n'a **pas** été vérifiée sur un téléphone : l'environnement de
-compilation n'a ni appareil ni émulateur. Le parcours a été validé par
-tests automatisés et par capture du rendu réel des écrans, ce qui a détecté
-le défaut, mais **le comportement tactile reste à confirmer sur appareil**.
-
-### Précédent build
-
-`relio-socle-v0.4.0-parcours-entree.apk` — parcours d'entrée en sept étapes,
-**mais bloqué à l'introduction du questionnaire** (voir ci-dessus).
-
-1. **Ouverture** — le logo se révèle, sans bouton et sans attente. L'écran
-   enchaîne tout seul, et rien n'y est enregistré : si l'élève le quitte,
-   il le reverra.
-2. **Bienvenue** — « Salut, moi c'est Relio !… », bouton **Commencer**.
-3. **Introduction au questionnaire** — cinq pastilles qui promettent une
-   étape courte. **C'est le seul endroit où `entryScreenSeen` est écrit.**
-4. **Prénom** — 24 caractères maximum, lettres et espaces uniquement,
-   première lettre en majuscule.
-5. **Questionnaire** — cinq questions, sans indice, sans correction, sans
-   score ni diagnostic.
-6. **Conclusion** — « Merci {prénom} ! Je commence à mieux te connaître. »
-7. **Accueil**.
-
-Le parcours reprend exactement où il s'était arrêté. Abandonner au milieu du
-questionnaire ne le fait pas disparaître : les réponses déjà enregistrées
-sont conservées, et l'élève retrouve la question suivante.
-
-> Une réponse n'est enregistrée qu'une fois l'écriture **confirmée**. Si elle
-> échoue, l'élève reste sur la question, sa saisie n'est pas effacée et il
-> peut réessayer sans jamais créer de doublon.
-
-### Précédent build
-
-`relio-socle-v0.3.9-marque.apk` — **la marque Relio est entièrement
-remplacée** par les deux fichiers fournis, propagés à toute l'application :
-
-- **nouveau mark** : un « R » ajouré, deux zigzags et un point orange ;
-- **icône d'application** : fond indigo à coins arrondis, mark en blanc et
-  orange, déclarée en calques Android séparés — le fond n'est plus cuit
-  dans l'image, donc les masques des constructeurs ne le rognent plus ;
-- **splash** : fond blanc, mark, « Relio » puis la signature
-  « Les maths, c'est ton terrain ! », le tout en Inter SemiBold ;
-- **écran d'entrée** : le personnage animé est le nouveau mark. Il garde
-  **exactement trois mouvements** — le « R » respire, le point pulse
-  décalé, le zigzag d'accent ondule ;
-- **en-tête d'accueil** : lockup horizontal avec le nouveau mark.
-
-La marque est **générée**, pas dessinée : la géométrie vit dans un seul
-fichier, et le SVG, les PNG et le rendu à l'écran lisent la même
-définition. Un test rejoue l'import depuis la spécification versionnée et
-échoue si la géométrie en dérive.
-
-### Précédent build
-
-`relio-socle-v0.3.4-logo.apk` — **l'ancienne marque Relio**, deux cercles
-(Ø 28 et Ø 15,4) reliés par une courbe, en `#F56207` seul, avec splash,
-icône d'application et en-tête d'accueil. Conservé pour comparaison.
-
-### Précédent build
-
-`relio-socle-v0.3.4-navigation.apk` — navigation globale et écrans
-d'accueil, d'apprentissage et de profil :
-
-- **trois onglets permanents** en barre basse : Accueil, Apprendre, Profil.
-  Aucun autre onglet, même grisé ;
-- l'application **ouvre sur Accueil**, plus sur S1 ;
-- **piles indépendantes** : changer d'onglet ne réinitialise pas la pile de
-  l'onglet quitté — le brouillon de saisie, les indices et la position de
-  défilement sont restaurés au retour ;
-- **Accueil** : en-tête « Bonjour » (+ prénom), carte « Commence ici » qui
-  ouvre S1, carte « Programme de 3e » qui bascule sur Apprendre ;
-- **Apprendre** : chapitre 1 actif, chapitres suivants « Bientôt
-  disponible » et non cliquables ;
-- **Profil** : identité (nom, classe), affichage (taille de texte, contraste
-  renforcé), accessibilité (réduire les animations). Préférences persistées
-  **localement**, sans compte ni synchronisation ;
-- **S1** est atteinte depuis Apprendre : sa flèche de retour ramène à
-  l'écran Apprendre ;
-- **S2 masque la barre de navigation** : l'exercice occupe l'espace, sa barre
-  d'action fixe reste seule ;
-- schéma de stockage passé en **version 3** (préférences), sans perte
-  d'historique d'apprentissage.
-
-Aucun pourcentage, aucun score, aucun badge, aucune progression, aucun code
-diagnostique interne, aucun compte, aucune mécanique de jeu. La taille de texte
-choisée dans le profil ne réduit jamais celle réglée dans le système.
-
-### Précédent build
-
-`relio-socle-v0.3.4-navigation.apk` — navigation globale :
-
-- **trois onglets permanents** en barre basse : Accueil, Apprendre, Profil ;
-- l'application **ouvre sur Accueil**, plus sur S1 ;
-- **piles indépendantes** par onglet ;
-- schéma de stockage passé en **version 3** (préférences).
-
-### Précédent build
-
-`relio-socle-v0.3.4-relation-ppcm.apk` — la tâche de vérification
-`PPCM de 10 et 15, avec PGCD 5` vérifie désormais réellement l'**application
-écrite** de la relation :
-
-- **`30` seul n'est plus accepté** : le bon résultat sans démonstration ne
-  prouve rien ;
-- un calcul écrit comportant la division est exigé et **évalué** — `10*15/5`,
-  `150/5`, `150 ÷ 5`, `10 × 15 / 5`, `10*15/5 = 30` sont acceptés ;
-- un calcul faux reste un **échec évaluable** : `10*15/6` est une erreur de
-  l'élève, pas une incertitude ;
-- un résultat juste mais un membre de droite faux (`10*15/5 = 25`) n'est pas
-  déclaré réussi.
-
-> **L'association de transfert reste inactive** : la condition technique est
-> remplie, l'activation est une décision pédagogique.
-
-### Précédent build
-
-`relio-socle-v0.3.3-typographie.apk` — police et rendu mathématique :
-
-- **Inter réellement embarquée**, en quatre poids (400 / 500 / 600 / 700)
-  plus un italique, sous-ensemble latin et latin étendu. Chaque fichier porte
-  son poids : aucun réglage d'axe n'est nécessaire ;
-- l'italique des variables est un **vrai fichier**, pas un oblique simulé ;
-- les accents français (`é è à ç ô î û œ`, majuscules accentuées) sont
-  inclus et vérifiés ;
-- **formateur typographique** sur les énoncés et les indices : variables
-  isolées en italique, chiffres en tabulaire, opérateurs et parenthèses
-  inchangés, acronymes jamais italiques ;
-- aucune bibliothèque de rendu mathématique ajoutée.
-
-> Ce build reste **sans validation sur appareil réel** : aucun téléphone ni
-> émulateur n'est disponible dans l'environnement de compilation.
-
-### Précédent build
-
-`relio-socle-v0.3.2-verification-transfert.apk` — cœur métier de la
-vérification de transfert du chapitre 1 :
-
-- **Association activée** : exercice 1 (`PGCD(18,12)`) → tâche
-  `PGCD(16,12) par soustractions`, couple différent, même méthode ;
-- **Deux associations laissées inactives** : `PGCD(35,20)` (son énoncé ne
-  demande pas Euclide et c'est le contrôle du cas D4) et
-  `PPCM de 10 et 15` (la valeur seule suffit, la relation n'est pas
-  vérifiée) ;
-- le moteur expose désormais **ce que l'évaluateur contrôle réellement** :
-  seule la valeur finale, **jamais la méthode** ;
-- quatre issues distinctes pour le résultat : réussite, échec évaluable,
-  **indéterminé**, **erreur technique**. Les deux dernières ne produisent
-  aucune conclusion ni remédiation ;
-- après un échec sans difficulté étayée : reprise guidée **sans diagnostic
-  affirmatif**, et les contenus manquants sont signalés.
-
-> **L'écran S4 reste fermé dans cette version.** Ce build pose la logique
-> métier ; son affichage relève de l'interface.
-
-### Précédent build
-
-`relio-socle-v0.3.1-verrouillage.apk` — verrouillage de l'écran S2 après
-validation :
-
-- le champ de réponse reste **visible et relisible**, mais devient non
-  éditable : ni focus, ni clavier, ni copier-coller ;
-- « Valider » reste **visible**, désactivé ;
-- « Demander un indice » reste visible s'il l'était, désactivé ;
-- le clavier se **ferme** dès l'apparition du panneau ;
-- un retour par la flèche de l'AppBar **conserve le panneau** : à la
-  réouverture, l'élève retrouve exactement l'état quitté ;
-- « Exercice suivant » vide et déverrouille le champ, avec reprise du focus.
-
-Le moteur pédagogique, la classification et le contenu mathématique sont
-**inchangés** : c'est une règle d'interface, dérivée de la seule présence
-d'un panneau affiché.
-
-### Précédent build
-
-`relio-socle-v0.3.0-fiabilisation.apk` — fiabilisation du parcours du
-chapitre 1 :
-
-- **Correction** : les réponses mathématiquement équivalentes sont désormais
-  reconnues (`÷` et `/`, `×`, `*`, `x`, accents, espaces). Un entier saisi à
-  l'exercice 11 n'est plus enregistré comme **faux** : il est **non
-  évaluable**. Les accents français ne font plus rejeter une bonne réponse.
-- **Type de réponse** : le clavier est désormais déduit des critères de
-  correction, au lieu d'une convention de position.
-- **Parcours** : « Valider » est neutralisé après soumission — plus de
-  tentatives identiques empilées dans l'historique immuable.
-- **Police Inter** embarquée (licence SIL OFL 1.1), variables d'énoncé en
-  italique, sans dépendance ajoutée.
-
-Voir `docs/INTERFACE.md` et `docs/VERIFICATION.md` sur `main`.
-
-> **Ce build n'a pas été testé sur un appareil Android réel** : aucun
-> téléphone ni émulateur n'est disponible dans l'environnement de
-> compilation. Les tests sont automatisés.
+budget. Les quatre natures de blocs et le bouton d'aide à libellé variable
+sont déjà en place, mais le **contenu des fiches restait celui de la banque**,
+tel quel, sans reformulation. C'est précisément ce que le build ci-dessus
+corrige.
 
 ## ⚠️ Branche de distribution, pas de développement
 
 - `main` porte le code. C'est là que le développement se fait.
-- `apk-build` porte les binaires. Elle grossit à chaque nouveau build.
+- `apk-build` porte les binaires. Elle ne contient aucun code à modifier.
 
 Le code de cette branche est identique à `main`. Ne pas y développer.
