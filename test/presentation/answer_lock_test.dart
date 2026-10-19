@@ -186,10 +186,22 @@ void main() {
 
     testWidgets('sur l\'exercice sans indice, le bouton reste absent',
         (tester) async {
-      await ouvrirParcours(tester);
-      await repondre(tester, '6');
-      await taperPanneau(tester, RelioStrings.nextExercise);
-      await repondre(tester, '5');
+      // Leçon 3 : aucune fiche n'y a été rédigée, le bouton n'a donc pas
+      // lieu d'être. L'exercice est monté directement, le parcours séquentiel
+      // ne mène pas jusqu'à la leçon 3.
+      final db = await openTestDatabase();
+      registerTestDatabase(db);
+      final service = Chapter1Service(LearningEventRepository(db));
+      await tester.pumpWidget(MaterialApp(
+        home: ExercisePage(
+          service: service,
+          exercise: Chapter1Bank.findExercise(ExerciseIds.ex8)!,
+          drafts: <String, ExerciseDraft>{},
+          onExit: () {},
+          onGoToNext: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
 
       expect(find.text(RelioStrings.askHint), findsNothing);
     });

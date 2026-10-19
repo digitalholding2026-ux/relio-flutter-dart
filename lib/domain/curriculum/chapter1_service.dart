@@ -29,6 +29,7 @@ import 'diagnostic_engine.dart';
 import 'exercise.dart';
 import 'hint_trajectory.dart';
 import 'rich_hint.dart';
+import 'rich_hint_adapter.dart';
 
 /// Type d'Ã©vÃ©nement Â« consultation d'indice Â».
 ///
@@ -270,8 +271,15 @@ class Chapter1Service {
   /// Retourne `null` si tous les indices ont Ã©tÃ© distribuÃ©s : la banque
   /// interdit d'afficher d'emblÃ©e toute la solution, et n'autorise pas
   /// d'inventer une aide supplÃ©mentaire.
-  ExerciseHint? nextHint(Exercise exercise, Set<int> consumedOrders) =>
-      exercise.nextHintAfter(consumedOrders);
+  /// Le prochain indice que le budget autorise encore, ou `null`.
+  ///
+  /// Le budget est la seule autorité : si l'élève a déjà consommé tout ce que
+  /// la règle lui accorde, la méthode renvoie `null` même si la banque
+  /// possède d'autres fiches. Aucune aide n'est fabriquée au-delà.
+  RichHint? nextHint(Exercise exercise, Set<int> consumedOrders) {
+    if (hintBudget(exercise, consumedOrders).isExhausted) return null;
+    return nextRichHintAfter(exercise, consumedOrders);
+  }
 
   /// Budget d'aide de l'exercice, a l'instant presente.
   ///
@@ -281,22 +289,60 @@ class Chapter1Service {
   /// enregistre une consultation, elle redemande ce budget et affiche le
   /// nouveau libelle. Cette methode est donc l'unique source du nombre affiche
   /// dans le bouton.
-  ///
-  /// DERIVATION TEMPORAIRE. Le budget est ici calcule par le nombre
-  /// d'indices de la banque, faute d'un regle de depense propre au moteur.
-  /// C'est une DERIVATION, pas une decision pedagogique : la signature de
-  /// cette methode est celle que le coeur prendra des qu'il calculera
-  /// lui-meme, et l'appel dans l'interface n'aura pas a changer.
   HintBudget hintBudget(
     Exercise exercise,
     Set<int> consumedOrders, {
     String? previousExerciseId,
   }) =>
       HintBudget(
-        maxHintsAllowed: exercise.orderedHints.length,
+        maxHintsAllowed: maxHintsFor(exercise),
         hintsConsumed: consumedOrders.length,
         previousExerciseId: previousExerciseId,
       );
+
+  /// Combien d'indices la REGLE DE BUDGET accorde a cet exercice.
+  ///
+  /// L'aide se retire progressivement dans la lecon : le premier exercice
+  /// d'une lecon peut beneficier de toutes les fiches du premier, le dernier
+  /// n'en garde qu'une. Notations :
+  ///
+  ///  - `N` : nombre d'EXERCICES OFFICIELS de la lecon. Les taches de
+  ///    verification ne comptent pas : elles ne sont pas des exercices de la
+  ///    lecon et ne recoivent pas d'indice.
+  ///  - `M` : nombre d'indices reels du PREMIER exercice de la lecon ;
+  ///  - `i` : position de l'exercice dans sa lecon, a partir de 1.
+  ///
+  /// La formule est une interpolation lineaire de `M` a 1 :
+  ///
+  ///     budget(i) = max(1, M - (i - 1) * (M - 1) / (N - 1))
+  ///
+  /// arrondie a l'entier le plus proche. Le plancher de 1 garantit qu'aucun
+  /// exercice ne devient muet, et le budget reel ne peut jamais depasser le
+  /// nombre de fiches que l'exercice possede reellement.
+  ///
+  /// Cas limite d'une lecon d'un seul exercice : l'interpolation n'a pas de
+  /// sens, on accorde le budget integral.
+  int maxHintsFor(Exercise exercise) {
+    final siblings = <Exercise>[
+      for (final candidate in Chapter1Bank.exercises)
+        if (candidate.kind == BankElementKind.exercise &&
+            candidate.lesson == exercise.lesson)
+          candidate,
+    ];
+
+    // La lecon n'existe pas dans la banque, ou n'a qu'un exercice.
+    final position = siblings.indexWhere((e) => e.id == exercise.id);
+    if (siblings.length < 2 || position < 0) return exercise.hintCount;
+
+    final n = siblings.length;
+    final m = siblings.first.hintCount;
+    final interpolated = m - (position * (m - 1) / (n - 1));
+    final rounded = interpolated.round();
+    final granted = rounded < 1 ? 1 : rounded;
+
+    // Jamais plus de fiches que l'exercice n'en possede.
+    return granted > exercise.hintCount ? exercise.hintCount : granted;
+  }
 
   // ---------------------------------------------------------------------
   // Enregistrement
@@ -314,12 +360,20 @@ class Chapter1Service {
     required Exercise exercise,
     required int hintOrder,
   }) async {
-    final hint = exercise.orderedHints.firstWhere(
-      (h) => h.order == hintOrder,
-      orElse: () => throw ArgumentError(
+    final card = richHintsOf(exercise)
+        .where((c) => c.order == hintOrder)
+        .firstOrNull;
+    if (card == null) {
+      throw ArgumentError(
         'Indice #$hintOrder inexistant pour ${exercise.id}',
-      ),
-    );
+      );
+    }
+
+    // Nature et texte d'origine lorsqu'ils existent encore : ce sont les
+    // métadonnées de la transcription validée, pas une reconstruction.
+    final legacy = exercise.orderedHints
+        .where((h) => h.order == hintOrder)
+        .firstOrNull;
 
     final now = _clock();
     final event = LearningEvent(
@@ -330,10 +384,10 @@ class Chapter1Service {
       metadata: <String, Object?>{
         'attemptKey': attemptKey,
         'exerciseId': exercise.id,
-        'hintOrder': hint.order,
-        'hintId': hint.hintId,
-        'hintKind': hint.kind,
-        'hintText': hint.text,
+        'hintOrder': card.order,
+        'hintId': card.hintId,
+        'hintKind': legacy?.kind,
+        'hintText': _plainTextOf(card),
       },
     );
 
@@ -523,11 +577,18 @@ class Chapter1Service {
   // ---------------------------------------------------------------------
 
   String? _hintId(Exercise exercise, int order) {
-    for (final hint in exercise.orderedHints) {
+    for (final hint in richHintsOf(exercise)) {
       if (hint.order == order) return hint.hintId;
     }
     return null;
   }
+
+  /// Texte plat d'une fiche : ses blocs concaténés, dans l'ordre de lecture.
+  ///
+  /// Sert uniquement à l'historique. AUCUN mot n'est ajouté ni reformulé :
+  /// l'événement enregistre ce que l'élève a réellement lu.
+  static String _plainTextOf(RichHint card) =>
+      card.blocks.map((block) => block.text).join(' ').trim();
 
   /// Notions concernÃ©es par un exercice.
   ///

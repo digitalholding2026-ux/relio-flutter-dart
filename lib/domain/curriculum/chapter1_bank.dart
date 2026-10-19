@@ -14,6 +14,7 @@ library;
 
 import 'diagnostic_case.dart';
 import 'exercise.dart';
+import 'rich_hint.dart';
 
 /// Identifiants stables des 11 exercices.
 abstract final class ExerciseIds {
@@ -89,6 +90,67 @@ class Chapter1Bank {
           kind: 'methode',
         ),
       ],
+      // FICHES DÉFINITIVES — règle 8.
+      //
+      // Transcription du document pédagogique validé, jamais une rédaction
+      // libre. Les [ExerciseHint] ci-dessus restent la trace de la version
+      // courte : elles ne sont plus ce que l'élève voit, mais elles ne sont
+      // pas effacées.
+      //
+      // Glyphes volontairement conservés tels quels : − (moins mathématique),
+      // × (multiplier), ÷ (diviser). Le formateur mathématique les reconnaît.
+      richHints: <RichHint>[
+        RichHint(
+          order: 1,
+          title: '💡 Première étape',
+          blocks: <HintBlock>[
+            TextBlock(
+              'Pour trouver le PGCD avec des soustractions, on commence '
+              'toujours par le plus grand nombre.',
+            ),
+            TextBlock(
+              'Prends le plus grand (18) et soustrais-lui le plus petit (12).',
+            ),
+            MathBlock('18 − 12 = 6'),
+            HandoffBlock(
+              'À toi : Maintenant, quels sont les deux nouveaux nombres avec '
+              'lesquels tu vas travailler ?',
+            ),
+          ],
+        ),
+        RichHint(
+          order: 2,
+          title: '💡 Deuxième étape',
+          blocks: <HintBlock>[
+            TextBlock(
+              'Tu as trouvé 6. Les deux nombres pour la suite sont donc '
+              '12 et 6.',
+            ),
+            TextBlock('Soustrais à nouveau le plus petit du plus grand.'),
+            MathBlock('12 − 6 = 6'),
+            HighlightBlock(
+              'Règle d\'or : On s\'arrête dès que le résultat de la soustraction '
+              'donne le même nombre que le plus petit.',
+            ),
+            HandoffBlock(
+              'À toi : Que remarques-tu sur les deux derniers nombres trouvés '
+              '(6 et 6) ?',
+            ),
+          ],
+        ),
+        RichHint(
+          order: 3,
+          title: '💡 Indice final : Résolution',
+          blocks: <HintBlock>[
+            TextBlock(
+              'On s\'arrête quand les deux nombres sont égaux. Ce nombre est '
+              'le PGCD.',
+            ),
+            MathBlock('PGCD(18, 12) = 6'),
+            HighlightBlock('Le PGCD est 6. Écris 6 dans ta réponse.'),
+          ],
+        ),
+      ],
       comprehension: ComprehensionQuestion(
         question: 'À quel moment t’arrêtes-tu ?',
         expectedAnswer:
@@ -123,6 +185,31 @@ class Chapter1Bank {
           value: 5,
         ),
       ],
+      richHints: <RichHint>[
+        RichHint(
+          order: 1,
+          title: '💡 Rappel de la méthode',
+          blocks: <HintBlock>[
+            TextBlock(
+              'Comme pour le premier exercice, commence par la première '
+              'soustraction entre tes deux nombres : 15 et 10.',
+            ),
+            HandoffBlock(
+              'À toi : Pose ta première soustraction et regarde bien le résultat.',
+            ),
+          ],
+        ),
+        RichHint(
+          order: 2,
+          title: '💡 Indice final : Résolution',
+          blocks: <HintBlock>[
+            TextBlock('Voici les étapes :'),
+            MathBlock('15 − 10 = 5'),
+            MathBlock('10 − 5 = 5'),
+            HighlightBlock('Les deux nombres sont égaux à 5. Le PGCD est donc 5.'),
+          ],
+        ),
+      ],
       // Suivi prévu par la banque : PGCD(16, 12) par soustractions (cas D1).
       followUpTask: ExerciseIds.ex4,
       diagnosticCaseIds: <String>['D1', 'D2'],
@@ -150,6 +237,22 @@ class Chapter1Bank {
           kind: SolutionStepKind.finalResult,
           text: 'PGCD = 7',
           value: 7,
+        ),
+      ],
+      richHints: <RichHint>[
+        RichHint(
+          order: 1,
+          title: '💡 Indice final : Résolution',
+          blocks: <HintBlock>[
+            TextBlock('Tu dois appliquer exactement la même méthode qu\'avant.'),
+            MathBlock('21 − 14 = 7'),
+            MathBlock('14 − 7 = 7'),
+            TextBlock(
+              'Pour justifier ton arrêt, tu dois dire que tu t\'arrêtes parce '
+              'que les deux nombres sont devenus égaux.',
+            ),
+            HighlightBlock('Le PGCD est 7.'),
+          ],
         ),
       ],
     ),
@@ -180,6 +283,19 @@ class Chapter1Bank {
           kind: SolutionStepKind.finalResult,
           text: 'PGCD = 4',
           value: 4,
+        ),
+      ],
+      richHints: <RichHint>[
+        RichHint(
+          order: 1,
+          title: '💡 Indice final : Résolution',
+          blocks: <HintBlock>[
+            TextBlock('Applique la méthode pas à pas :'),
+            MathBlock('20 − 12 = 8'),
+            MathBlock('12 − 8 = 4'),
+            MathBlock('8 − 4 = 4'),
+            HighlightBlock('Les deux nombres sont égaux à 4. Le PGCD est 4.'),
+          ],
         ),
       ],
     ),
@@ -229,6 +345,58 @@ class Chapter1Bank {
           kind: 'methode',
         ),
       ],
+      richHints: <RichHint>[
+        RichHint(
+          order: 1,
+          title: '💡 Comprendre la première division',
+          blocks: <HintBlock>[
+            TextBlock(
+              'On prend le plus grand nombre (30) et on le divise par le plus '
+              'petit (18).',
+            ),
+            MathBlock('30 ÷ 18 = 1'),
+            TextBlock(
+              'Pourquoi 1 ? Parce que 18 × 1 = 18. Si on faisait 18 × 2, cela '
+              'donnerait 36, ce qui est trop grand.',
+            ),
+            TextBlock('On cherche maintenant le reste de la division :'),
+            MathBlock('30 − 18 = 12'),
+            HighlightBlock('Bilan : 30 = (18 × 1) + 12'),
+            HandoffBlock(
+              'À toi : avec les nombres 18 et 12, quelle est la prochaine '
+              'division à poser ?',
+            ),
+          ],
+        ),
+        RichHint(
+          order: 2,
+          title: '💡 Comprendre la deuxième division',
+          blocks: <HintBlock>[
+            TextBlock(
+              'On reprend les deux derniers nombres : le diviseur (18) et le '
+              'reste (12).',
+            ),
+            MathBlock('18 ÷ 12 = 1'),
+            TextBlock('Le reste est :'),
+            MathBlock('18 − 12 = 6'),
+            HighlightBlock('Bilan : 18 = (12 × 1) + 6'),
+            HandoffBlock('À toi : Peux-tu continuer avec 12 et 6 ?'),
+          ],
+        ),
+        RichHint(
+          order: 3,
+          title: '💡 Indice final : Résolution',
+          blocks: <HintBlock>[
+            TextBlock('On continue encore une fois :'),
+            MathBlock('12 ÷ 6 = 2'),
+            MathBlock('12 − (6 × 2) = 0'),
+            TextBlock('Le reste est 0. L\'algorithme s\'arrête.'),
+            HighlightBlock(
+              'Le dernier reste non nul est 6. Donc PGCD(30, 18) = 6.',
+            ),
+          ],
+        ),
+      ],
       comprehension: ComprehensionQuestion(
         question: 'Quand l’algorithme s’arrête-t-il ?',
         expectedAnswer:
@@ -265,6 +433,34 @@ class Chapter1Bank {
           kind: SolutionStepKind.finalResult,
           text: 'PGCD = 6',
           value: 6,
+        ),
+      ],
+      richHints: <RichHint>[
+        RichHint(
+          order: 1,
+          title: '💡 Rappel de la méthode',
+          blocks: <HintBlock>[
+            TextBlock(
+              'Commence par diviser le plus grand par le plus petit, et note le '
+              'reste.',
+            ),
+            MathBlock('42 ÷ 30 = 1'),
+            TextBlock('Trouve le reste en faisant 42 − 30.'),
+            HandoffBlock(
+              'À toi : Quel est le bilan de cette première division ?',
+            ),
+          ],
+        ),
+        RichHint(
+          order: 2,
+          title: '💡 Indice final : Résolution',
+          blocks: <HintBlock>[
+            TextBlock('Voici les étapes complètes :'),
+            MathBlock('42 = 30 × 1 + 12'),
+            MathBlock('30 = 12 × 2 + 6'),
+            MathBlock('12 = 6 × 2 + 0'),
+            HighlightBlock('Le dernier reste non nul est 6. PGCD = 6.'),
+          ],
         ),
       ],
       diagnosticCaseIds: <String>['D3', 'D4'],
@@ -308,6 +504,24 @@ class Chapter1Bank {
           text:
               'L’algorithme d’Euclide utilise les divisions euclidiennes et '
               'peut réduire le nombre d’étapes.',
+        ),
+      ],
+      richHints: <RichHint>[
+        RichHint(
+          order: 1,
+          title: '💡 Indice final : Résolution',
+          blocks: <HintBlock>[
+            TextBlock('Voici la démarche pour 48 et 18 :'),
+            MathBlock('48 = 18 × 2 + 12'),
+            MathBlock('18 = 12 × 1 + 6'),
+            MathBlock('12 = 6 × 2 + 0'),
+            HighlightBlock('Le PGCD est 6.'),
+            TextBlock(
+              'Pour la comparaison : l\'algorithme d\'Euclide utilise les '
+              'divisions euclidiennes, ce qui permet d\'aller plus vite que les '
+              'soustractions successives.',
+            ),
+          ],
         ),
       ],
       // Élément de comparaison accepté par la banque, à contrôler aussi

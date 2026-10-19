@@ -8,7 +8,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:relio/presentation/branding/relio_mark.dart';
+
 import 'package:relio/presentation/screens/onboarding/closing_page.dart';
 import 'package:relio/presentation/screens/onboarding/name_page.dart';
 import 'package:relio/presentation/strings/relio_strings.dart';
@@ -53,7 +53,7 @@ void main() {
       final ButtonStyle? style = bouton.style;
       expect(
         style?.backgroundColor?.resolve(<WidgetState>{WidgetState.disabled}),
-        RelioBrand.wordmark.withValues(alpha: 0.4),
+        RelioPalette.standard().primary.withValues(alpha: 0.4),
       );
       expect(
         style?.foregroundColor?.resolve(<WidgetState>{WidgetState.disabled}),

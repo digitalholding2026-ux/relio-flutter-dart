@@ -170,7 +170,11 @@ void main() {
         final rich = richHintsOf(exercise);
         if (rich.isEmpty) continue;
         expect(rich.last.isFinal, isTrue, reason: exercise.id);
-        expect(rich.first.isFinal, isFalse, reason: exercise.id);
+        // Une fiche unique est à la fois la première et la dernière : il n'y a
+        // alors aucune fiche « précédente » à ne pas marquer finale.
+        if (rich.length > 1) {
+          expect(rich.first.isFinal, isFalse, reason: exercise.id);
+        }
       }
     });
 
@@ -184,8 +188,11 @@ void main() {
     });
 
     test('un exercice sans indice ne produit aucune fiche', () {
+      // `hintCount` et non `orderedHints` : un exercice peut n'avoir aucune
+      // fiche définitive tout en gardant des indices hérités, et l'inverse
+      // aussi. C'est le nombre RÉEL d'indices qui décide.
       final exercise = Chapter1Bank.exercises
-          .firstWhere((e) => e.orderedHints.isEmpty, orElse: () => const Exercise(
+          .firstWhere((e) => e.hintCount == 0, orElse: () => const Exercise(
                 id: 'vide',
                 lesson: ArithmeticLesson.lesson1Subtractions,
                 statement: '',

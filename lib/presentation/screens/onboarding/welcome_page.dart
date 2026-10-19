@@ -16,7 +16,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../../branding/relio_mark.dart';
+
 import '../../strings/relio_strings.dart';
 import '../../theme/relio_theme.dart';
 import 'entry_kit.dart';
@@ -142,7 +142,7 @@ class _WelcomePageState extends State<WelcomePage>
                     RelioStrings.welcomeTitle,
                     textAlign: TextAlign.center,
                     style: RelioType.display(palette).copyWith(
-                      color: RelioBrand.wordmark,
+                      color: palette.primary,
                     ),
                   ),
                 ),

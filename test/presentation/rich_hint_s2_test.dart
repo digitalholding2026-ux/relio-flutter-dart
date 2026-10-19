@@ -138,7 +138,7 @@ Exercise _exerciseWithHintCount(int count) {
 /// Le libellé du bouton est relu a chaque etape : c'est la suite reelle des
 /// libelles attendue, du premier au dernier.
 Future<void> _consumeWholeBudget(WidgetTester tester, Exercise exercise) async {
-  final total = exercise.orderedHints.length;
+  final total = exercise.hintCount;
   for (var i = 0; i < total; i++) {
     final label = switch (i) {
       0 => RelioStrings.askHint,
@@ -335,28 +335,22 @@ void main() {
       expect(find.text(exercise.statement), findsNothing);
     });
 
-    testWidgets('aucune fiche inventée si le précédent n’a aucun indice',
+    testWidgets('aucune relecture proposée quand l’exercice n’a pas de précédent',
         (tester) async {
-      // CONTRAINTE DE LA BANQUE, À NE PAS MASQUER.
+      // GARANTIE DU MOTEUR, À NE PAS MASQUER.
       //
-      // L'exercice précédent de l'exercice 5 est l'exercice 4, qui ne porte
-      // AUCUN indice. Une fiche empilee y serait donc vide : il n'y a rien à
-      // relire, et surtout rien à inventer. Aucune fiche ne doit s'ouvrir.
-      final exercise = _exWithReviewablePrevious;
-      final previous = V1ScreenRules.previousBefore(exercise)!;
-      expect(previous.orderedHints, isEmpty);
+      // Une fois le budget epuise, le bouton propose « Revoir l'exercice N »
+      // seulement si un exercice precedent existe. Le premier exercice d'une
+      // lecon n'en a pas : le bouton doit alors DISPARAITRE. Le moteur ne
+      // fabrique ni une cible de retour, ni une fiche pour la remplir.
+      final first = V1ScreenRules.exercises.first;
+      expect(V1ScreenRules.previousBefore(first), isNull);
 
-      final drafts = <String, ExerciseDraft>{};
-      await pumpExercise(tester, exercise, drafts);
-      await _consumeWholeBudget(tester, exercise);
+      await pumpExercise(tester, first, <String, ExerciseDraft>{});
+      await _consumeWholeBudget(tester, first);
 
-      final previousNumber = V1ScreenRules.positionOf(previous.id)!;
-      await tester.tap(find.text('Revoir l’exercice $previousNumber'));
-      await tester.pumpAndSettle();
-
-      // L'ecran precedent s'affiche bien…
-      expect(find.text(previous.statement), findsOneWidget);
-      // …mais aucune fiche n'est ouverte : on ne fabrique pas de contenu.
+      final previousNumber = 1;
+      expect(find.text('Revoir l’exercice $previousNumber'), findsNothing);
       expect(find.text(RelioStrings.richHintUnderstood), findsNothing);
     });
 
@@ -379,7 +373,7 @@ void main() {
       // Relecturer n'ecrit RIEN : ce sont des fiches deja consommees. Le
       // compteur ne doit pas bouger, sinon le budget de l'exercice consulte
       // serait corrige sans que l'eleve l'ait demande.
-      expect(events, hasLength(exercise.orderedHints.length));
+      expect(events, hasLength(exercise.hintCount));
     });
   });
 }

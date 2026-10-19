@@ -127,6 +127,28 @@ class RichHint {
   /// Vrai si ce hint est le dernier que le budget autorise.
   final bool isFinal;
 
+  /// Les blocs, en texte simple : la fiche réduite à son contenu.
+  ///
+  /// N'ajoute aucun mot et n'en retire aucun — c'est la concaténation des
+  /// blocs dans l'ordre de lecture. Sert à l'historique et aux rendus de
+  /// résumé ; n'est jamais la source d'un affichage enrichi, pour lequel la
+  /// liste de blocs reste seule faisant foi.
+  String get plainText =>
+      blocks.map((block) => block.text).join(' ').trim();
+
+  /// Même fiche, avec un [isFinal] différent.
+  ///
+  /// `isFinal` n'est JAMAIS saisi dans la banque : il se déduit du budget, qui
+  /// ne dépend pas du contenu mais de la position dans la leçon. La copie
+  /// permet à l'adaptateur de l'appliquer sans que la banque ait à le
+  /// deviner — et sans réécrire un seul mot du contenu.
+  RichHint withIsFinal(bool value) => RichHint(
+        order: order,
+        title: title,
+        blocks: blocks,
+        isFinal: value,
+      );
+
   /// Identifiant stable, dérivé du rang.
   ///
   /// Même convention que [ExerciseHint.hintId] (`h<rang>`) : les deux

@@ -11,6 +11,8 @@
 library;
 
 import 'exercise.dart';
+import 'rich_hint.dart';
+import 'rich_hint_adapter.dart';
 
 /// Comment s'est terminée une tentative.
 ///
@@ -88,8 +90,8 @@ class HintTrajectory {
   /// Prochain indice disponible selon l'ordre de la banque.
   ///
   /// `null` si tous les indices ont déjà été distribués.
-  ExerciseHint? nextAvailable(Exercise exercise) {
-    return exercise.nextHintAfter(consumedOrders);
+  RichHint? nextAvailable(Exercise exercise) {
+    return nextRichHintAfter(exercise, consumedOrders);
   }
 
   /// Classifie une tentative à partir des faits observés.

@@ -146,7 +146,7 @@ class EntryButton extends StatelessWidget {
     return _PressScale(
       enabled: enabled,
       child: FilledButton(
-        style: _style(),
+        style: _style(RelioPaletteScope.of(context)),
         onPressed: enabled ? onPressed : null,
         child: loading
             ? const SizedBox.square(
@@ -161,7 +161,7 @@ class EntryButton extends StatelessWidget {
     );
   }
 
-  static ButtonStyle _style() {
+  static ButtonStyle _style(RelioPalette palette) {
     final ButtonStyle base = FilledButton.styleFrom(
       minimumSize:
           const Size.fromHeight(RelioSizes.primaryButtonHeight),
@@ -181,12 +181,12 @@ class EntryButton extends StatelessWidget {
     return base.copyWith(
       backgroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {
-          return RelioBrand.wordmark.withValues(alpha: 0.4);
+          return palette.primary.withValues(alpha: 0.4);
         }
         if (states.contains(WidgetState.pressed)) {
-          return RelioBrand.wordmarkPressed;
+          return palette.primaryPressed;
         }
-        return RelioBrand.wordmark;
+        return palette.primary;
       }),
       foregroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {

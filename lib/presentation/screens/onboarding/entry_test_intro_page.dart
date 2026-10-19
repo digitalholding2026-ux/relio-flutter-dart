@@ -15,7 +15,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../../branding/relio_mark.dart';
+
 import '../../strings/relio_strings.dart';
 import '../../theme/relio_theme.dart';
 import 'entry_kit.dart';
@@ -140,7 +140,7 @@ class _EntryTestIntroPageState extends State<EntryTestIntroPage>
                           RelioStrings.entryIntroFinal,
                           textAlign: TextAlign.left,
                           style: RelioType.bodyStrong(palette).copyWith(
-                            color: RelioBrand.wordmark,
+                            color: palette.primary,
                           ),
                         ),
                       ),

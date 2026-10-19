@@ -435,9 +435,12 @@ void main() {
     test('le service ne propose rien de plus que la banque', () {
       final ex1 = Chapter1Bank.findExercise(ExerciseIds.ex1)!;
 
+      // L'exercice 1 ouvre la leçon 1 : la règle de budget lui accorde ses
+      // 3 fiches, celles qu'il possède. La progression s'arrête donc là.
       expect(service.nextHint(ex1, <int>{})!.order, 1);
       expect(service.nextHint(ex1, <int>{1})!.order, 2);
-      expect(service.nextHint(ex1, <int>{1, 2}), isNull,
+      expect(service.nextHint(ex1, <int>{1, 2})!.order, 3);
+      expect(service.nextHint(ex1, <int>{1, 2, 3}), isNull,
           reason: 'aucune aide inventee au-dela du document');
     });
 

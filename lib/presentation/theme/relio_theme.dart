@@ -48,9 +48,9 @@ class RelioPalette {
 
   /// Palette de référence.
   factory RelioPalette.standard() => const RelioPalette._(
-        primary: Color(0xFF0E1821),
+        primary: Color(0xFF1F3A6E),
         primaryContainer: Color(0xFFE7E8E9),
-        brand: Color(0xFFFE7904),
+        brand: Color(0xFFF56207),
         hintText: Color(0xFFB45309),
         hintBackground: Color(0xFFFEF3C7),
         successText: Color(0xFF15803D),
@@ -76,9 +76,9 @@ class RelioPalette {
   /// principal et les couleurs sémantiques sont déjà au-dessus d'AA et ne
   /// changent pas — les foncer davantage dégraderait la lecture.
   factory RelioPalette.contrast() => const RelioPalette._(
-        primary: Color(0xFF060A10),
+        primary: Color(0xFF12264C),
         primaryContainer: Color(0xFFD4D6D9),
-        brand: Color(0xFFC45D03),
+        brand: Color(0xFFB34500),
         hintText: Color(0xFF7C3D06),
         hintBackground: Color(0xFFFCE9B6),
         successText: Color(0xFF14532D),
@@ -103,16 +103,28 @@ class RelioPalette {
   factory RelioPalette.of({required bool highContrast}) =>
       highContrast ? RelioPalette.contrast() : RelioPalette.standard();
 
-  /// Navy principal : barre de navigation active, bouton principal, focus.
+  /// Indigo principal : barre de navigation active, bouton principal, focus.
+  ///
+  /// COULEUR D'INTERFACE, PAS COULEUR DE MARQUE. Les couleurs du logo vivent
+  /// dans `RelioBrand` et n'ont pas à être alignées sur celles-ci : l'écran
+  /// et la marque sont deux usages distincts du même nom de couleur.
   final Color primary;
+
+  /// Variante pressée de [primary] : même teinte, simplement assombrie.
+  ///
+  /// DÉRIVÉE, jamais saisie. Un second bleu écrit à la main finirait par
+  /// diverger de celui qu'il doit décliner.
+  Color get primaryPressed =>
+      Color.lerp(primary, const Color(0xFF000000), 0.12)!;
 
   /// Fond des zones sélectionnées.
   final Color primaryContainer;
 
-  /// Orange de marque.
+  /// Orange d'accentuation.
   ///
-  /// RÉSERVÉ au mark du logo. Jamais utilisé comme couleur sémantique : il ne
-  /// doit jamais pouvoir être confondu avec un état de l'interface.
+  /// Même règle que [primary] : c'est un jeton d'INTERFACE. Le mark du logo
+  /// garde sa propre couleur, mesurée sur le visuel livré et figée par la
+  /// règle 9. Ne jamais confondre les deux usages.
   final Color brand;
 
   /// Texte des indices, sur fond ambre.

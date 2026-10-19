@@ -9,6 +9,7 @@
 library;
 
 import 'answer_normalization.dart';
+import 'rich_hint.dart';
 
 /// Leçon du chapitre 1 « Arithmétique ».
 ///
@@ -321,6 +322,7 @@ class Exercise {
     this.kind = BankElementKind.exercise,
     this.expectedSteps = const <SolutionStep>[],
     this.hints = const <ExerciseHint>[],
+    this.richHints = const <RichHint>[],
     this.comprehension,
     this.followUpTask,
     this.diagnosticCaseIds = const <String>[],
@@ -346,6 +348,32 @@ class Exercise {
 
   /// Indices disponibles, par ordre croissant de [ExerciseHint.order].
   final List<ExerciseHint> hints;
+
+  /// Fiches d'aide DÉFINITIVES, par rang croissant.
+  ///
+  /// Quand cette liste est renseignée, elle fait autorité : le nombre
+  /// d'indices ouvrables, le contenu affiché et le budget en découlent. Les
+  /// [hints] héritées ne sont alors plus qu'une trace de la transcription
+  /// d'origine, conservée telle quelle pour l'historique.
+  ///
+  /// Elle est vide tant que le contenu pédagogique définitif n'a pas été
+  /// fourni (règle 8) : les exercices sans fiches restent pilotés par [hints].
+  final List<RichHint> richHints;
+
+  /// Fiches définitives, triées par rang croissant.
+  List<RichHint> get orderedRichHints {
+    final sorted = List<RichHint>.of(richHints);
+    sorted.sort((a, b) => a.order.compareTo(b.order));
+    return sorted;
+  }
+
+  /// Combien d'indices l'élève peut réellement ouvrir sur cet exercice.
+  ///
+  /// Les fiches définitives priment : si la banque en fournit, elles seules
+  /// comptent. C'est CETTE valeur que la règle de budget consomme comme «
+  /// nombre d'indices réels de l'exercice ».
+  int get hintCount =>
+      orderedRichHints.isNotEmpty ? orderedRichHints.length : hints.length;
 
   /// Question de compréhension éventuelle.
   final ComprehensionQuestion? comprehension;

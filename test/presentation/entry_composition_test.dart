@@ -154,7 +154,7 @@ void main() {
           .style;
       expect(
         style?.backgroundColor?.resolve(<WidgetState>{}),
-        RelioBrand.wordmark,
+        RelioPalette.standard().primary,
       );
       expect(
         style?.side?.resolve(<WidgetState>{}),
@@ -176,7 +176,7 @@ void main() {
           .style;
       expect(
         style?.backgroundColor?.resolve(<WidgetState>{WidgetState.disabled}),
-        RelioBrand.wordmark.withValues(alpha: 0.4),
+        RelioPalette.standard().primary.withValues(alpha: 0.4),
       );
       expect(
         style?.foregroundColor?.resolve(<WidgetState>{WidgetState.disabled}),

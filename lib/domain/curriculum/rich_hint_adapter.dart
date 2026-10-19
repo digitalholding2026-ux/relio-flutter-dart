@@ -2,9 +2,15 @@
 ///
 /// RÈGLE 8 — AUCUN CONTENU INVENTÉ, ICI NI AILLEURS.
 ///
-/// Les fiches riches définitives sont rédigées par le cœur à partir d'un
-/// document pédagogique validé. Ce fichier ne fait qu'une chose : traduire
-/// l'existant, à l'identique, vers la nouvelle forme d'affichage.
+/// Ce fichier sert deux fonctions distinctes, et n'en invente aucune :
+///
+///  1. il lit les fiches DÉFINITIVES que la banque a désormais déclarées
+///     ([Exercise.richHints]) et les rend telles quelles ;
+///  2. pour les exercices qui n'en ont pas encore, il traduit l'existant,
+///     à l'identique, vers la nouvelle forme d'affichage.
+///
+/// La deuxième fonction est transitoire : elle disparaîtra quand les fiches
+/// définitives couvriront toute la banque.
 ///
 /// Il ne reformule aucun mot, n'ajoute aucun texte de repli, ne complète
 /// aucune fiche. Une [ExerciseHint] dont le texte est vide produit une fiche
@@ -84,18 +90,43 @@ bool _isDigit(String c) {
   return u >= 0x30 && u <= 0x39;
 }
 
-/// Les fiches d'un exercice, dérivées de ses indices existants.
+/// Les fiches d'un exercice, dans l'ordre de la banque.
 ///
-/// [consumedOrders] restreint la dérivation aux indices déjà ouverts, dans
-/// l'ordre de la banque.
-List<RichHint> richHintsOf(Exercise exercise, {Set<int> consumedOrders = const <int>{}}) {
-  final total = exercise.orderedHints.length;
+/// Les fiches DÉFINITIVES de l'exercice ([Exercise.richHints]) priment : elles
+/// sont rendues telles quelles, sans dérivation. On ne retombe sur la
+/// dérivation mécanique que pour les exercices qui n'en possèdent pas encore —
+/// c'est l'état transitoire décrit par la règle 8.
+///
+/// [consumedOrders] restreint le résultat aux indices déjà ouverts.
+///
+/// [maxHintsAllowed] est le BUDGET : c'est lui qui désigne la dernière fiche,
+/// jamais le contenu. À défaut, la liste entière est réputée accordable.
+List<RichHint> richHintsOf(
+  Exercise exercise, {
+  Set<int> consumedOrders = const <int>{},
+  int? maxHintsAllowed,
+}) {
+  final definitive = exercise.orderedRichHints;
+  final List<RichHint> source = definitive.isNotEmpty
+      ? definitive
+      : <RichHint>[for (final hint in exercise.orderedHints) hint.asRichHint()];
+
+  final budget = maxHintsAllowed ?? source.length;
+
   return <RichHint>[
-    for (final hint in exercise.orderedHints)
+    for (final hint in source)
       if (consumedOrders.isEmpty || consumedOrders.contains(hint.order))
-        hint.asRichHint(
-          // L'indice est « final » quand il est le dernier du budget.
-          isFinal: hint.order == total,
-        ),
+        hint.withIsFinal(hint.order == budget),
   ];
+}
+
+/// Le prochain indice non consommé, dans l'ordre de la banque.
+///
+/// `null` si l'exercice n'a plus rien à distribuer : le moteur ne fabrique
+/// jamais une aide de remplacement.
+RichHint? nextRichHintAfter(Exercise exercise, Set<int> consumedOrders) {
+  for (final hint in richHintsOf(exercise)) {
+    if (!consumedOrders.contains(hint.order)) return hint;
+  }
+  return null;
 }

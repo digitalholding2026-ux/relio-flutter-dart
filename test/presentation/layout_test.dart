@@ -99,14 +99,16 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('la barre d’action reste visible avec deux indices',
+    testWidgets('la barre d’action reste visible après les trois indices',
         (tester) async {
       await openOnSmallPhone(tester);
 
-      await askHintAndClose(tester);
-      await askHintAndClose(tester, label: 'Indice final');
+      final total = 3;
+      for (var click = 0; click < total; click++) {
+        await askHintAndClose(tester, label: hintLabelForClick(click, total));
+      }
 
-      // Deux indices + enonce : la barre d'action reste en place.
+      // Trois indices + enonce : la barre d'action reste en place.
       expect(find.byType(AnswerField), findsOneWidget);
       expect(find.text(RelioStrings.validate), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -207,9 +209,9 @@ void main() {
   group('Thème', () {
     test('couleurs conformes à la spécification', () {
       final palette = RelioPalette.standard();
-      expect(palette.primary.toARGB32(), 0xFF0E1821);
+      expect(palette.primary.toARGB32(), 0xFF1F3A6E);
       expect(palette.primaryContainer.toARGB32(), 0xFFE7E8E9);
-      expect(palette.brand.toARGB32(), 0xFFFE7904);
+      expect(palette.brand.toARGB32(), 0xFFF56207);
       expect(palette.hintText.toARGB32(), 0xFFB45309);
       expect(palette.hintBackground.toARGB32(), 0xFFFEF3C7);
       expect(palette.successText.toARGB32(), 0xFF15803D);

@@ -44,7 +44,7 @@ class ExerciseDraft {
 
   String answer = '';
   final Set<int> consumedHintOrders = <int>{};
-  final List<ExerciseHint> shownHints = <ExerciseHint>[];
+  final List<RichHint> shownHints = <RichHint>[];
 
   /// Panneau de retour affiche, conserve pour la session.
   ///
@@ -286,7 +286,12 @@ class _ExercisePageState extends State<ExercisePage> {
 
     await showRichHintSheet(
       context,
-      hint: hint.asRichHint(
+      // La fiche affichee est celle que le moteur a servie : on ne se contente
+      // pas de recomposer un isFinal, on ne touche pas a son contenu.
+      hint: RichHint(
+        order: hint.order,
+        title: hint.title,
+        blocks: hint.blocks,
         isFinal: budgetBefore.remaining == 1,
       ),
       // La consommation est notifiee AU MOMENT DE L'AFFICHAGE, pas a la
@@ -295,7 +300,7 @@ class _ExercisePageState extends State<ExercisePage> {
       // L'enregistrement passe par le service : l'interface ne decremente donc
       // jamais le budget elle-meme, elle redemande ensuite le budget au
       // moteur et affiche le libelle qu'il renvoie.
-      onShown: () => _recordHintConsumed(hint.order),
+      onShown: () => _recordHintConsumed(hint),
     );
   }
 
@@ -303,12 +308,12 @@ class _ExercisePageState extends State<ExercisePage> {
   ///
   /// L'ecran ne fait qu'appeler le moteur et redemander le budget. Aucune
   /// valeur n'est comptee ici.
-  Future<void> _recordHintConsumed(int hintOrder) async {
+  Future<void> _recordHintConsumed(RichHint hint) async {
     try {
       await widget.service.recordHintRequested(
         attemptKey: _draft.answerKey,
         exercise: widget.exercise,
-        hintOrder: hintOrder,
+        hintOrder: hint.order,
       );
     } catch (_) {
       // L'historique est une garantie, pas un confort : un echec
@@ -318,11 +323,8 @@ class _ExercisePageState extends State<ExercisePage> {
 
     if (!mounted) return;
     setState(() {
-      _draft.consumedHintOrders.add(hintOrder);
-      final hint = widget.exercise.orderedHints
-          .where((h) => h.order == hintOrder)
-          .firstOrNull;
-      if (hint != null && !_draft.shownHints.contains(hint)) {
+      _draft.consumedHintOrders.add(hint.order);
+      if (!_draft.shownHints.contains(hint)) {
         _draft.shownHints.add(hint);
       }
     });

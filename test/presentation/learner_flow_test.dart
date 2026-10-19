@@ -167,15 +167,15 @@ void main() {
       expect(find.text(RelioStrings.askHint), findsOneWidget);
     });
 
-    testWidgets('absent sur les 9 exercices sans indice', (tester) async {
+    testWidgets('absent sur les exercices sans aucune fiche', (tester) async {
       final harness = await pumpApp(tester);
 
-      // Exercice 2 : pas d'indice.
+      // Leçon 3 : aucun indice n'a été rédigé pour ces exercices.
       await tester.pumpWidget(MaterialApp(
         theme: RelioTheme.build(),
         home: ExercisePage(
           service: harness.service,
-          exercise: Chapter1Bank.findExercise(ExerciseIds.ex2)!,
+          exercise: Chapter1Bank.findExercise(ExerciseIds.ex8)!,
           drafts: <String, ExerciseDraft>{},
           onExit: () {},
           onGoToNext: () {},
@@ -189,27 +189,26 @@ void main() {
   });
 
   group('S2 — Indices', () {
-    testWidgets('s’affichent dans l’ordre 1 puis 2, puis le bouton disparaît',
+    testWidgets('s’affichent dans l’ordre 1, 2 puis 3, puis le bouton disparaît',
         (tester) async {
       await openExercise(tester, 0);
 
-      // L'exercice 1 porte DEUX indices : c'est le budget de reference.
-      const total = 2;
+      // L'exercice 1 ouvre la leçon 1 et porte TROIS fiches : c'est le budget
+      // de reference. Le libellé du bouton suit le budget restant, donc
+      // l'ordre des clics est impose par la regle et non par le test.
+      final total = 3;
 
-      // Premier indice : la zone d'indices s'alimente, le bouton reste.
-      await askHintAndClose(tester);
-      expect(find.text(RelioStrings.hintLabel(1)), findsOneWidget);
-      expect(find.text('Indice final'), findsOneWidget);
+      for (var click = 0; click < total; click++) {
+        await askHintAndClose(tester, label: hintLabelForClick(click, total));
+        expect(find.text(RelioStrings.hintLabel(click + 1)), findsOneWidget);
+      }
 
-      // Second indice : budget épuisé, le bouton disparaît. L'exercice 1 est
-      // le premier du chapitre : il n'a pas de précédent, donc aucune relecture
-      // n'est proposée.
-      await askHintAndClose(tester, label: 'Indice final');
-      expect(find.text(RelioStrings.hintLabel(2)), findsOneWidget);
+      // Budget epuise : le bouton disparait. L'exercice 1 est le premier du
+      // chapitre, donc aucune relecture n'est proposee.
       expect(find.byType(HintArea), findsOneWidget);
       expect(find.text(RelioStrings.askHint), findsNothing);
+      expect(find.text('Indice suivant'), findsNothing);
       expect(find.text('Indice final'), findsNothing);
-      expect(total, 2);
     });
 
     testWidgets('ne modifie ni la saisie ni le focus', (tester) async {
@@ -228,11 +227,14 @@ void main() {
     testWidgets('les indices précédents restent visibles', (tester) async {
       await openExercise(tester, 0);
 
-      await askHintAndClose(tester);
-      await askHintAndClose(tester, label: 'Indice final');
+      final total = 3;
+      for (var click = 0; click < total; click++) {
+        await askHintAndClose(tester, label: hintLabelForClick(click, total));
+      }
 
       expect(find.text(RelioStrings.hintLabel(1)), findsOneWidget);
       expect(find.text(RelioStrings.hintLabel(2)), findsOneWidget);
+      expect(find.text(RelioStrings.hintLabel(3)), findsOneWidget);
     });
   });
 

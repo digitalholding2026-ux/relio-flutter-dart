@@ -6,7 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../../domain/curriculum/exercise.dart';
+import '../../domain/curriculum/rich_hint.dart';
 import '../strings/relio_strings.dart';
 import '../theme/relio_theme.dart';
 import 'math_text.dart';
@@ -15,10 +15,10 @@ import 'math_text.dart';
 class HintArea extends StatelessWidget {
   const HintArea({super.key, required this.hints});
 
-  /// Indices consignes, dans l'ordre de consultation.
+  /// Fiches consignes, dans l'ordre de consultation.
   ///
   /// Vide a l'ouverture : la zone ne reserve aucun espace.
-  final List<ExerciseHint> hints;
+  final List<RichHint> hints;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +39,7 @@ class HintArea extends StatelessWidget {
 class _HintTile extends StatelessWidget {
   const _HintTile({required this.hint});
 
-  final ExerciseHint hint;
+  final RichHint hint;
 
   @override
   Widget build(BuildContext context) {
@@ -65,8 +65,14 @@ class _HintTile extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
+          // Rappel COMPACT, pas le contenu de la fiche.
+          //
+          // Le contenu entier appartient au panneau. Le recopier ici
+          // empilerait les mots dans l'ecran de l'eleve, allongerait la
+          // colonne au point de repousser le panneau de correction hors du
+          // viewport, et n'apporterait rien : l'eleve vient de le lire.
           MathText(
-            text: hint.text,
+            text: hint.title,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w400,
