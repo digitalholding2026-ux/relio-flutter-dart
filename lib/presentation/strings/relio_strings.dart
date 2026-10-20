@@ -146,23 +146,51 @@ abstract final class RelioStrings {
   static const String tabProfile = 'Profil';
 
   // ---------------------------------------------------------------------
-  // Accueil
+  // Accueil — tableau de bord
+  //
+  // L'accueil ne donne aucun résultat chiffré : il nomme ce qui est
+  // disponible et laisse les statuts de leçon à l'état de présentation.
   // ---------------------------------------------------------------------
 
   /// En-tête d'accueil. Le prénom est ajouté séparément s'il est renseigné.
   static const String greeting = 'Bonjour';
 
-  /// Titre de la carte principale.
-  static const String startHereTitle = 'Commence ici';
+  /// Message de Relio, dans la carte sous l'en-tête.
+  static const String relioMessage = 'Prêt à avancer en maths aujourd’hui ?';
 
-  /// Sous-titre de la carte principale.
-  static const String startHereSubtitle = 'Chapitre 1 — Arithmétique';
+  /// Étiquette de la carte principale.
+  static const String resumeLabel = 'REPRENDRE';
 
-  /// Titre de la carte secondaire.
-  static const String programTitle = 'Programme de 3e';
+  /// Sous-texte de la carte principale : position dans le chapitre.
+  static String resumeProgress(int current, int total) =>
+      'Exercice $current sur $total';
 
-  /// Sous-titre de la carte secondaire.
-  static const String programSubtitle = 'Voir les chapitres';
+  /// Libellé du bouton de la carte principale.
+  static const String resumeContinue = 'Continuer';
+
+  /// Action rapide — titre.
+  static const String quickFiveTitle = 'J’ai 5 minutes';
+
+  /// Action rapide — sous-titre.
+  static const String quickFiveSubtitle = 'Révision éclair';
+
+  /// Action rapide — titre.
+  static const String quickWarmupTitle = 'Échauffement';
+
+  /// Action rapide — sous-titre.
+  static const String quickWarmupSubtitle = 'Question du jour';
+
+  /// Titre de la section qui liste les leçons du chapitre.
+  static const String programSectionTitle = 'Ton programme';
+
+  /// Statut d'une leçon commencée, non terminée.
+  static const String statusInProgress = 'En cours';
+
+  /// Statut d'une leçon maîtrisée.
+  static const String statusMastered = 'Maîtrisé';
+
+  /// Statut d'une leçon à reprendre.
+  static const String statusToReview = 'À revoir';
 
   // ---------------------------------------------------------------------
   // Apprendre

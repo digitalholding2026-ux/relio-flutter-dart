@@ -38,8 +38,10 @@ class RelioPalette {
     required this.textSecondary,
     required this.outline,
     required this.background,
+    required this.homeBackground,
     required this.surface,
     required this.shadow,
+    required this.onPrimary,
     required this.hintMathBackground,
     required this.hintHighlightBackground,
     required this.hintHighlightAccent,
@@ -61,8 +63,10 @@ class RelioPalette {
         textSecondary: Color(0xFF4B5563),
         outline: Color(0xFFE4E7EC),
         background: Color(0xFFFAFBFC),
+        homeBackground: Color(0xFFEEF2FA),
         surface: Color(0xFFFFFFFF),
         shadow: Color(0x0F000000),
+        onPrimary: Color(0xFFFFFFFF),
         hintMathBackground: Color(0xFFF3F4F6),
         hintHighlightBackground: Color(0xFFFEF0E6),
         hintHighlightAccent: Color(0xFFF56207),
@@ -89,8 +93,10 @@ class RelioPalette {
         textSecondary: Color(0xFF1F2937),
         outline: Color(0xFF6B7280),
         background: Color(0xFFFFFFFF),
+        homeBackground: Color(0xFFFFFFFF),
         surface: Color(0xFFFFFFFF),
         shadow: Color(0x1F000000),
+        onPrimary: Color(0xFFFFFFFF),
         // Palette a contraste renforce : les fonds sont eclaircis, les textes
         // fonces. Meme separation de sens, contraste superieur.
         hintMathBackground: Color(0xFFEBEEF2),
@@ -157,11 +163,25 @@ class RelioPalette {
   /// Fond général des écrans.
   final Color background;
 
+  /// Fond de l'écran d'accueil : indigo très pâle, pour détacher les cartes
+  /// blanches du fond sans les cerner d'un trait.
+  ///
+  /// Jeton DISTINCT de [background] : l'accueil est le seul écran à porter une
+  /// teinte, et cette teinte doit rester réglable en un point. En contraste
+  /// renforcé, le fond redevient blanc — c'est la lisibilité qui prime.
+  final Color homeBackground;
+
   /// Fond des cartes et des barres.
   final Color surface;
 
   /// Ombre portée des cartes, en alpha.
   final Color shadow;
+
+  /// Texte et icônes posés sur [primary].
+  ///
+  /// Jeton plutôt que `Colors.white` dans les écrans : le jour où le contraste
+  /// renforcé voudra un fond d'action différent, un seul point change.
+  final Color onPrimary;
 
   /// Fond de l'encadre d'un bloc mathematique.
   final Color hintMathBackground;
@@ -283,6 +303,18 @@ abstract final class RelioSizes {
   /// Épaisseur de bordure des cartes.
   static const double cardBorderWidth = 1;
 
+  /// Épaisseur de la bordure orange de la carte « Reprendre ».
+  ///
+  /// Plus épaisse que celle des cartes ordinaires : c'est ce trait qui désigne
+  /// la carte principale, sans ajouter d'ombre supplémentaire.
+  static const double heroBorderWidth = 1.5;
+
+  /// Diamètre de la pastille d'état d'une leçon.
+  static const double statusDot = 8;
+
+  /// Hauteur de la barre de progression d'une leçon.
+  static const double lessonBarHeight = 6;
+
   /// Épaisseur de trait des icônes de la barre basse.
   static const double iconStrokeWidth = 1.75;
 }
@@ -309,6 +341,50 @@ abstract final class RelioType {
         height: 1.25,
         fontFamily: RelioTheme.fontFamily,
         color: p.textPrimary,
+      );
+
+  /// TitleBold — 22 / Bold.
+  ///
+  /// Réservé aux titres qui doivent porter la hiérarchie à eux seuls : titre
+  /// de la carte « Reprendre », où aucun autre signal ne désigne l'élément
+  /// principal de l'écran.
+  static TextStyle titleBold(RelioPalette p) => TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.w700,
+        height: 1.25,
+        fontFamily: RelioTheme.fontFamily,
+        color: p.textPrimary,
+      );
+
+  /// SectionTitle — 18 / SemiBold.
+  static TextStyle sectionTitle(RelioPalette p) => TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        height: 1.3,
+        fontFamily: RelioTheme.fontFamily,
+        color: p.textPrimary,
+      );
+
+  /// Badge — 12 / SemiBold, pour les pastilles d'état.
+  static TextStyle badge(RelioPalette p) => TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        height: 1.2,
+        fontFamily: RelioTheme.fontFamily,
+        color: p.textSecondary,
+      );
+
+  /// Overline — 12 / Bold, capitales espacées.
+  ///
+  /// Utilisé pour l'étiquette « REPRENDRE » : un repère de section, pas un
+  /// titre. L'interlettrage est porté ici, jamais dans l'écran.
+  static TextStyle overline(RelioPalette p) => TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        height: 1.2,
+        letterSpacing: 1.2,
+        fontFamily: RelioTheme.fontFamily,
+        color: p.textSecondary,
       );
 
   /// Subtitle — 17 / SemiBold.

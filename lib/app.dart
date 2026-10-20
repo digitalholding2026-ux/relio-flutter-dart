@@ -37,6 +37,7 @@ import 'presentation/screens/onboarding/welcome_page.dart';
 import 'presentation/screens/profile_page.dart';
 import 'presentation/strings/relio_strings.dart';
 import 'presentation/theme/relio_theme.dart';
+import 'presentation/widgets/relio_page_route.dart';
 
 /// Étape de premier lancement, lue depuis un seul endroit.
 ///
@@ -478,7 +479,8 @@ class _RelioShellState extends State<_RelioShell> {
     final navigator = _learnNavigator;
     if (navigator == null) return;
     navigator.push<void>(
-      MaterialPageRoute<void>(
+      RelioPageRoute<void>(
+        reduceAnimations: widget.settings.reduceAnimations,
         builder: (_) => ChapterAccessPage(onOpenLesson: _openLesson),
       ),
     );
@@ -490,11 +492,17 @@ class _RelioShellState extends State<_RelioShell> {
     // Leçon inconnue : ne rien ouvrir plutôt qu'afficher un écran vide.
     if (exercise == null) return;
 
+    // Même règle que [_openChapter1] : une page poussée dans la pile d'un
+    // onglet qui n'est pas affiché resterait invisible. L'accueil ouvre donc
+    // la leçon ET bascule sur Apprendre.
+    _shellKey.currentState?.selectTab(RelioTab.learn);
+
     final navigator = _learnNavigator;
     if (navigator == null) return;
 
     await navigator.push<void>(
-      MaterialPageRoute<void>(
+      RelioPageRoute<void>(
+        reduceAnimations: widget.settings.reduceAnimations,
         builder: (_) => ExercisePage(
           service: _service,
           exercise: exercise,
@@ -522,7 +530,8 @@ class _RelioShellState extends State<_RelioShell> {
 
     // Remplace S2 par l'exercice suivant : la pile ne s'empile pas.
     navigator.pushReplacement(
-      MaterialPageRoute<void>(
+      RelioPageRoute<void>(
+        reduceAnimations: widget.settings.reduceAnimations,
         builder: (_) => ExercisePage(
           service: _service,
           exercise: next,
@@ -551,10 +560,13 @@ class _RelioShellState extends State<_RelioShell> {
       tabs: <Widget Function(BuildContext, GlobalKey<NavigatorState>)>[
         (context, _) => HomePage(
               name: widget.settings.name,
-              onStartHere: _openChapter1,
-              // « Programme de 3e » bascule sur l'onglet Apprendre, sans
-              // y pousser d'écran : il en est déjà la racine.
-              onOpenProgram: () => _shellKey.currentState?.selectTab(RelioTab.learn),
+              reduceAnimations: widget.settings.reduceAnimations,
+              // La carte « Continuer » et les deux actions rapides ouvrent le
+              // même chapitre : c'est le seul parcours disponible en V1.
+              onContinue: _openChapter1,
+              onFiveMinutes: _openChapter1,
+              onWarmup: _openChapter1,
+              onOpenLesson: _openLesson,
             ),
         (context, _) => LearnPage(onOpenChapter1: _openChapter1),
         (context, _) => ProfilePage(

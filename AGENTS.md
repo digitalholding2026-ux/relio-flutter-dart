@@ -64,14 +64,14 @@ est préféré pour l'installation sur téléphone.
 
 > **À la fin de tout travail, publier l'APK dans une GitHub Release.**
 >
-> Cette publication est **autorisée d'office**, sans demande explicite de
-> l'utilisateur, et **ne doit jamais être retardée** en attendant une
-> confirmation. C'est la seule action `git push` — et le seul `gh` — que
-> l'agent effectue de sa propre initiative.
+> Cette publication est **obligatoire et automatique**, sans demande explicite
+> de l'utilisateur, et **ne doit jamais être retardée** en attendant une
+> confirmation. Elle fait partie de la séquence de fin de travail décrite
+> dans la **règle 7** (commit → push → Release).
 
 Cette publication ne dispense pas de la règle 1 : le build reste obligatoire
-avant publication. En résumé, à la fin de chaque tâche : build → tests verts →
-Release → retour sur `main`.
+avant publication. En résumé, à la fin de chaque tâche : tests verts →
+commit → push → Release → retour sur `main`.
 
 ### Pourquoi une Release et non une branche
 
@@ -141,9 +141,10 @@ n'est pas disponible : l'utilisateur ne peut rien tester.
 
 ### À savoir
 
-- Le CLI GitHub est **installé et authentifié** sur la machine de
-  développement (`gh`, compte `digitalholding2026-ux`, scope `repo`). Si
-  `gh auth status` échoue, ne pas tenter de publier autrement : le signaler.
+- Le CLI GitHub (`gh`, compte `digitalholding2026-ux`) doit être **installé et
+  authentifié**. Si `gh auth status` échoue, tenter `gh auth login` une fois ;
+  si l'authentification n'aboutit toujours pas, **le signaler** plutôt que de
+  publier autrement.
 - **Ne jamais commiter d'APK**, ni sur `main`, ni sur `apk-build`. Les seuls
   APK déjà dans l'historique sont ceux de `apk-build` avant la bascule ; ils
   y restent, on ne réécrit pas l'historique.
@@ -201,32 +202,65 @@ migration.
 
 ---
 
-## Règle 7 — Qui commite et pousse quoi
+## Règle 7 — Terminer chaque travail par un commit, un push et une Release
 
-Deux périmètres nettement séparés. Ne pas les confondre.
+> **Aucun travail ne reste sur la machine. À la fin de chaque tâche, le code
+> est commité, poussé sur `main`, et l'APK publié en Release — sans attendre de
+> confirmation.**
+
+Cette règle remplace la règle antérieure « le code ne bouge pas sans demande ».
+Elle existe parce que du travail non poussé est du travail perdu : il
+n'apparaît dans aucun historique, il ne survit ni à une réinstallation ni à un
+changement de machine, et personne — y compris l'utilisateur — ne peut le voir.
 
 | Action | Autorisation |
 |---|---|
-| Commit de **code source** sur `main` | ⛔ Sur demande explicite uniquement |
+| Commit du **code source** sur `main` | ✅ **Automatique, en fin de travail** |
+| `git push origin main` | ✅ **Automatique, en fin de travail** |
 | Publication de l'**APK** en GitHub Release | ✅ **Automatique, en fin de travail** (règle 2) |
 | Commit d'un **binaire** (`.apk`, `.aab`) | ⛔ **Interdit**, sur toute branche (règle 2) |
 | Suppression d'une **Release** existante | ⛔ Sur demande explicite |
 
-### Le code ne bouge pas sans demande
+### La séquence de fin de travail
 
-`main` est sous le contrôle de l'utilisateur : **ne jamais commiter ni
-pousser le code source** sans qu'il l'ait demandé.
+À exécuter **dans cet ordre**, sans demander l'autorisation :
 
-### L'APK, si, se publie tout seul
+1. `flutter analyze` → doit finir par `No issues found!` ;
+2. `flutter test` → doit finir par `All tests passed!` ;
+3. incrémenter le `versionCode` dans `pubspec.yaml` (voir plus bas) ;
+4. `flutter build apk --release --target-platform android-arm64` ;
+5. `git add -A` puis `git commit` avec un message qui décrit le travail ;
+6. `git push origin main` ;
+7. publier l'APK en **Release** (règle 2) ;
+8. vérifier que `git status` est propre et que `main` est à jour, puis que
+   l'actif de la Release est bien nommé et téléchargeable ;
+9. rendre compte à l'utilisateur : commit, branche, URL de la Release, chemin
+   local de l'APK.
 
-C'est l'**exception unique et permanente**. À la fin de chaque tâche, une fois
-`flutter analyze` et `flutter test` verts et l'APK construit :
+Si une étape échoue, ne pas s'arrêter en silence : corriger, et si le blocage
+persiste, le signaler **avec** l'état exact (`git status`, message d'erreur).
 
-1. publier l'APK dans une **GitHub Release** via `gh` **sans attendre de
-   confirmation** — et **sans commiter le binaire** ;
-2. revenir sur `main`.
+### Un travail documentaire se pousse aussi
 
-Ne pas demander « dois-je pousser l'APK ? ». La question est déjà tranchée.
+Une modification de documentation, de règle ou de configuration ne produit pas
+d'APK — le dernier APK publié reste la référence de livraison. Elle se termine
+tout de même par les étapes 5, 6 et 9 : **commit + push**. La règle 1 (build)
+ne s'applique qu'aux modifications de code. En cas de doute, produire l'APK :
+un build superflu coûte quelques minutes, un livrable manquant coûte le travail.
+
+### Ne pas commiter n'importe quoi
+
+- **Jamais de binaire** : ni `.apk`, ni `.aab`, ni `build/` (règle 2).
+- Ne pas commiter `android/local.properties`, `.dart_tool/`, ni un fichier
+  généré déjà ignoré par `.gitignore`.
+- Ne pas réécrire l'historique (`git push --force`) sur `main`.
+
+### Pourquoi le commit compte autant que la Release
+
+La Release rend l'application installable ; le commit rend le **code**
+retrouvable. Les deux sont nécessaires : une Release sans commit est un
+binaire orphelin, un commit sans Release est une correction que l'utilisateur
+ne peut pas tester.
 
 ### Versionner l'APK
 
@@ -473,7 +507,7 @@ exactement ce qui a masqué le blocage de démarrage décrit dans
 
 | Branche | Rôle | Poussée |
 |---|---|---|
-| `main` | Code source, tests, documentation | Sur demande explicite |
+| `main` | Code source, tests, documentation | ✅ **Automatique, en fin de travail** (règle 7) |
 | `apk-build` | Historique de distribution, figé — **plus de binaires** (règle 2) |
 
 ### Récupérer l'APK
@@ -482,7 +516,7 @@ L'APK n'est plus dans le dépôt : il est publié en **Release**.
 
 <https://github.com/digitalholding2026-ux/relio-flutter-dart/releases>
 
-Release courante : [`apk-v0.4.2-18`](https://github.com/digitalholding2026-ux/relio-flutter-dart/releases/tag/apk-v0.4.2-18)
+Release courante : [`apk-v0.4.2-19`](https://github.com/digitalholding2026-ux/relio-flutter-dart/releases/tag/apk-v0.4.2-19)
 
 Détail complet dans `docs/ARCHITECTURE.md` et `docs/BUILD.md`.
 

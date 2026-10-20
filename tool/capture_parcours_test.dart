@@ -55,9 +55,17 @@ Future<void> capturer(WidgetTester tester, String nom, Widget ecran) async {
 
   final RenderRepaintBoundary boundary =
       cle.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-  final ui.Image image = await boundary.toImage(pixelRatio: 2);
-  final ByteData? data = await image.toByteData(format: ui.ImageByteFormat.png);
-  image.dispose();
+
+  // L'encodage PNG est une opération du MOTEUR, hors de la zone de temps
+  // simulé du test. Sans `runAsync`, l'attente ne se résout jamais : le test
+  // reste bloqué après l'écriture de l'image (« did not complete »).
+  final ByteData? data = await tester.runAsync<ByteData?>(() async {
+    final ui.Image image = await boundary.toImage(pixelRatio: 2);
+    final ByteData? bytes =
+        await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    return bytes;
+  });
   expect(data, isNotNull);
 
   final File fichier = File('$kSortie/$nom.png')

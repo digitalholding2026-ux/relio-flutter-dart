@@ -17,7 +17,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:relio/app.dart';
 import 'package:relio/data/db/app_database.dart';
+import 'package:relio/domain/curriculum/exercise.dart';
 import 'package:relio/domain/settings/learner_settings.dart';
+import 'package:relio/presentation/home/home_widgets.dart';
 import 'package:relio/presentation/screens/app_shell.dart';
 import 'package:relio/presentation/screens/app_shell_nav.dart';
 import 'package:relio/presentation/screens/chapter_access_page.dart';
@@ -60,7 +62,7 @@ void main() {
         (tester) async {
       await pumpApp(tester);
 
-      expect(find.text(RelioStrings.startHereTitle), findsOneWidget);
+      expect(find.text(RelioStrings.relioMessage), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });
@@ -158,45 +160,110 @@ void main() {
   });
 
   group('Accueil', () {
-    testWidgets('affiche la carte « Commence ici » et « Programme de 3e »',
+    /// Agrandit la fenêtre de test : l'accueil complet dépasse 600 dp de haut,
+    /// et une liste paresseuse ne construit pas ce qui n'est pas visible.
+    void useTallScreen(WidgetTester tester) {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+    }
+
+    testWidgets('affiche le message de Relio et la carte « Reprendre »',
         (tester) async {
+      useTallScreen(tester);
       await pumpApp(tester);
 
-      expect(find.text(RelioStrings.startHereTitle), findsOneWidget);
-      expect(find.text(RelioStrings.startHereSubtitle), findsOneWidget);
-      expect(find.text(RelioStrings.programTitle), findsOneWidget);
-      expect(find.text(RelioStrings.programSubtitle), findsOneWidget);
+      expect(find.text(RelioStrings.relioMessage), findsOneWidget);
+      expect(find.text(RelioStrings.resumeLabel), findsOneWidget);
+      expect(find.text(RelioStrings.chapterArithmetic), findsOneWidget);
+      expect(find.text(RelioStrings.resumeProgress(2, 4)), findsOneWidget);
+      expect(find.text(RelioStrings.resumeContinue), findsOneWidget);
     });
 
-    testWidgets('le tap sur « Commence ici » ouvre S1', (tester) async {
+    testWidgets('affiche les deux actions rapides', (tester) async {
+      useTallScreen(tester);
       await pumpApp(tester);
 
-      await tester.tap(find.text(RelioStrings.startHereTitle));
+      expect(find.text(RelioStrings.quickFiveTitle), findsOneWidget);
+      expect(find.text(RelioStrings.quickFiveSubtitle), findsOneWidget);
+      expect(find.text(RelioStrings.quickWarmupTitle), findsOneWidget);
+      expect(find.text(RelioStrings.quickWarmupSubtitle), findsOneWidget);
+    });
+
+    testWidgets('le tap sur « Continuer » ouvre S1', (tester) async {
+      await pumpApp(tester);
+
+      await tester.tap(find.text(RelioStrings.resumeContinue));
       await tester.pumpAndSettle();
 
       expect(find.byType(ChapterAccessPage), findsOneWidget);
     });
 
-    testWidgets('le tap sur « Programme de 3e » bascule sur Apprendre',
-        (tester) async {
+    testWidgets('le tap sur une action rapide ouvre S1', (tester) async {
       await pumpApp(tester);
 
-      await tester.tap(find.text(RelioStrings.programTitle));
+      await tester.tap(find.text(RelioStrings.quickFiveTitle));
       await tester.pumpAndSettle();
 
-      expect(find.byType(LearnPage), findsOneWidget);
-      final nav = tester.widget<RelioBottomNav>(find.byType(RelioBottomNav));
-      expect(nav.current, RelioTab.learn);
+      expect(find.byType(ChapterAccessPage), findsOneWidget);
     });
 
-    testWidgets('aucune progression, aucun pourcentage, aucun encouragement',
+    testWidgets('un appui rapproche la carte avant de naviguer', (tester) async {
+      useTallScreen(tester);
+      await pumpApp(tester);
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.text(RelioStrings.quickFiveTitle)),
+      );
+      await tester.pump(const Duration(milliseconds: 120));
+
+      final Iterable<AnimatedScale> echelles = tester.widgetList<AnimatedScale>(
+        find.descendant(
+          of: find.byType(QuickActionCard),
+          matching: find.byType(AnimatedScale),
+        ),
+      );
+      expect(echelles.where((AnimatedScale s) => s.scale == 0.97), isNotEmpty);
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ChapterAccessPage), findsOneWidget);
+    });
+
+    testWidgets('« Ton programme » liste les leçons et leur statut',
         (tester) async {
+      useTallScreen(tester);
+      await pumpApp(tester);
+
+      expect(find.text(RelioStrings.programSectionTitle), findsOneWidget);
+      for (final lesson in ArithmeticLesson.values) {
+        expect(find.text(lesson.title), findsOneWidget);
+      }
+      expect(find.text(RelioStrings.statusInProgress), findsOneWidget);
+      expect(find.text(RelioStrings.statusToReview), findsOneWidget);
+      expect(find.text(RelioStrings.statusMastered), findsOneWidget);
+    });
+
+    testWidgets('le tap sur une leçon du programme ouvre l’exercice',
+        (tester) async {
+      useTallScreen(tester);
+      await pumpApp(tester);
+
+      await tester.tap(find.text(ArithmeticLesson.lesson1Subtractions.title));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ExercisePage), findsOneWidget);
+    });
+
+    testWidgets('aucun résultat chiffré sur l’accueil', (tester) async {
       await pumpApp(tester);
 
       expect(find.textContaining('%'), findsNothing);
       expect(find.byType(LinearProgressIndicator), findsNothing);
       expect(find.textContaining('Réussite'), findsNothing);
-      expect(find.textContaining('À revoir'), findsNothing);
+      expect(find.textContaining('Score'), findsNothing);
     });
 
     testWidgets('sans prénom, l’en-tête dit seulement « Bonjour »',

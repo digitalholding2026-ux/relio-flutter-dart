@@ -1,24 +1,28 @@
 /// Écran Accueil — onglet 1.
 ///
 /// OBJECTIF : dire à l'élève, en trois secondes, ce qu'il peut faire
-/// maintenant. Deux cartes, rien de plus.
+/// maintenant. Quatre blocs, dans cet ordre :
 ///
-/// V1 : aucun historique n'est exploitable, donc aucune carte « Reprendre »,
-/// aucune progression, aucune recommandation, aucun message de félicitation.
-/// La zone basse reste volontairement VIDE : elle est réservée pour une
-/// future carte « À revoir », qui dépendra d'une capacité moteur qui n'existe
-/// pas encore. L'afficher sans moteur serait simuler une capacité inexistante.
+///  1. l'en-tête et le message de Relio — qui parle ;
+///  2. la carte « Reprendre » — ce qu'il y a à faire ;
+///  3. deux actions rapides — ce qu'il peut faire s'il a peu de temps ;
+///  4. le programme — où il en est.
+///
+/// DONNÉES FACTICES : l'accueil n'affiche pour l'instant que le contenu de
+/// [HomeState.mock]. Aucun fait d'apprentissage n'est lu en base : les leçons
+/// et leurs états sont une projection d'attente, pas un résultat.
 library;
 
 import 'package:flutter/material.dart';
 
-import '../branding/relio_lockup.dart';
+import '../home/home_state.dart';
+import '../home/home_widgets.dart';
 import '../strings/relio_strings.dart';
 import '../theme/relio_theme.dart';
-import 'app_shell.dart';
 
 /// En-tête d'accueil : « Bonjour », suivi du prénom s'il est renseigné.
 class GreetingHeader extends StatelessWidget {
+  /// Crée l'en-tête.
   const GreetingHeader({super.key, required this.name});
 
   /// Prénom de l'élève. Vide si non renseigné.
@@ -34,87 +38,186 @@ class GreetingHeader extends StatelessWidget {
         ? RelioStrings.greeting
         : '${RelioStrings.greeting} $trimmed';
 
-    return Text(text, style: RelioType.display(palette));
+    return Text(
+      text,
+      style: RelioType.display(palette).copyWith(color: palette.primary),
+    );
   }
 }
 
 /// Écran d'accueil.
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
+  /// Crée l'écran d'accueil.
   const HomePage({
     super.key,
     required this.name,
-    required this.onStartHere,
-    required this.onOpenProgram,
+    required this.onContinue,
+    required this.onFiveMinutes,
+    required this.onWarmup,
+    required this.onOpenLesson,
+    this.homeState,
+    this.reduceAnimations = false,
   });
 
   /// Prénom de l'élève, éventuellement vide.
   final String name;
 
-  /// Ouvre S1 du chapitre 1.
-  final VoidCallback onStartHere;
+  /// Ouvre le chapitre à l'endroit où l'élève s'est arrêté.
+  final VoidCallback onContinue;
 
-  /// Bascule sur l'onglet Apprendre.
-  final VoidCallback onOpenProgram;
+  /// Action « J'ai 5 minutes ».
+  final VoidCallback onFiveMinutes;
+
+  /// Action « Échauffement ».
+  final VoidCallback onWarmup;
+
+  /// Ouvre une leçon précise depuis le programme.
+  final void Function(String lessonId) onOpenLesson;
+
+  /// État à afficher.
+  ///
+  /// `null` en production : l'écran prend alors [HomeState.mock]. Ce paramètre
+  /// existe pour que les tests et, plus tard, le moteur puissent imposer un
+  /// état sans toucher à la mise en page.
+  final HomeState? homeState;
+
+  /// Supprime les animations d'apparition et d'appui.
+  final bool reduceAnimations;
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
+  /// Durée de l'apparition du programme.
+  static const Duration _entranceDuration = Duration(milliseconds: 900);
+
+  late final HomeState _state = widget.homeState ?? HomeState.mock();
+  late final AnimationController _entrance;
+
+  @override
+  void initState() {
+    super.initState();
+    _entrance = AnimationController(
+      vsync: this,
+      duration: _entranceDuration,
+    );
+    if (widget.reduceAnimations) {
+      _entrance.value = 1;
+    } else {
+      _entrance.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _entrance.dispose();
+    super.dispose();
+  }
+
+  /// Avancement de l'apparition de la ligne [index].
+  ///
+  /// Les lignes se remplissent l'une après l'autre : c'est ce décalage qui
+  /// donne à la liste l'air de se construire, plutôt que de clignoter d'un
+  /// bloc. Chaque ligne reste bornée : la dernière a fini avant 900 ms.
+  double _appearanceOf(int index) {
+    if (widget.reduceAnimations) return 1;
+    final double start = (index * 0.12).clamp(0.0, 0.55);
+    final double end = (start + 0.45).clamp(0.0, 1.0);
+    return CurvedAnimation(
+      parent: _entrance,
+      curve: Interval(start, end, curve: Curves.easeOutCubic),
+    ).value;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final palette = RelioPaletteScope.of(context);
+
     return Scaffold(
-      // Racine d'onglet : pas de flèche de retour.
-      //
-      // Le lockup horizontal remplace le titre vide : c'est la premiere
-      // occurrence de la marque dans l'application (critère d'acceptation de
-      // la mission logo).
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        titleSpacing: RelioSpacing.horizontal,
-        title: const RelioLockupHorizontal(
-          markSize: RelioSpacing.logoCapHeight,
-        ),
-      ),
+      // Teinte propre à l'accueil : elle détache les cartes blanches sans
+      // ajouter de bordure à chacune.
+      backgroundColor: palette.homeBackground,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             RelioSpacing.horizontal,
-            RelioSpacing.md,
+            RelioSpacing.xl,
             RelioSpacing.horizontal,
-            RelioSpacing.xxl,
+            RelioSpacing.xxxl,
           ),
           children: <Widget>[
-            GreetingHeader(name: name),
+            GreetingHeader(name: widget.name),
+            const SizedBox(height: RelioSpacing.sm),
+            RelioMessageCard(message: _state.message),
             const SizedBox(height: RelioSpacing.xl),
-
-            // Carte principale : pleine largeur, hauteur généreuse, ombre légère.
-            //
-            // `ConstrainedBox(minHeight:)` et NON une hauteur fixe : la carte
-            // reste généreuse, mais grandit si le contenu l'exige — échelle de
-            // texte renforcée, ou libellé long. Une hauteur fixe ferait
-            // déborder le contenu sur un petit écran ou en gros texte.
-            ConstrainedBox(
-              constraints:
-                  const BoxConstraints(minHeight: 132),
-              child: NavCard(
-                title: RelioStrings.startHereTitle,
-                subtitle: RelioStrings.startHereSubtitle,
-                onTap: onStartHere,
-                elevated: true,
+            ResumeCard(
+              target: _state.resume,
+              onContinue: widget.onContinue,
+              reduceAnimations: widget.reduceAnimations,
+            ),
+            const SizedBox(height: RelioSpacing.lg),
+            // `IntrinsicHeight` : les deux cartes prennent la hauteur de la
+            // plus grande. Sans lui, un sous-titre sur deux lignes laisserait
+            // deux cartes de hauteurs différentes côte à côte.
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Expanded(
+                    child: QuickActionCard(
+                      icon: Icons.bolt_rounded,
+                      iconColor: palette.primary,
+                      title: RelioStrings.quickFiveTitle,
+                      subtitle: RelioStrings.quickFiveSubtitle,
+                      onTap: widget.onFiveMinutes,
+                      reduceAnimations: widget.reduceAnimations,
+                    ),
+                  ),
+                  const SizedBox(width: RelioSpacing.md),
+                  Expanded(
+                    child: QuickActionCard(
+                      icon: Icons.lightbulb_outline_rounded,
+                      iconColor: palette.brand,
+                      title: RelioStrings.quickWarmupTitle,
+                      subtitle: RelioStrings.quickWarmupSubtitle,
+                      onTap: widget.onWarmup,
+                      reduceAnimations: widget.reduceAnimations,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: RelioSpacing.cardGap),
-
-            // Carte secondaire : plate, sans ombre.
-            ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 104),
-              child: NavCard(
-                title: RelioStrings.programTitle,
-                subtitle: RelioStrings.programSubtitle,
-                onTap: onOpenProgram,
-              ),
+            const SizedBox(height: RelioSpacing.sectionGap),
+            Text(
+              RelioStrings.programSectionTitle,
+              style: RelioType.sectionTitle(palette),
             ),
-
-            // Zone basse volontairement vide en V1.
+            const SizedBox(height: RelioSpacing.md),
+            AnimatedBuilder(
+              animation: _entrance,
+              builder: (BuildContext context, Widget? _) {
+                return Column(
+                  children: <Widget>[
+                    for (final (int index, LessonProgress lesson)
+                        in _state.lessons.indexed) ...<Widget>[
+                      if (index > 0)
+                        const SizedBox(height: RelioSpacing.md),
+                      LessonTimelineTile(
+                        lesson: lesson,
+                        appearance: _appearanceOf(index),
+                        onTap: () => widget.onOpenLesson(lesson.lessonId),
+                        reduceAnimations: widget.reduceAnimations,
+                      ),
+                    ],
+                  ],
+                );
+              },
+            ),
           ],
         ),
       ),
-      );
+    );
   }
 }
