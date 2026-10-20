@@ -500,7 +500,7 @@ exactement ce qui a masqué le blocage de démarrage décrit dans
 | NDK requis | 28.2.13676358 |
 | Persistance | Drift / SQLite, schéma v2 |
 | Marque | `assets/branding/` — spécification dans `docs/brand/`, voir [règle 9](#règle-9--la-marque-est-générée-pas-dessinée) |
-| Tests | 784 (dont 18 sur la règle de budget, `test/curriculum/hint_budget_rule_test.dart`) |
+| Tests | 796 (dont 18 sur la règle de budget, `test/curriculum/hint_budget_rule_test.dart`) |
 | Écran d'entrée | 7 étapes, 1,8 s d'ouverture sans bouton, tap pour passer — voir règle 10 |
 
 ### Branches
@@ -516,7 +516,7 @@ L'APK n'est plus dans le dépôt : il est publié en **Release**.
 
 <https://github.com/digitalholding2026-ux/relio-flutter-dart/releases>
 
-Release courante : [`apk-v0.4.2-21`](https://github.com/digitalholding2026-ux/relio-flutter-dart/releases/tag/apk-v0.4.2-21)
+Release courante : [`apk-v0.4.2-22`](https://github.com/digitalholding2026-ux/relio-flutter-dart/releases/tag/apk-v0.4.2-22)
 
 Détail complet dans `docs/ARCHITECTURE.md` et `docs/BUILD.md`.
 

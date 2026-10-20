@@ -156,7 +156,32 @@ abstract final class RelioStrings {
   static const String greeting = 'Bonjour';
 
   /// Message de Relio, dans la carte sous l'en-tête.
-  static const String relioMessage = 'Prêt à avancer en maths aujourd’hui ?';
+  ///
+  /// Message PAR DÉFAUT : aucun blocage récent n'est connu. C'est la valeur
+  /// que le moteur remplacera par un texte contextuel.
+  ///
+  /// L'espace qui précède « ? » est INSÉCABLE (`\u00A0`) : sans lui, la
+  /// ponctuation peut se retrouver seule sur la dernière ligne de la carte.
+  static const String relioMessage = 'Prêt à avancer en maths aujourd’hui\u00A0?';
+
+  /// Message de Relio quand une hésitation récente sur les soustractions a été
+  /// observée.
+  ///
+  /// Variante de DÉMONSTRATION : elle n'est affichée que si l'appelant passe le
+  /// code de blocage correspondant. Aucune détection n'existe encore.
+  static const String relioMessageSubtraction =
+      'J’ai vu que tu avais hésité sur les soustractions. On s’entraîne\u00A0?';
+
+  /// Objectif de séquence, en tête d'accueil.
+  ///
+  /// « notion » s'accorde avec le nombre DÉJÀ validé (« 1 notion »,
+  /// « 2 notions ») ; « validée(s) » s'accorde avec le nombre TOTAL
+  /// (« sur 1 validée », « sur 5 validées »).
+  static String sequenceObjective(int sequence, int validated, int total) {
+    final String notion = validated > 1 ? 'notions' : 'notion';
+    final String validatedWord = total > 1 ? 'validées' : 'validée';
+    return 'Séquence $sequence • $validated $notion sur $total $validatedWord';
+  }
 
   /// Étiquette de la carte principale.
   static const String resumeLabel = 'REPRENDRE';

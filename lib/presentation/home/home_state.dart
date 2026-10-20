@@ -74,8 +74,7 @@ class LessonProgress {
       };
 }
 
-/// Chapitre proposé en reprise dans la carte principale.
-@immutable
+/// Chapitre proposé en reprise dans la carte principale.@immutable
 class ResumeTarget {
   /// Crée la cible de reprise.
   const ResumeTarget({
@@ -90,15 +89,64 @@ class ResumeTarget {
   final String positionLabel;
 }
 
+/// Objectif de séquence affiché en tête d'accueil.
+///
+/// « Séquence 1 • 2 notions sur 5 validées » : trois nombres, rien d'autre.
+/// Ce n'est ni une note ni un score — seulement la position dans le programme.
+/// Comme le reste de [HomeState], cet objet est une PROJECTION d'affichage :
+/// il n'est jamais persisté et sera calculé par le moteur à partir des faits
+/// observés.
+@immutable
+class SequenceObjective {
+  /// Crée l'objectif affiché.
+  const SequenceObjective({
+    required this.sequence,
+    required this.validated,
+    required this.notions,
+  });
+
+  /// Numéro de la séquence en cours.
+  final int sequence;
+
+  /// Nombre de notions déjà validées.
+  final int validated;
+
+  /// Nombre total de notions de la séquence.
+  final int notions;
+
+  /// Part validée, entre 0 et 1 — largeur du trait, jamais affichée en chiffre.
+  double get ratio {
+    if (notions <= 0) return 0;
+    return (validated / notions).clamp(0.0, 1.0);
+  }
+
+  /// Libellé affiché au-dessus du prénom.
+  String get label => RelioStrings.sequenceObjective(sequence, validated, notions);
+}
+
+/// Codes de blocage récent que les mocks savent reconnaître.
+///
+/// Un code est un FAIT observé (« soustraction_fausse »), pas un jugement :
+/// c'est le message affiché qui choisit comment en parler. Le moteur en
+/// fournira d'autres ; l'interface n'en connaît qu'un pour l'instant.
+abstract final class RecentBlockCodes {
+  /// Hésitation constatée sur une soustraction.
+  static const String subtractionWrong = 'soustraction_fausse';
+}
+
 /// Tout ce que l'écran d'accueil affiche.
 @immutable
 class HomeState {
   /// Crée un état d'accueil complet.
   const HomeState({
+    required this.objective,
     required this.message,
     required this.resume,
     required this.lessons,
   });
+
+  /// Objectif de séquence, affiché au-dessus du prénom.
+  final SequenceObjective objective;
 
   /// Message de Relio sous l'en-tête.
   final String message;
@@ -113,8 +161,13 @@ class HomeState {
   ///
   /// Les intitulés de leçons sont ceux du document validé (via
   /// [ArithmeticLesson]) : le mock n'invente aucun contenu pédagogique. Seuls
-  /// les états et les remplissages sont factices.
-  factory HomeState.mock() {
+  /// les états, les remplissages et le message contextuel sont factices.
+  ///
+  /// [recentBlock] permet de voir la variante de message : passer
+  /// [RecentBlockCodes.subtractionWrong] affiche le rappel sur les
+  /// soustractions. Tout autre code — ou l'absence de code — laisse le message
+  /// par défaut.
+  factory HomeState.mock({String? recentBlock}) {
     const List<LessonStatus> statuses = <LessonStatus>[
       LessonStatus.inProgress,
       LessonStatus.toReview,
@@ -123,7 +176,11 @@ class HomeState {
     const List<double> fills = <double>[0.45, 0.15, 1];
 
     return HomeState(
-      message: RelioStrings.relioMessage,
+      objective: const SequenceObjective(sequence: 1, validated: 2, notions: 5),
+      message: switch (recentBlock) {
+        RecentBlockCodes.subtractionWrong => RelioStrings.relioMessageSubtraction,
+        _ => RelioStrings.relioMessage,
+      },
       resume: ResumeTarget(
         chapterTitle: RelioStrings.chapterArithmetic,
         positionLabel: RelioStrings.resumeProgress(2, 4),

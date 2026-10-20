@@ -20,6 +20,37 @@ void main() {
       expect(state.resume.positionLabel, 'Exercice 2 sur 4');
     });
 
+    test('porte l’objectif de séquence en tête', () {
+      final state = HomeState.mock();
+
+      expect(state.objective.sequence, 1);
+      expect(state.objective.validated, 2);
+      expect(state.objective.notions, 5);
+      expect(state.objective.label, 'Séquence 1 • 2 notions sur 5 validées');
+      expect(state.objective.ratio, closeTo(0.4, 1e-9));
+    });
+
+    test('le message par défaut ne parle d’aucun blocage', () {
+      expect(HomeState.mock().message, RelioStrings.relioMessage);
+      expect(
+        HomeState.mock(recentBlock: 'code_inconnu').message,
+        RelioStrings.relioMessage,
+      );
+    });
+
+    test('un blocage récent sur les soustractions change le message', () {
+      final state = HomeState.mock(
+        recentBlock: RecentBlockCodes.subtractionWrong,
+      );
+
+      expect(state.message, RelioStrings.relioMessageSubtraction);
+      expect(state.message, contains('soustractions'));
+      // Le reste de l'écran ne bouge pas : seule la phrase change.
+      expect(state.objective.label, HomeState.mock().objective.label);
+      expect(state.resume.positionLabel, HomeState.mock().resume.positionLabel);
+      expect(state.lessons.length, HomeState.mock().lessons.length);
+    });
+
     test('liste les trois leçons du chapitre, dans l’ordre validé', () {
       final state = HomeState.mock();
 
@@ -66,6 +97,7 @@ void main() {
   test('un état peut être construit sans le mock — le moteur pourra le remplir',
       () {
     const state = HomeState(
+      objective: SequenceObjective(sequence: 2, validated: 1, notions: 4),
       message: 'Message',
       resume: ResumeTarget(chapterTitle: 'Chapitre', positionLabel: 'Exercice 1 sur 2'),
       lessons: <LessonProgress>[
@@ -80,5 +112,12 @@ void main() {
 
     expect(state.lessons, hasLength(1));
     expect(state.lessons.single.statusLabel, RelioStrings.statusMastered);
+    expect(state.objective.label, 'Séquence 2 • 1 notion sur 4 validées');
+  });
+
+  test('un objectif sans notion ne divise pas par zéro', () {
+    const objective = SequenceObjective(sequence: 1, validated: 0, notions: 0);
+
+    expect(objective.ratio, 0);
   });
 }

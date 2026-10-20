@@ -315,6 +315,12 @@ abstract final class RelioSizes {
   /// Hauteur de la barre de progression d'une leçon.
   static const double lessonBarHeight = 6;
 
+  /// Hauteur de la barre d'objectif de séquence, en tête d'accueil.
+  ///
+  /// Plus fine que celle d'une leçon : elle ne mesure pas un travail en cours,
+  /// elle situe une séquence. Un trait de 3 dp suffit à le dire.
+  static const double objectiveBarHeight = 3;
+
   /// Épaisseur de trait des icônes de la barre basse.
   static const double iconStrokeWidth = 1.75;
 }
@@ -423,7 +429,20 @@ abstract final class RelioType {
         color: p.textSecondary,
       );
 
-  /// Numeric — 20 / Medium, chiffres tabulaires.
+  /// CaptionSmall — 12 / Medium.
+  ///
+  /// Ligne d'information secondaire, plus discrète que [caption] : objectif de
+  /// séquence, mention de contexte. Même encre que lui — c'est la taille, pas
+  /// la couleur, qui la met au second plan.
+  static TextStyle captionSmall(RelioPalette p) => TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        height: 1.35,
+        fontFamily: RelioTheme.fontFamily,
+        color: p.textSecondary,
+      );
+
+  /// Numeric - 20 / Medium, chiffres tabulaires.
   ///
   /// Utilisé pour les valeurs chiffrées alignées verticalement.
   static TextStyle numeric(RelioPalette p) => TextStyle(

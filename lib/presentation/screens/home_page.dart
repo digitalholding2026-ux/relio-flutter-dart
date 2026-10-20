@@ -148,6 +148,8 @@ class _HomePageState extends State<HomePage>
             RelioSpacing.xxxl,
           ),
           children: <Widget>[
+            SequenceObjectiveBar(objective: _state.objective),
+            const SizedBox(height: RelioSpacing.md),
             GreetingHeader(name: widget.name),
             const SizedBox(height: RelioSpacing.sm),
             RelioMessageCard(message: _state.message),

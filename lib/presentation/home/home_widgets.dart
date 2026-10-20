@@ -12,6 +12,76 @@ import '../theme/relio_theme.dart';
 import 'home_state.dart';
 import 'pressable_scale.dart';
 
+/// Objectif de séquence : une ligne discrète, et un trait qui la situe.
+///
+/// C'est le premier élément de l'écran, avant même le prénom : il répond à
+/// « où j'en suis dans le programme ? » sans prendre la place d'un titre.
+class SequenceObjectiveBar extends StatelessWidget {
+  /// Crée la barre d'objectif.
+  const SequenceObjectiveBar({super.key, required this.objective});
+
+  /// Séquence, notions validées et total.
+  final SequenceObjective objective;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = RelioPaletteScope.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Text(
+          objective.label,
+          style: RelioType.captionSmall(palette),
+        ),
+        const SizedBox(height: RelioSpacing.xs),
+        _ObjectiveBar(
+          ratio: objective.ratio,
+          track: palette.outline,
+          fill: palette.primary,
+        ),
+      ],
+    );
+  }
+}
+
+/// Trait de progression de la séquence — 3 dp, sans chiffre.
+class _ObjectiveBar extends StatelessWidget {
+  const _ObjectiveBar({
+    required this.ratio,
+    required this.track,
+    required this.fill,
+  });
+
+  final double ratio;
+  final Color track;
+  final Color fill;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        return Container(
+          height: RelioSizes.objectiveBarHeight,
+          decoration: BoxDecoration(
+            color: track,
+            borderRadius: RelioRadius.pillAll,
+          ),
+          alignment: Alignment.centerLeft,
+          child: Container(
+            width: constraints.maxWidth * ratio.clamp(0.0, 1.0),
+            decoration: BoxDecoration(
+              color: fill,
+              borderRadius: RelioRadius.pillAll,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 /// Message de Relio : le mark à gauche, la bulle de texte à droite.
 ///
 /// Le logo n'est pas décoratif ici : il DÉSIGNE l'auteur du message. C'est la

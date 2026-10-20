@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:relio/presentation/home/home_state.dart';
 import 'package:relio/presentation/screens/home_page.dart';
 import 'package:relio/presentation/theme/relio_theme.dart';
 
@@ -40,6 +41,7 @@ Future<void> capturer(
   required String nom,
   required Size taille,
   double defilement = 0,
+  HomeState? etat,
 }) async {
   tester.view.physicalSize = taille;
   tester.view.devicePixelRatio = 1;
@@ -57,6 +59,7 @@ Future<void> capturer(
           theme: RelioTheme.build(),
           home: HomePage(
             name: 'Camille',
+            homeState: etat,
             // Les animations sont coupées : la capture montre l'état FINAL,
             // jamais une image prise au milieu d'un remplissage.
             reduceAnimations: true,
@@ -145,6 +148,17 @@ void main() {
       tester,
       nom: 'accueil-360x640',
       taille: const Size(360, 640),
+    );
+  });
+
+  testWidgets('accueil avec mémoire, 360 x 980', (tester) async {
+    // Variante contextuelle : Relio rappelle une hésitation récente. Seule la
+    // phrase change — l'objectif et la carte « Reprendre » restent identiques.
+    await capturer(
+      tester,
+      nom: 'accueil-memoire',
+      taille: const Size(360, 980),
+      etat: HomeState.mock(recentBlock: RecentBlockCodes.subtractionWrong),
     );
   });
 }

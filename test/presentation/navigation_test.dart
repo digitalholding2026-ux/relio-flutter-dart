@@ -175,6 +175,10 @@ void main() {
       await pumpApp(tester);
 
       expect(find.text(RelioStrings.relioMessage), findsOneWidget);
+      expect(
+        find.text(RelioStrings.sequenceObjective(1, 2, 5)),
+        findsOneWidget,
+      );
       expect(find.text(RelioStrings.resumeLabel), findsOneWidget);
       expect(find.text(RelioStrings.chapterArithmetic), findsOneWidget);
       expect(find.text(RelioStrings.resumeProgress(2, 4)), findsOneWidget);
