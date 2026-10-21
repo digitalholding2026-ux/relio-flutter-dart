@@ -26,6 +26,7 @@ import 'package:relio/presentation/screens/chapter_access_page.dart';
 import 'package:relio/presentation/screens/exercise_page.dart';
 import 'package:relio/presentation/screens/home_page.dart';
 import 'package:relio/presentation/screens/learn_page.dart';
+import 'package:relio/presentation/screens/profile_page.dart';
 import 'package:relio/presentation/strings/relio_strings.dart';
 import 'package:relio/presentation/theme/relio_theme.dart';
 import 'package:relio/presentation/widgets/relio_progress_bar.dart';
@@ -44,6 +45,24 @@ Future<AppDatabase> pumpApp(WidgetTester tester) async {
 /// Bascule sur l'onglet [tab].
 Future<void> goToTab(WidgetTester tester, RelioTab tab) async {
   await tester.tap(find.text(tab.label).last);
+  await tester.pumpAndSettle();
+}
+
+/// Fait défiler l'écran Profil jusqu'au libellé [label].
+///
+/// Le contenu dépasse la hauteur d'un téléphone : une carte hors écran n'est
+/// pas construite par la liste paresseuse, et ne peut donc pas être trouvée
+/// sans défiler. Le défilement vise le Scrollable du Profil, pas celui d'un
+/// onglet resté monté dans l'IndexedStack.
+Future<void> scrollProfileTo(WidgetTester tester, String label) async {
+  await tester.scrollUntilVisible(
+    find.text(label),
+    160,
+    scrollable: find.descendant(
+      of: find.byType(ProfilePage),
+      matching: find.byType(Scrollable),
+    ),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -421,13 +440,16 @@ void main() {
   });
 
   group('Profil', () {
-    testWidgets('contient exactement les trois sections prévues',
+    testWidgets(
+        'présente l’en-tête, le parcours et les deux cartes de réglages',
         (tester) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.profile);
 
-      expect(find.text(RelioStrings.sectionIdentity), findsOneWidget);
+      expect(find.text(RelioStrings.profileTitle), findsWidgets);
+      expect(find.text(RelioStrings.profileJourneyTitle), findsOneWidget);
       expect(find.text(RelioStrings.sectionDisplay), findsOneWidget);
+      await scrollProfileTo(tester, RelioStrings.sectionAccessibility);
       expect(find.text(RelioStrings.sectionAccessibility), findsOneWidget);
     });
 
@@ -436,11 +458,10 @@ void main() {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.profile);
 
-      expect(find.text(RelioStrings.classLabel), findsOneWidget);
-      expect(find.text(RelioStrings.classValue), findsOneWidget);
+      expect(find.text('Classe de 3e'), findsOneWidget);
     });
 
-    testWidgets('aucune progression, aucun score, aucun avatar',
+    testWidgets('aucune progression chiffrée, aucun score, aucun avatar photo',
         (tester) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.profile);
@@ -464,6 +485,8 @@ void main() {
       await tester.pumpAndSettle();
       await goToTab(tester, RelioTab.profile);
 
+      await tester.tap(find.text(RelioStrings.profileModify));
+      await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).first, 'Camille');
       await tester.pumpAndSettle();
 
@@ -487,6 +510,8 @@ void main() {
       await tester.pumpAndSettle();
       await goToTab(tester, RelioTab.profile);
 
+      await tester.tap(find.text(RelioStrings.profileModify));
+      await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).first, 'Camille');
       await tester.pumpAndSettle();
       await tester.pumpAndSettle();
@@ -546,7 +571,8 @@ void main() {
 
       expect(controller.settings.reduceAnimations, isFalse);
 
-      // Bascule via l'étiquette de la ligne.
+      // Bascule via l'étiquette de la ligne, après défilement jusqu'à elle.
+      await scrollProfileTo(tester, RelioStrings.reduceAnimationsLabel);
       await tester.tap(find.text(RelioStrings.reduceAnimationsLabel));
       await tester.pumpAndSettle();
       await tester.pumpAndSettle();

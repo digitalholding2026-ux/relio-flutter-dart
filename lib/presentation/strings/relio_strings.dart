@@ -279,6 +279,31 @@ abstract final class RelioStrings {
   static const String classLabel = 'Classe';
   static const String classValue = '3e';
 
+  /// Ligne de classe de la carte d'identité : « Classe de 3e ».
+  static String classLine(String value) => 'Classe de $value';
+
+  /// Bouton qui ouvre la saisie du prénom.
+  static const String profileModify = 'Modifier';
+
+  /// Bouton qui referme la saisie du prénom.
+  static const String profileDone = 'Terminé';
+
+  /// Titre de la carte des deux faits affichés.
+  static const String profileJourneyTitle = 'Mon parcours';
+
+  /// Libellé du fait « exercices terminés ».
+  static const String completedExercisesLabel = 'Exercices terminés';
+
+  /// Libellé du fait « notions maîtrisées ».
+  static const String masteredNotionsLabel = 'Notions maîtrisées';
+
+  /// Fait affiché : « 12 Exercices terminés ».
+  static String completedExercises(int count) =>
+      '$count $completedExercisesLabel';
+
+  /// Fait affiché : « 3 Notions maîtrisées ».
+  static String masteredNotions(int count) => '$count $masteredNotionsLabel';
+
   static const String textSizeLabel = 'Taille du texte';
   static const String highContrastLabel = 'Contraste renforcé';
   static const String reduceAnimationsLabel = 'Réduire les animations';
