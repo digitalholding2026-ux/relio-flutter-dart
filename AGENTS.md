@@ -500,7 +500,7 @@ exactement ce qui a masqué le blocage de démarrage décrit dans
 | NDK requis | 28.2.13676358 |
 | Persistance | Drift / SQLite, schéma v2 |
 | Marque | `assets/branding/` — spécification dans `docs/brand/`, voir [règle 9](#règle-9--la-marque-est-générée-pas-dessinée) |
-| Tests | 796 (dont 18 sur la règle de budget, `test/curriculum/hint_budget_rule_test.dart`) |
+| Tests | 808 (dont 18 sur la règle de budget, `test/curriculum/hint_budget_rule_test.dart`) |
 | Écran d'entrée | 7 étapes, 1,8 s d'ouverture sans bouton, tap pour passer — voir règle 10 |
 
 ### Branches

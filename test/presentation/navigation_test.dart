@@ -28,6 +28,7 @@ import 'package:relio/presentation/screens/home_page.dart';
 import 'package:relio/presentation/screens/learn_page.dart';
 import 'package:relio/presentation/strings/relio_strings.dart';
 import 'package:relio/presentation/theme/relio_theme.dart';
+import 'package:relio/presentation/widgets/relio_progress_bar.dart';
 
 import '../helpers/test_database.dart';
 
@@ -96,7 +97,7 @@ void main() {
     testWidgets('la barre est visible sur S1', (tester) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
-      await tester.tap(find.text(RelioStrings.chapterArithmetic));
+      await tester.tap(find.text(RelioStrings.chapter1CardTitle));
       await tester.pumpAndSettle();
 
       expect(find.byType(ChapterAccessPage), findsOneWidget);
@@ -110,7 +111,7 @@ void main() {
         (tester) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
-      await tester.tap(find.text(RelioStrings.chapterArithmetic));
+      await tester.tap(find.text(RelioStrings.chapter1CardTitle));
       await tester.pumpAndSettle();
 
       expect(find.byType(ChapterAccessPage), findsOneWidget);
@@ -132,7 +133,7 @@ void main() {
       // visible.
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
-      await tester.tap(find.text('Chapitre 1'));
+      await tester.tap(find.text(RelioStrings.chapter1CardTitle));
       await tester.pumpAndSettle();
       await tester.tap(find.byType(LessonCard).at(0));
       await tester.pumpAndSettle();
@@ -301,8 +302,11 @@ void main() {
       await goToTab(tester, RelioTab.learn);
 
       expect(find.byType(LearnPage), findsOneWidget);
-      expect(find.text('Chapitre 1'), findsOneWidget);
-      expect(find.text(RelioStrings.chapterArithmetic), findsOneWidget);
+      expect(find.text(RelioStrings.chapter1CardTitle), findsOneWidget);
+      expect(
+        find.text(RelioStrings.chapterLessonsValidated(2, 3)),
+        findsOneWidget,
+      );
 
       // Chapitres suivants : génériques et « Bientôt disponible ».
       expect(find.text('Chapitre 2'), findsOneWidget);
@@ -327,17 +331,21 @@ void main() {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
 
-      await tester.tap(find.text('Chapitre 1'));
+      await tester.tap(find.text(RelioStrings.chapter1CardTitle));
       await tester.pumpAndSettle();
 
       expect(find.byType(ChapterAccessPage), findsOneWidget);
     });
 
-    testWidgets('aucun compteur, aucune barre de progression',
+    testWidgets('le chapitre 1 affiche sa progression factice',
         (tester) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
 
+      // La progression est un trait, jamais un pourcentage ni un compteur de
+      // chapitres terminés.
+      expect(find.byType(RelioProgressBar), findsOneWidget);
+      expect(find.text(RelioStrings.chapterLessonsValidated(2, 3)), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsNothing);
       expect(find.textContaining('%'), findsNothing);
       expect(find.textContaining('terminés'), findsNothing);
@@ -349,7 +357,7 @@ void main() {
         (tester) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
-      await tester.tap(find.text('Chapitre 1'));
+      await tester.tap(find.text(RelioStrings.chapter1CardTitle));
       await tester.pumpAndSettle();
 
       expect(find.byType(ChapterAccessPage), findsOneWidget);
@@ -365,7 +373,7 @@ void main() {
     testWidgets('« PGDC » reste affiché tel quel', (tester) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
-      await tester.tap(find.text('Chapitre 1'));
+      await tester.tap(find.text(RelioStrings.chapter1CardTitle));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('PGDC'), findsWidgets);
@@ -379,7 +387,7 @@ void main() {
         (tester) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
-      await tester.tap(find.text('Chapitre 1'));
+      await tester.tap(find.text(RelioStrings.chapter1CardTitle));
       await tester.pumpAndSettle();
       await tester.tap(find.byType(LessonCard).at(0));
       await tester.pumpAndSettle();
@@ -397,7 +405,7 @@ void main() {
     testWidgets('la barre revient dès que l’on quitte S2', (tester) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
-      await tester.tap(find.text('Chapitre 1'));
+      await tester.tap(find.text(RelioStrings.chapter1CardTitle));
       await tester.pumpAndSettle();
       await tester.tap(find.byType(LessonCard).at(0));
       await tester.pumpAndSettle();

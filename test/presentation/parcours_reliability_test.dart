@@ -35,7 +35,7 @@ Future<AppDatabase> openFirstExercise(WidgetTester tester) async {
   // L'application ouvre sur ACCUEIL : S1 s'atteint par l'onglet Apprendre.
   await tester.tap(find.text(RelioStrings.tabLearn).last);
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Chapitre 1'));
+  await tester.tap(find.text(RelioStrings.chapter1CardTitle));
   await tester.pumpAndSettle();
 
   await tester.tap(find.byType(LessonCard).at(0));

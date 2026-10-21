@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import '../branding/relio_mark.dart';
 import '../strings/relio_strings.dart';
 import '../theme/relio_theme.dart';
+import '../widgets/lesson_status_pill.dart';
+import '../widgets/relio_progress_bar.dart';
 import 'home_state.dart';
 import 'pressable_scale.dart';
 
@@ -363,99 +365,21 @@ class LessonTimelineTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: RelioSpacing.sm),
-                _StatusPill(label: lesson.statusLabel, color: statusColor),
+                LessonStatusPill(
+                  label: lesson.statusLabel,
+                  color: statusColor,
+                ),
               ],
             ),
             const SizedBox(height: RelioSpacing.md),
-            _LessonBar(
-              fraction: lesson.fill * appearance.clamp(0.0, 1.0),
+            RelioProgressBar(
+              ratio: lesson.fill * appearance.clamp(0.0, 1.0),
               color: statusColor,
               track: palette.outline,
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-/// Pastille d'état : un point coloré ET son libellé.
-///
-/// Le libellé est obligatoire : la couleur seule ne dirait rien à un élève
-/// daltonien, et ne dirait rien du tout à un lecteur d'écran.
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = RelioPaletteScope.of(context);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: RelioSpacing.sm,
-        vertical: 3,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: RelioRadius.pillAll,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Container(
-            width: RelioSizes.statusDot,
-            height: RelioSizes.statusDot,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: RelioRadius.pillAll,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: RelioType.badge(palette).copyWith(color: color),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Barre de remplissage d'une leçon.
-class _LessonBar extends StatelessWidget {
-  const _LessonBar({
-    required this.fraction,
-    required this.color,
-    required this.track,
-  });
-
-  final double fraction;
-  final Color color;
-  final Color track;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        return Container(
-          height: RelioSizes.lessonBarHeight,
-          decoration: BoxDecoration(
-            color: track,
-            borderRadius: RelioRadius.pillAll,
-          ),
-          alignment: Alignment.centerLeft,
-          child: Container(
-            width: constraints.maxWidth * fraction.clamp(0.0, 1.0),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: RelioRadius.pillAll,
-            ),
-          ),
-        );
-      },
     );
   }
 }

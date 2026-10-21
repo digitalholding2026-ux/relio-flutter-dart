@@ -481,7 +481,10 @@ class _RelioShellState extends State<_RelioShell> {
     navigator.push<void>(
       RelioPageRoute<void>(
         reduceAnimations: widget.settings.reduceAnimations,
-        builder: (_) => ChapterAccessPage(onOpenLesson: _openLesson),
+        builder: (_) => ChapterAccessPage(
+          onOpenLesson: _openLesson,
+          reduceAnimations: widget.settings.reduceAnimations,
+        ),
       ),
     );
   }
@@ -568,7 +571,10 @@ class _RelioShellState extends State<_RelioShell> {
               onWarmup: _openChapter1,
               onOpenLesson: _openLesson,
             ),
-        (context, _) => LearnPage(onOpenChapter1: _openChapter1),
+        (context, _) => LearnPage(
+              onOpenChapter1: _openChapter1,
+              reduceAnimations: widget.settings.reduceAnimations,
+            ),
         (context, _) => ProfilePage(
               settings: widget.settings,
               onChanged: _onSettingsChanged,

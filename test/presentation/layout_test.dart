@@ -37,7 +37,7 @@ Future<void> pumpOnSmallPhone(WidgetTester tester, Widget app) async {
 Future<void> openS1(WidgetTester tester) async {
   await tester.tap(find.text(RelioStrings.tabLearn).last);
   await tester.pumpAndSettle();
-  await tester.tap(find.text(RelioStrings.chapterArithmetic));
+  await tester.tap(find.text(RelioStrings.chapter1CardTitle));
   await tester.pumpAndSettle();
 }
 
@@ -54,8 +54,19 @@ void main() {
       expect(find.byType(ChapterAccessPage), findsOneWidget);
       expect(tester.takeException(), isNull);
 
-      // Les trois cartes existent.
-      expect(find.byType(LessonCard), findsNWidgets(3));
+      // Les cartes se construisent à la demande : on vérifie qu'elles sont
+      // toutes atteignables, pas qu'elles tiennent simultanément à l'écran.
+      expect(find.byType(LessonCard), findsWidgets);
+      await tester.scrollUntilVisible(
+        find.text('Relation entre le PPCM et le PGCD de deux entiers naturels'),
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(
+        find.text('Relation entre le PPCM et le PGCD de deux entiers naturels'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('la troisième leçon est atteignable par défilement',
@@ -66,14 +77,16 @@ void main() {
       await pumpOnSmallPhone(tester, RelioApp(database: db, showIntro: false));
       await openS1(tester);
 
+      const String thirdLesson =
+          'Relation entre le PPCM et le PGCD de deux entiers naturels';
       await tester.scrollUntilVisible(
-        find.byType(LessonCard).at(2),
+        find.text(thirdLesson),
         120,
         scrollable: find.byType(Scrollable).first,
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(LessonCard).at(2), findsOneWidget);
+      expect(find.text(thirdLesson), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });

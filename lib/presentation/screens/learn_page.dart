@@ -1,139 +1,220 @@
-/// Écran Apprendre — onglet 2.
+/// Écran Apprendre — onglet 2 : catalogue de progression.
 ///
-/// OBJECTIF : donner accès au programme officiel de mathématiques de 3e.
+/// OBJECTIF : montrer le programme de 3e comme un parcours, pas comme une
+/// liste plate. Un chapitre ouvert porte son avancement ; les chapitres
+/// suivants sont annoncés sans être cliquables.
 ///
-/// V1 : la liste est STATIQUE. Le chapitre 1 est le seul actif. Les intitulés
-/// des chapitres suivants ne sont pas arrêtés, ils sont donc affichés
-/// génériquement (« Chapitre 2 ») avec « Bientôt disponible » : inventer les
-/// intitulés officiels serait du contenu pédagogique fabriqué, interdit par la
-/// règle 8 d'`AGENTS.md`.
+/// DONNÉES FACTICES : [LearnState.mock] fournit les états et les décomptes.
+/// Aucun fait d'apprentissage n'est lu en base. Les types de [LearnState] sont
+/// ceux que le moteur remplira : l'écran n'aura pas à changer de structure.
 ///
-/// Ce que l'écran n'affiche PAS : aucun compteur de chapitres terminés, aucune
-/// barre de progression, aucun indicateur de déblocage, aucun encouragement.
+/// Aucun personnage n'est utilisé ici : la marque et le personnage restent sur
+/// l'ouverture, le prénom et la clôture.
 library;
 
 import 'package:flutter/material.dart';
 
-import '../strings/relio_strings.dart';
+import '../home/pressable_scale.dart';
+import '../learn/learn_state.dart';import '../strings/relio_strings.dart';
 import '../theme/relio_theme.dart';
-import 'app_shell.dart';
+import '../widgets/relio_progress_bar.dart';
 
-/// Un chapitre du programme, dans son état d'avancement.
-@immutable
-class ChapterEntry {
-  const ChapterEntry({
-    required this.number,
-    required this.subtitle,
-    required this.active,
+/// Carte d'un chapitre du catalogue.
+///
+/// Deux formes seulement :
+///  - chapitre ouvert : fond blanc, bordure orange, ombre douce, chevron,
+///    barre de progression ;
+///  - chapitre indisponible : fond gris, sans ombre, sans chevron, inerte.
+class ChapterCard extends StatelessWidget {
+  /// Crée une carte de chapitre.
+  const ChapterCard({
+    super.key,
+    required this.chapter,
     this.onTap,
+    this.reduceAnimations = false,
   });
 
-  /// Numéro du chapitre, pour l'affichage.
-  final int number;
+  /// Chapitre décrit par la carte.
+  final ChapterProgress chapter;
 
-  /// Intitulé du chapitre. Générique si l'intitulé officiel n'est pas arrêté.
-  final String subtitle;
-
-  /// Chapitre disponible : cliquable, chevron présent.
-  final bool active;
-
-  /// Action au tap. Non nul si et seulement si [active].
+  /// Ouvre les leçons du chapitre. `null` rend la carte inerte.
   final VoidCallback? onTap;
 
-  /// Titre affiché : « Chapitre N ».
-  String get title => 'Chapitre $number';
-}
-
-/// Programme de 3e — liste statique du chapitre 1.
-///
-/// Le chapitre 1 est le seul actif en V1. Les chapitres 2 à 3 sont des
-/// emplacements réservés : affichés, mais inertes.
-const List<ChapterEntry> kChapterProgram = <ChapterEntry>[
-  ChapterEntry(
-    number: 1,
-    subtitle: RelioStrings.chapterArithmetic,
-    active: true,
-  ),
-  ChapterEntry(number: 2, subtitle: RelioStrings.chapterComingSoon, active: false),
-  ChapterEntry(number: 3, subtitle: RelioStrings.chapterComingSoon, active: false),
-];
-
-/// Carte de chapitre de l'écran Apprendre.
-class ChapterCard extends StatelessWidget {
-  const ChapterCard({super.key, required this.chapter});
-
-  /// Chapitre décrit par la carte.
-  final ChapterEntry chapter;
-
-  @override
-  Widget build(BuildContext context) {
-    // Un chapitre inactif affiche « Bientôt disponible » comme sous-titre ;
-    // un chapitre actif affiche son intitulé et un chevron.
-    final subtitle = chapter.active
-        ? chapter.subtitle
-        : RelioStrings.chapterComingSoon;
-
-    return NavCard(
-      title: chapter.title,
-      subtitle: subtitle,
-      onTap: chapter.onTap,
-      // Pas de chevron sur un chapitre indisponible : rien à ouvrir.
-      showChevron: chapter.active,
-      elevated: false,
-    );
-  }
-}
-
-/// Écran Apprendre.
-class LearnPage extends StatelessWidget {
-  const LearnPage({super.key, required this.onOpenChapter1});
-
-  /// Ouvre S1 du chapitre 1.
-  final VoidCallback onOpenChapter1;
+  /// Désactive l'effet d'appui.
+  final bool reduceAnimations;
 
   @override
   Widget build(BuildContext context) {
     final palette = RelioPaletteScope.of(context);
 
-    // Le chapitre 1 est le seul actif : c'est lui qui porte l'action.
-    final chapters = <ChapterEntry>[
-      for (final chapter in kChapterProgram)
-        if (chapter.active)
-          ChapterEntry(
-            number: chapter.number,
-            subtitle: chapter.subtitle,
-            active: true,
-            onTap: onOpenChapter1,
-          )
-        else
-          chapter,
-    ];
+    final content = Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(RelioSpacing.cardInner),
+      decoration: BoxDecoration(
+        color: chapter.available ? palette.surface : palette.inactiveSurface,
+        borderRadius: RelioRadius.bannerAll,
+        border: chapter.available
+            ? Border.all(
+                color: palette.brand,
+                width: RelioSizes.heroBorderWidth,
+              )
+            : null,
+        boxShadow: chapter.available
+            ? <BoxShadow>[
+                BoxShadow(
+                  color: palette.shadow,
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  chapter.cardTitle,
+                  style: RelioType.chapterTitle(palette).copyWith(
+                    color: chapter.available
+                        ? palette.textPrimary
+                        : palette.textMuted,
+                  ),
+                ),
+                const SizedBox(height: RelioSpacing.xs),
+                Text(
+                  chapter.subtitle,
+                  style: RelioType.body(palette).copyWith(
+                    color: chapter.available
+                        ? palette.textSecondary
+                        : palette.textMuted,
+                  ),
+                ),
+                if (chapter.available) ...<Widget>[
+                  const SizedBox(height: RelioSpacing.md),
+                  RelioProgressBar(
+                    ratio: chapter.ratio,
+                    color: palette.brand,
+                    track: palette.outline,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (chapter.available) ...<Widget>[
+            const SizedBox(width: RelioSpacing.md),
+            Icon(Icons.chevron_right, color: palette.textSecondary),
+          ],
+        ],
+      ),
+    );
+
+    if (!chapter.available || onTap == null) return content;
+
+    return Semantics(
+      button: true,
+      label: chapter.cardTitle,
+      child: PressableScale(
+        onTap: onTap!,
+        reduceAnimations: reduceAnimations,
+        child: content,
+      ),
+    );
+  }
+}
+
+/// Écran Apprendre — catalogue des chapitres.
+class LearnPage extends StatelessWidget {
+  /// Crée l'écran Apprendre.
+  const LearnPage({
+    super.key,
+    required this.onOpenChapter1,
+    this.learnState,
+    this.reduceAnimations = false,
+  });
+
+  /// Ouvre les leçons du chapitre 1.
+  final VoidCallback onOpenChapter1;
+
+  /// État à afficher.
+  ///
+  /// `null` en production : l'écran prend alors [LearnState.mock]. Ce
+  /// paramètre existe pour les tests et, plus tard, pour le moteur.
+  final LearnState? learnState;
+
+  /// Désactive les effets d'appui.
+  final bool reduceAnimations;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = RelioPaletteScope.of(context);
+    final state = learnState ?? LearnState.mock();
 
     return Scaffold(
-      // Racine d'onglet : pas de flèche de retour.
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Text(
-          RelioStrings.learnTitle,
-          style: RelioType.title(palette),
-        ),
-      ),
+      // Même teinte que l'accueil : les cartes blanches se détachent sans
+      // qu'on ajoute une bordure à chacune.
+      backgroundColor: palette.homeBackground,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             RelioSpacing.horizontal,
-            RelioSpacing.md,
+            RelioSpacing.xl,
             RelioSpacing.horizontal,
-            RelioSpacing.xxl,
+            RelioSpacing.xxxl,
           ),
           children: <Widget>[
-            for (final chapter in chapters) ...<Widget>[
-              ChapterCard(chapter: chapter),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    RelioStrings.learnTitle,
+                    style: RelioType.display(palette).copyWith(
+                      color: palette.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: RelioSpacing.sm),
+                // Emplacement préparé pour la recherche : il n'ouvre encore
+                // rien, et le dit plutôt que de rester muet.
+                IconButton(
+                  onPressed: () => _showSearchComingSoon(context),
+                  tooltip: RelioStrings.searchTooltip,
+                  color: palette.textSecondary,
+                  constraints: const BoxConstraints(
+                    minWidth: RelioSizes.minTouchTarget,
+                    minHeight: RelioSizes.minTouchTarget,
+                  ),
+                  icon: const Icon(Icons.search),
+                ),
+              ],
+            ),
+            const SizedBox(height: RelioSpacing.xl),
+            for (final chapter in state.chapters) ...<Widget>[
+              ChapterCard(
+                chapter: chapter,
+                // Seul le chapitre ouvert porte l'action. Un chapitre à venir
+                // n'a rien à ouvrir : il reste inerte, sans chevron.
+                onTap: chapter.available ? onOpenChapter1 : null,
+                reduceAnimations: reduceAnimations,
+              ),
               const SizedBox(height: RelioSpacing.cardGap),
             ],
           ],
         ),
       ),
     );
+  }
+
+  /// Dit que la recherche n'est pas encore disponible.
+  void _showSearchComingSoon(BuildContext context) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(content: Text(RelioStrings.searchComingSoon)),
+      );
   }
 }

@@ -46,7 +46,7 @@ Future<Harness> pumpChapter(WidgetTester tester) async {
 
   await tester.tap(find.text(RelioStrings.tabLearn).last);
   await tester.pumpAndSettle();
-  await tester.tap(find.text(RelioStrings.chapterArithmetic));
+  await tester.tap(find.text(RelioStrings.chapter1CardTitle));
   await tester.pumpAndSettle();
 
   return harness;
@@ -84,12 +84,21 @@ void main() {
       expect(find.byType(LessonCard), findsNWidgets(3));
     });
 
-    testWidgets('n’affiche aucun compteur de progression', (tester) async {
+    testWidgets('affiche l’état et l’avancement des trois leçons',
+        (tester) async {
       await pumpChapter(tester);
 
       final page = tester.widget<ChapterAccessPage>(find.byType(ChapterAccessPage));
       expect(page.onOpenLesson, isNotNull);
-      // Aucun chiffre ne doit apparaitre sur l'ecran d'acces.
+
+      // États factices : orange « En cours », gris « À revoir », vert
+      // « Maîtrisé ». L'information est toujours doublée d'un libellé.
+      expect(find.text(RelioStrings.statusInProgress), findsOneWidget);
+      expect(find.text(RelioStrings.statusToReview), findsOneWidget);
+      expect(find.text(RelioStrings.statusMastered), findsOneWidget);
+
+      // Décompte factice d'exercices, sans pourcentage.
+      expect(find.text(RelioStrings.lessonExerciseProgress(2, 4)), findsOneWidget);
       expect(find.textContaining('%'), findsNothing);
       expect(find.byType(LinearProgressIndicator), findsNothing);
     });

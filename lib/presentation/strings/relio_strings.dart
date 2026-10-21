@@ -230,6 +230,40 @@ abstract final class RelioStrings {
   /// Sous-titre d'un chapitre non encore disponible.
   static const String chapterComingSoon = 'Bientôt disponible';
 
+  /// Titre complet d'une carte de chapitre disponible : « Chapitre 1 : … ».
+  static String chapterCardTitle(int number, String title) =>
+      '${chapterLabel(number)} : $title';
+
+  /// Titre complet du chapitre 1, tel qu'il s'affiche dans le catalogue.
+  static String get chapter1CardTitle =>
+      chapterCardTitle(1, chapterArithmetic);
+
+  /// Libellé court d'un chapitre : « Chapitre 2 ».
+  static String chapterLabel(int number) => 'Chapitre $number';
+
+  /// Avancement d'un chapitre : « 2 leçons sur 3 validées ».
+  ///
+  /// « leçon » s'accorde avec le nombre DÉJÀ validé, « validée(s) » avec le
+  /// nombre TOTAL — la même règle que [sequenceObjective].
+  static String chapterLessonsValidated(int validated, int total) {
+    final String lesson = validated > 1 ? 'leçons' : 'leçon';
+    final String validatedWord = total > 1 ? 'validées' : 'validée';
+    return '$validated $lesson sur $total $validatedWord';
+  }
+
+  /// Avancement d'une leçon : « 2/4 exercices ».
+  static String lessonExerciseProgress(int completed, int total) =>
+      '$completed/$total exercices';
+
+  /// Infobulle et libellé de l'icône de recherche.
+  static const String searchTooltip = 'Rechercher';
+
+  /// Message affiché tant que la recherche n'existe pas.
+  static const String searchComingSoon = 'La recherche arrive bientôt.';
+
+  /// Libellé du retour depuis la vue des leçons.
+  static const String backToProgram = 'Retour au programme';
+
   // ---------------------------------------------------------------------
   // Profil
   // ---------------------------------------------------------------------

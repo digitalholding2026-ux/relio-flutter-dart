@@ -46,6 +46,8 @@ class LessonProgress {
     required this.title,
     required this.status,
     required this.fill,
+    this.completedExercises,
+    this.totalExercises,
   });
 
   /// Identifiant stable de la leçon — celui de [ArithmeticLesson.id].
@@ -62,6 +64,24 @@ class LessonProgress {
   /// Sert UNIQUEMENT à la largeur du trait : ce n'est pas un score, et il n'est
   /// jamais affiché sous forme de chiffre.
   final double fill;
+
+  /// Exercices terminés, quand l'écran affiche un décompte.
+  ///
+  /// Facultatif : l'accueil ne montre qu'une barre. La vue des leçons du
+  /// chapitre affiche « 2/4 exercices » ; le moteur renseignera ces deux
+  /// valeurs, l'interface ne les calcule jamais.
+  final int? completedExercises;
+
+  /// Exercices de la leçon, quand l'écran affiche un décompte.
+  final int? totalExercises;
+
+  /// Décompte affiché, ou `null` si l'écran n'en demande pas.
+  String? get exerciseProgressLabel {
+    final done = completedExercises;
+    final total = totalExercises;
+    if (done == null || total == null) return null;
+    return RelioStrings.lessonExerciseProgress(done, total);
+  }
 
   /// Libellé qui accompagne la pastille de couleur.
   ///

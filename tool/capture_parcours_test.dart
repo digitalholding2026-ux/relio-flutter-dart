@@ -22,6 +22,8 @@ import 'package:relio/presentation/screens/onboarding/closing_page.dart';
 import 'package:relio/presentation/screens/onboarding/entry_test_intro_page.dart';
 import 'package:relio/presentation/screens/onboarding/name_page.dart';
 import 'package:relio/presentation/screens/onboarding/welcome_page.dart';
+import 'package:relio/presentation/screens/chapter_access_page.dart';
+import 'package:relio/presentation/screens/learn_page.dart';
 import 'package:relio/presentation/theme/relio_theme.dart';
 
 const Size kTaille = Size(360, 640);
@@ -125,4 +127,26 @@ void main() {
       ),
     );
   });
+
+  testWidgets('apprendre — catalogue', (WidgetTester tester) async {
+    await capturer(
+      tester,
+      '7-apprendre-catalogue',
+      const LearnPage(onOpenChapter1: _ignorerTap),
+    );
+  });
+
+  testWidgets('apprendre — leçons du chapitre 1', (WidgetTester tester) async {
+    await capturer(
+      tester,
+      '8-apprendre-lecons',
+      ChapterAccessPage(onOpenLesson: _ignorerLecon),
+    );
+  });
 }
+
+/// Raccourcis inertes pour les captures : aucun écran ne les déclenche.
+void _ignorerTap() {}
+
+/// Raccourci inerte pour la capture des leçons.
+void _ignorerLecon(String _) {}

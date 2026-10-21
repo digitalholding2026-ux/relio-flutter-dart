@@ -36,9 +36,11 @@ class RelioPalette {
     required this.errorBackground,
     required this.textPrimary,
     required this.textSecondary,
+    required this.textMuted,
     required this.outline,
     required this.background,
     required this.homeBackground,
+    required this.inactiveSurface,
     required this.surface,
     required this.shadow,
     required this.onPrimary,
@@ -61,9 +63,11 @@ class RelioPalette {
         errorBackground: Color(0xFFFEE2E2),
         textPrimary: Color(0xFF111827),
         textSecondary: Color(0xFF4B5563),
+        textMuted: Color(0xFF9CA3AF),
         outline: Color(0xFFE4E7EC),
         background: Color(0xFFFAFBFC),
         homeBackground: Color(0xFFEEF2FA),
+        inactiveSurface: Color(0xFFF3F4F6),
         surface: Color(0xFFFFFFFF),
         shadow: Color(0x0F000000),
         onPrimary: Color(0xFFFFFFFF),
@@ -91,9 +95,11 @@ class RelioPalette {
         errorBackground: Color(0xFFFBD5D5),
         textPrimary: Color(0xFF000000),
         textSecondary: Color(0xFF1F2937),
+        textMuted: Color(0xFF4B5563),
         outline: Color(0xFF6B7280),
         background: Color(0xFFFFFFFF),
         homeBackground: Color(0xFFFFFFFF),
+        inactiveSurface: Color(0xFFE5E7EB),
         surface: Color(0xFFFFFFFF),
         shadow: Color(0x1F000000),
         onPrimary: Color(0xFFFFFFFF),
@@ -157,6 +163,14 @@ class RelioPalette {
   /// Texte secondaire : libellés, légendes.
   final Color textSecondary;
 
+  /// Texte d'un élément indisponible.
+  ///
+  /// Plus clair que [textSecondary] dans la palette standard : un chapitre qui
+  /// n'existe pas encore doit se lire comme tel. La palette renforcée le
+  /// ramène à [textSecondary], car l'effacement ne doit jamais se payer en
+  /// lisibilité.
+  final Color textMuted;
+
   /// Bordure de carte et de champ.
   final Color outline;
 
@@ -170,6 +184,13 @@ class RelioPalette {
   /// teinte, et cette teinte doit rester réglable en un point. En contraste
   /// renforcé, le fond redevient blanc — c'est la lisibilité qui prime.
   final Color homeBackground;
+
+  /// Fond d'une carte indisponible : gris neutre, sans ombre.
+  ///
+  /// Distinct de [homeBackground] : sur le fond indigo pâle, ce gris dit
+  /// « cet élément n'est pas encore ouvert » sans recourir à une couleur
+  /// sémantique.
+  final Color inactiveSurface;
 
   /// Fond des cartes et des barres.
   final Color surface;
@@ -358,6 +379,19 @@ abstract final class RelioType {
         fontSize: 22,
         fontWeight: FontWeight.w700,
         height: 1.25,
+        fontFamily: RelioTheme.fontFamily,
+        color: p.textPrimary,
+      );
+
+  /// ChapterTitle — 20 / SemiBold.
+  ///
+  /// Titre d'une carte de chapitre. Un cran sous [title] : la carte porte
+  /// aussi son état et sa barre, elle n'a pas à crier plus fort que le titre
+  /// de l'écran.
+  static TextStyle chapterTitle(RelioPalette p) => TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        height: 1.3,
         fontFamily: RelioTheme.fontFamily,
         color: p.textPrimary,
       );
