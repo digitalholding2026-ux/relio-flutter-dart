@@ -153,6 +153,9 @@ class DiagnosticEngine {
 
     for (final diagnostic in _cases) {
       if (diagnostic.id != caseId) continue;
+      // Les codes sont locaux au chapitre : sans ce filtre, le « D1 » de
+      // Thalès ouvrirait l'intervention du « D1 » d'arithmétique.
+      if (diagnostic.chapterNumber != exercise.lesson.chapterNumber) continue;
 
       // Même garde-fou que [diagnose] : la tâche de vérification ne doit
       // jamais être l'exercice qui vient d'échouer.

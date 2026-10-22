@@ -131,7 +131,7 @@ void main() {
 
   group('HomeState.fromProgress', () {
     test('un historique vide donne l’état de premier démarrage', () {
-      final DateTime now = DateTime(2026, 9, 10);
+      final DateTime now = DateTime(2026, 9, 10, 10);
       final state = HomeState.fromProgress(LearnerProgress.empty, now: now);
 
       expect(state.started, isFalse);
@@ -151,6 +151,15 @@ void main() {
       );
     });
 
+    test('le soir, le message de Relio situe l’élève et propose une session', () {
+      final DateTime now = DateTime(2026, 11, 22, 21);
+      final state = HomeState.fromProgress(LearnerProgress.empty, now: now);
+
+      expect(state.message, RelioStrings.relioSeasonMessage(now, 2));
+      expect(state.message, startsWith('Bonsoir'));
+      expect(state.message, contains('ce soir'));
+    });
+
     test('une tentative suffit pour proposer de reprendre', () {
       final lesson = ArithmeticLesson.lesson1Subtractions;
       final progress = LearnerProgress(
@@ -160,13 +169,13 @@ void main() {
 
       final state = HomeState.fromProgress(
         progress,
-        now: DateTime(2026, 11, 10),
+        now: DateTime(2026, 11, 10, 10),
       );
 
       expect(state.started, isTrue);
       expect(
         state.message,
-        RelioStrings.relioSeasonMessage(DateTime(2026, 11, 10), 2),
+        RelioStrings.relioSeasonMessage(DateTime(2026, 11, 10, 10), 2),
       );
       expect(state.objective.sequence, 2);
       expect(state.resume.positionLabel, RelioStrings.resumeProgress(1, 4));

@@ -13,6 +13,8 @@
 /// est l'ÉTAT VIDE : sans données, on n'affiche aucune progression inventée.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../home/home_state.dart';
@@ -20,23 +22,75 @@ import '../home/home_widgets.dart';
 import '../strings/relio_strings.dart';
 import '../theme/relio_theme.dart';
 
-/// En-tête d'accueil : « Bonjour », suivi du prénom s'il est renseigné.
-class GreetingHeader extends StatelessWidget {
+/// En-tête d'accueil : « Bonjour » ou « Bonsoir », suivi du prénom s'il est
+/// renseigné.
+///
+/// La salutation suit l'heure locale : « Bonjour » de 05h00 à 17h59,
+/// « Bonsoir » de 18h00 à 04h59. Un minuteur la recale au changement de minute,
+/// pour qu'elle bascule à 18h00 sans quitter l'écran.
+class GreetingHeader extends StatefulWidget {
   /// Crée l'en-tête.
-  const GreetingHeader({super.key, required this.name});
+  ///
+  /// [now] remplace l'horloge système dans les tests. En production, la date
+  /// locale de l'appareil est utilisée telle quelle.
+  const GreetingHeader({super.key, required this.name, this.now});
 
   /// Prénom de l'élève. Vide si non renseigné.
   final String name;
 
+  /// Source de l'heure, injectable pour les tests.
+  final DateTime Function()? now;
+
+  @override
+  State<GreetingHeader> createState() => _GreetingHeaderState();
+}
+
+class _GreetingHeaderState extends State<GreetingHeader> {
+  late DateTime _time;
+  Timer? _timer;
+
+  DateTime _read() => (widget.now ?? DateTime.now)();
+
+  @override
+  void initState() {
+    super.initState();
+    _time = _read();
+    _scheduleNextMinute();
+  }
+
+  /// Programme le rafraîchissement au prochain changement de minute.
+  void _scheduleNextMinute() {
+    final DateTime current = _read();
+    final DateTime nextMinute = DateTime(
+      current.year,
+      current.month,
+      current.day,
+      current.hour,
+      current.minute,
+    ).add(const Duration(minutes: 1));
+    final Duration delay = nextMinute.difference(current);
+
+    _timer = Timer(delay.isNegative ? Duration.zero : delay, () {
+      if (!mounted) return;
+      setState(() => _time = _read());
+      _scheduleNextMinute();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = RelioPaletteScope.of(context);
-    final trimmed = name.trim();
+    final trimmed = widget.name.trim();
+    final greeting = RelioStrings.greetingFor(_time);
 
-    // Sans prénom : « Bonjour » seul. On n'invente pas de texte d'attente.
-    final text = trimmed.isEmpty
-        ? RelioStrings.greeting
-        : '${RelioStrings.greeting} $trimmed';
+    // Sans prénom : la salutation seule. On n'invente pas de texte d'attente.
+    final text = trimmed.isEmpty ? greeting : '$greeting $trimmed';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -50,7 +104,7 @@ class GreetingHeader extends StatelessWidget {
         const SizedBox(width: RelioSpacing.sm),
         // Discret, aligné sur la ligne du prénom : il informe sans occuper le
         // centre de l'écran.
-        const GreetingClock(),
+        GreetingClock(now: widget.now),
       ],
     );
   }

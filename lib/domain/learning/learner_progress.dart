@@ -24,6 +24,7 @@ library;
 import 'package:flutter/foundation.dart';
 
 import '../curriculum/chapter1_bank.dart';
+import '../curriculum/curriculum_bank.dart';
 import '../curriculum/exercise.dart';
 import 'exercise_attempt.dart';
 import 'learning_event.dart';
@@ -82,6 +83,19 @@ class LearnerProgress {
     return count;
   }
 
+  /// Nombre de leçons maîtrisées PARMI [lessons].
+  ///
+  /// L'accueil et le catalogue comptent les notions de leur chapitre, pas
+  /// celles de tous les chapitres ouverts : un chapitre ne doit pas gonfler
+  /// l'objectif d'un autre.
+  int masteredNotionsIn(Iterable<CurriculumLesson> lessons) {
+    var count = 0;
+    for (final lesson in lessons) {
+      if (isLessonMastered(lesson.id)) count++;
+    }
+    return count;
+  }
+
   /// L'élève a-t-il commencé [lessonId] ?
   bool startedLesson(String lessonId) => startedLessonIds.contains(lessonId);
 
@@ -108,12 +122,8 @@ class LearnerProgress {
   /// exercice supplémentaire. `null` seulement si la leçon n'existe pas dans
   /// la banque validée.
   Exercise? resumeExerciseForLesson(String lessonId) {
-    final exercises = Chapter1Bank.exercises
-        .where(
-          (exercise) =>
-              exercise.kind == BankElementKind.exercise &&
-              exercise.lesson.id == lessonId,
-        )
+    final exercises = CurriculumBank.exercises
+        .where((exercise) => exercise.lesson.id == lessonId)
         .toList();
     if (exercises.isEmpty) return null;
 
@@ -164,9 +174,21 @@ class LearnerProgress {
         },
       ),
       lessonExerciseTotals: Map<String, int>.unmodifiable(
-        lessonExerciseTotals ?? officialChapter1ExerciseTotals(),
+        lessonExerciseTotals ?? officialExerciseTotals(),
       ),
     );
+  }
+
+  /// Totaux officiels de tous les chapitres ouverts.
+  ///
+  /// Aucun total n'est saisi à la main : il est compté dans les banques, donc
+  /// il ne peut pas diverger du contenu.
+  static Map<String, int> officialExerciseTotals() {
+    final totals = <String, int>{};
+    for (final CurriculumLesson lesson in CurriculumBank.lessons) {
+      totals[lesson.id] = CurriculumBank.exercisesOfLesson(lesson.id).length;
+    }
+    return totals;
   }
 
   /// Totaux officiels du chapitre 1, lus dans la banque validée.

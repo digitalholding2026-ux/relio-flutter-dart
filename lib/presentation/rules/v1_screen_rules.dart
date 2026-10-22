@@ -6,6 +6,7 @@
 library;
 
 import '../../domain/curriculum/chapter1_bank.dart';
+import '../../domain/curriculum/curriculum_bank.dart';
 import '../../domain/curriculum/exercise.dart';
 import '../strings/relio_strings.dart';
 
@@ -33,10 +34,8 @@ const String kRedactionExerciseId = ExerciseIds.ex11;
 abstract final class V1ScreenRules {
   const V1ScreenRules._();
 
-  /// Les 11 exercices, dans l'ordre du document valide.
-  static List<Exercise> get exercises => Chapter1Bank.exercises
-      .where((e) => e.kind == BankElementKind.exercise)
-      .toList();
+  /// Les exercices officiels de tous les chapitres ouverts, dans l'ordre.
+  static List<Exercise> get exercises => CurriculumBank.exercises;
 
   /// Index (base 1) d'un exercice dans la banque, ou `null`.
   static int? positionOf(String exerciseId) {
@@ -92,7 +91,7 @@ abstract final class V1ScreenRules {
   /// exercice dont le critere changerait voit son clavier suivre, sans
   /// qu'une divergence soit possible.
   static AnswerKeyboard keyboardFor(String exerciseId) {
-    final exercise = Chapter1Bank.findExercise(exerciseId);
+    final exercise = CurriculumBank.findExercise(exerciseId);
     // Exercice inconnu : on ouvre le clavier texte, plus permissif, plutot
     // que de refuser la saisie.
     if (exercise == null) return AnswerKeyboard.alphanumeric;

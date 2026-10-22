@@ -133,12 +133,19 @@ class LearnPage extends StatelessWidget {
   const LearnPage({
     super.key,
     required this.onOpenChapter1,
+    this.onOpenChapter2,
     this.learnState,
     this.reduceAnimations = false,
   });
 
   /// Ouvre les leçons du chapitre 1.
   final VoidCallback onOpenChapter1;
+
+  /// Ouvre les leçons du chapitre 2.
+  ///
+  /// `null` conserve l'ancien comportement (ouvrir le chapitre 1) : un écran
+  /// monté sans cette action ne doit pas introduire une cible inventée.
+  final VoidCallback? onOpenChapter2;
 
   /// État à afficher.
   ///
@@ -196,9 +203,11 @@ class LearnPage extends StatelessWidget {
             for (final chapter in state.chapters) ...<Widget>[
               ChapterCard(
                 chapter: chapter,
-                // Seul le chapitre ouvert porte l'action. Un chapitre à venir
+                // Seul un chapitre ouvert porte l'action. Un chapitre à venir
                 // n'a rien à ouvrir : il reste inerte, sans chevron.
-                onTap: chapter.available ? onOpenChapter1 : null,
+                onTap: chapter.available
+                    ? _openChapter(chapter)
+                    : null,
                 reduceAnimations: reduceAnimations,
               ),
               const SizedBox(height: RelioSpacing.cardGap),
@@ -207,6 +216,12 @@ class LearnPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Action d'ouverture d'un chapitre disponible.
+  VoidCallback _openChapter(ChapterProgress chapter) {
+    if (chapter.number == 2) return onOpenChapter2 ?? onOpenChapter1;
+    return onOpenChapter1;
   }
 
   /// Dit que la recherche n'est pas encore disponible.

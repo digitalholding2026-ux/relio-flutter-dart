@@ -15,7 +15,8 @@ library;
 
 import 'package:flutter/foundation.dart';
 
-import '../../domain/curriculum/chapter1_bank.dart';
+import '../../domain/curriculum/chapter2_bank.dart';
+import '../../domain/curriculum/curriculum_bank.dart';
 import '../../domain/curriculum/exercise.dart';
 import '../../domain/learning/learner_progress.dart';
 import '../../domain/learning/learning_event.dart';
@@ -99,6 +100,14 @@ class LearnState {
     return null;
   }
 
+  /// Chapitre de numéro [number], ou `null` s'il n'est pas au programme.
+  ChapterProgress? chapterByNumber(int number) {
+    for (final chapter in chapters) {
+      if (chapter.number == number) return chapter;
+    }
+    return null;
+  }
+
   /// État de démonstration, pour les tests et les aperçus.
   ///
   /// Les intitulés de leçons sont ceux du document validé (via
@@ -108,7 +117,7 @@ class LearnState {
     return LearnState(
       chapters: <ChapterProgress>[
         mockChapter1(),
-        const ChapterProgress(number: 2, available: false),
+        mockChapter2(),
         const ChapterProgress(number: 3, available: false),
       ],
     );
@@ -138,9 +147,20 @@ class LearnState {
             for (final ArithmeticLesson lesson in ArithmeticLesson.values)
               HomeState.lessonProgress(lesson, progress),
           ]),
-          validatedLessons: progress.masteredNotions,
+          validatedLessons: progress.masteredNotionsIn(
+            ArithmeticLesson.values,
+          ),
         ),
-        const ChapterProgress(number: 2, available: false),
+        ChapterProgress(
+          number: 2,
+          available: true,
+          title: RelioStrings.chapterThales,
+          lessons: List<LessonProgress>.unmodifiable(<LessonProgress>[
+            for (final ThalesLesson lesson in ThalesLesson.values)
+              HomeState.lessonProgress(lesson, progress),
+          ]),
+          validatedLessons: progress.masteredNotionsIn(ThalesLesson.values),
+        ),
         const ChapterProgress(number: 3, available: false),
       ],
     );
@@ -185,14 +205,27 @@ class LearnState {
     );
   }
 
+  /// Chapitre 2, avec ses deux leçons à l'état vide.
+  ///
+  /// Aucun exercice n'est inventé : les totaux sont comptés dans
+  /// [Chapter2Bank] via [CurriculumBank].
+  static ChapterProgress mockChapter2() {
+    const LearnerProgress empty = LearnerProgress.empty;
+
+    return ChapterProgress(
+      number: 2,
+      available: true,
+      title: RelioStrings.chapterThales,
+      lessons: List<LessonProgress>.unmodifiable(<LessonProgress>[
+        for (final ThalesLesson lesson in ThalesLesson.values)
+          HomeState.lessonProgress(lesson, empty),
+      ]),
+      validatedLessons: 0,
+    );
+  }
+
   /// Nombre d'exercices officiels d'une leçon.
-  static int _officialExerciseCount(ArithmeticLesson lesson) {
-    return Chapter1Bank.exercises
-        .where(
-          (exercise) =>
-              exercise.kind == BankElementKind.exercise &&
-              exercise.lesson == lesson,
-        )
-        .length;
+  static int _officialExerciseCount(CurriculumLesson lesson) {
+    return CurriculumBank.exercisesOfLesson(lesson.id).length;
   }
 }

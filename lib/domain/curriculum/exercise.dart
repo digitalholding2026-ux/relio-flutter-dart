@@ -11,12 +11,32 @@ library;
 import 'answer_normalization.dart';
 import 'rich_hint.dart';
 
+/// Une leçon du programme, quel que soit son chapitre.
+///
+/// L'interface ne porte que des faits structurels : identifiant stable,
+/// intitulé transcrit, chapitre d'appartenance et rang dans ce chapitre. Elle
+/// permet à [Exercise] de décrire aussi bien une leçon d'arithmétique que la
+/// leçon de Thalès sans dupliquer le modèle d'exercice.
+abstract interface class CurriculumLesson {
+  /// Identifiant stable, unique dans toute l'application.
+  String get id;
+
+  /// Intitulé affiché, transcrit du document validé.
+  String get title;
+
+  /// Numéro du chapitre (1 pour l'arithmétique, 2 pour Thalès).
+  int get chapterNumber;
+
+  /// Rang de la leçon dans son chapitre, à partir de zéro.
+  int get order;
+}
+
 /// Leçon du chapitre 1 « Arithmétique ».
 ///
 /// Les intitulés reprennent ceux du document validé. La leçon 2 porte le
 /// libellé « PGDC » dans la source, signalé comme transcription à vérifier :
 /// il est conservé tel quel, avec [requiresEditorialConfirmation].
-enum ArithmeticLesson {
+enum ArithmeticLesson implements CurriculumLesson {
   /// Leçon 1 — PGCD : algorithme des soustractions.
   lesson1Subtractions(
     id: 'lecon-1',
@@ -46,9 +66,11 @@ enum ArithmeticLesson {
   });
 
   /// Identifiant stable de la leçon.
+  @override
   final String id;
 
   /// Intitulé officiel, reproduit du document validé.
+  @override
   final String title;
 
   /// Vrai si l'intitulé attend une confirmation éditoriale.
@@ -56,6 +78,12 @@ enum ArithmeticLesson {
   /// Aucune correction n'est appliquée automatiquement : modifier un titre
   /// officiel relève d'une décision pédagogique, pas technique.
   final bool requiresEditorialConfirmation;
+
+  @override
+  int get chapterNumber => 1;
+
+  @override
+  int get order => index;
 
   @override
   String toString() => 'ArithmeticLesson($id)';
@@ -334,7 +362,7 @@ class Exercise {
   final BankElementKind kind;
 
   /// Leçon concernée.
-  final ArithmeticLesson lesson;
+  final CurriculumLesson lesson;
 
   /// Énoncé présenté à l'élève, transcrit du document validé.
   final String statement;

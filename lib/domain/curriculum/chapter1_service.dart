@@ -23,7 +23,7 @@ import '../learning/learning_event.dart';
 import '../learning/learning_event_repository.dart';
 import '../learning/observed_error.dart';
 import '../learning/offered_hint.dart';
-import 'chapter1_bank.dart';
+import 'curriculum_bank.dart';
 import 'diagnostic_case.dart';
 import 'diagnostic_engine.dart';
 import 'exercise.dart';
@@ -263,17 +263,14 @@ class Chapter1Service {
   // Lecture de la banque
   // ---------------------------------------------------------------------
 
-  /// Les 11 exercices validÃ©s.
-  List<Exercise> get exercises => Chapter1Bank.exercises
-      .where((e) => e.kind == BankElementKind.exercise)
-      .toList();
+  /// Les exercices officiels de tous les chapitres ouverts.
+  List<Exercise> get exercises => CurriculumBank.exercises;
 
-  /// Les tÃ¢ches de vÃ©rification post-rÃ©mediation.
-  List<Exercise> get verificationTasks =>
-      Chapter1Bank.verificationTasks.toList();
+  /// Les tâches de vérification post-rémédiation.
+  List<Exercise> get verificationTasks => CurriculumBank.verificationTasks;
 
-  /// Exercice par identifiant (exercices ET tÃ¢ches de vÃ©rification).
-  Exercise? findExercise(String id) => Chapter1Bank.findExercise(id);
+  /// Exercice par identifiant (exercices ET tâches de vérification).
+  Exercise? findExercise(String id) => CurriculumBank.findExercise(id);
 
   /// Prochain indice Ã  proposer, selon l'ordre de la banque.
   ///
@@ -332,10 +329,8 @@ class Chapter1Service {
   /// sens, on accorde le budget integral.
   int maxHintsFor(Exercise exercise) {
     final siblings = <Exercise>[
-      for (final candidate in Chapter1Bank.exercises)
-        if (candidate.kind == BankElementKind.exercise &&
-            candidate.lesson == exercise.lesson)
-          candidate,
+      for (final candidate in exercises)
+        if (candidate.lesson == exercise.lesson) candidate,
     ];
 
     // La lecon n'existe pas dans la banque, ou n'a qu'un exercice.

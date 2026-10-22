@@ -27,7 +27,8 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import '../curriculum/academic_calendar.dart';
-import '../curriculum/chapter1_bank.dart';
+import '../curriculum/chapter2_bank.dart';
+import '../curriculum/curriculum_bank.dart';
 import '../curriculum/curriculum_data.dart';
 import '../curriculum/exercise.dart';
 import 'exercise_attempt.dart';
@@ -36,21 +37,22 @@ import 'learning_event.dart';
 
 /// Chapitres du programme qui disposent d'exercices dans la banque actuelle.
 ///
-/// La banque ne contient que le chapitre 1. Cette table est le SEUL endroit
-/// où un chapitre officiel est relié à des leçons : ajouter un chapitre au
-/// programme ne crée donc pas d'exercices par accident.
-const Map<String, List<ArithmeticLesson>> lessonsByChapter =
-    <String, List<ArithmeticLesson>>{
+/// Cette table est le SEUL endroit où un chapitre officiel est relié à des
+/// leçons : ajouter un chapitre au programme ne crée donc pas d'exercices par
+/// accident. Les deux chapitres ouverts appartiennent à la séquence 1.
+const Map<String, List<CurriculumLesson>> lessonsByChapter =
+    <String, List<CurriculumLesson>>{
       'Arithmétique': ArithmeticLesson.values,
+      'Théorème de Thalès': ThalesLesson.values,
     };
 
 /// Numéro de séquence de chaque leçon disponible, calculé depuis le programme.
-final Map<ArithmeticLesson, int> _lessonSequenceNumbers =
-    <ArithmeticLesson, int>{
+final Map<CurriculumLesson, int> _lessonSequenceNumbers =
+    <CurriculumLesson, int>{
       for (final AcademicSequence sequence in officialProgram)
         for (final String chapter in sequence.chapters)
-          for (final ArithmeticLesson lesson
-              in lessonsByChapter[chapter] ?? const <ArithmeticLesson>[])
+          for (final CurriculumLesson lesson
+              in lessonsByChapter[chapter] ?? const <CurriculumLesson>[])
             lesson: sequence.number,
     };
 
@@ -61,7 +63,7 @@ class RevisionWeakness {
   const RevisionWeakness({required this.lesson, required this.errorCount});
 
   /// Leçon concernée, telle que nommée dans la banque validée.
-  final ArithmeticLesson lesson;
+  final CurriculumLesson lesson;
 
   /// Nombre d'erreurs réellement observées sur cette leçon.
   ///
@@ -171,7 +173,7 @@ class RevisionPlanBuilder {
     );
     final List<Exercise> weakExercises = <Exercise>[
       for (final RevisionWeakness weakness in weaknesses)
-        ..._exercisesOfLessons(<ArithmeticLesson>[weakness.lesson]),
+        ..._exercisesOfLessons(<CurriculumLesson>[weakness.lesson]),
     ];
 
     final bool empty = currentExercises.isEmpty && weakExercises.isEmpty;
@@ -182,7 +184,7 @@ class RevisionPlanBuilder {
       currentExercises: currentExercises,
       weakExercises: weakExercises,
       fallbackExercises: empty
-          ? _exercisesOfLessons(ArithmeticLesson.values)
+          ? _exercisesOfLessons(CurriculumBank.lessons)
           : const <Exercise>[],
     );
   }
@@ -196,7 +198,7 @@ class RevisionPlanBuilder {
     Iterable<LearningEvent> events,
     AcademicSequence current,
   ) {
-    final Map<ArithmeticLesson, int> counts = <ArithmeticLesson, int>{};
+    final Map<CurriculumLesson, int> counts = <CurriculumLesson, int>{};
 
     for (final LearningEvent event in events) {
       if (event.type != kLearnerAttemptEventType) continue;
@@ -209,7 +211,7 @@ class RevisionPlanBuilder {
       if (attempt.outcome != AnswerOutcome.incorrect) continue;
       if (attempt.error == null) continue;
 
-      final ArithmeticLesson? lesson = _lessonById(lessonId);
+      final CurriculumLesson? lesson = _lessonById(lessonId);
       if (lesson == null) continue;
 
       final int? sequenceNumber = _lessonSequenceNumbers[lesson];
@@ -219,14 +221,17 @@ class RevisionPlanBuilder {
     }
 
     final List<RevisionWeakness> result = <RevisionWeakness>[
-      for (final MapEntry<ArithmeticLesson, int> entry in counts.entries)
+      for (final MapEntry<CurriculumLesson, int> entry in counts.entries)
         RevisionWeakness(lesson: entry.key, errorCount: entry.value),
     ];
 
     result.sort((RevisionWeakness a, RevisionWeakness b) {
       final int byCount = b.errorCount.compareTo(a.errorCount);
       if (byCount != 0) return byCount;
-      return a.lesson.index.compareTo(b.lesson.index);
+      final int byChapter =
+          a.lesson.chapterNumber.compareTo(b.lesson.chapterNumber);
+      if (byChapter != 0) return byChapter;
+      return a.lesson.order.compareTo(b.lesson.order);
     });
 
     return List<RevisionWeakness>.unmodifiable(result);
@@ -234,7 +239,7 @@ class RevisionPlanBuilder {
 
   /// Exercices des leçons rattachées à [chapters].
   List<Exercise> _exercisesOfChapters(List<String> chapters) {
-    final Set<ArithmeticLesson> lessons = <ArithmeticLesson>{
+    final Set<CurriculumLesson> lessons = <CurriculumLesson>{
       for (final String chapter in chapters)
         ...?lessonsByChapter[chapter],
     };
@@ -242,19 +247,17 @@ class RevisionPlanBuilder {
   }
 
   /// Exercices de la banque pour [lessons], dans l'ordre de la banque.
-  List<Exercise> _exercisesOfLessons(Iterable<ArithmeticLesson> lessons) {
-    final Set<ArithmeticLesson> wanted = lessons.toSet();
+  List<Exercise> _exercisesOfLessons(Iterable<CurriculumLesson> lessons) {
+    final Set<CurriculumLesson> wanted = lessons.toSet();
     return List<Exercise>.unmodifiable(<Exercise>[
-      for (final Exercise exercise in Chapter1Bank.exercises)
-        if (exercise.kind == BankElementKind.exercise &&
-            wanted.contains(exercise.lesson))
-          exercise,
+      for (final Exercise exercise in CurriculumBank.exercises)
+        if (wanted.contains(exercise.lesson)) exercise,
     ]);
   }
 
   /// Retrouve une leçon par son identifiant persisté.
-  ArithmeticLesson? _lessonById(String id) {
-    for (final ArithmeticLesson lesson in ArithmeticLesson.values) {
+  CurriculumLesson? _lessonById(String id) {
+    for (final CurriculumLesson lesson in CurriculumBank.lessons) {
       if (lesson.id == id) return lesson;
     }
     return null;

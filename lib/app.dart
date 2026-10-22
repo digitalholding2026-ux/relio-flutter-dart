@@ -541,14 +541,20 @@ class _RelioShellState extends State<_RelioShell> {
 
   NavigatorState? get _learnNavigator => _learnKey.currentState;
 
-  /// Ouvre S1, puis S2, dans la pile de l'onglet Apprendre.
+  /// Ouvre le chapitre 1, puis ses leçons, dans la pile de l'onglet Apprendre.
   ///
   /// « Commencer » (Accueil) et le chapitre 1 (Apprendre) convergent donc vers
   /// le MÊME parcours, sans dupliquer la pile.
+  Future<void> _openChapter1() => _openChapter(1);
+
+  /// Ouvre le chapitre 2 (Théorème de Thalès).
+  Future<void> _openChapter2() => _openChapter(2);
+
+  /// Ouvre la vue des leçons d'un chapitre.
   ///
   /// Bascule AUSSI sur l'onglet Apprendre : pousser une page dans la pile d'un
-  /// onglet sans l'afficher laisserait S1 invisible.
-  Future<void> _openChapter1() async {
+  /// onglet sans l'afficher laisserait la vue invisible.
+  Future<void> _openChapter(int chapterNumber) async {
     _shellKey.currentState?.selectTab(RelioTab.learn);
 
     final navigator = _learnNavigator;
@@ -557,6 +563,7 @@ class _RelioShellState extends State<_RelioShell> {
       RelioPageRoute<void>(
         reduceAnimations: widget.settings.reduceAnimations,
         builder: (_) => ChapterAccessPage(
+          chapterNumber: chapterNumber,
           onOpenLesson: _openLesson,
           // Les leçons affichées sont celles que les faits décrivent : une
           // leçon jamais tentée reste « À commencer ». S1 écoute le notifiant,
@@ -875,6 +882,7 @@ class _RelioShellState extends State<_RelioShell> {
           (context, _) => LearnPage(
             learnState: LearnState.fromProgress(progress),
             onOpenChapter1: _openChapter1,
+            onOpenChapter2: _openChapter2,
             reduceAnimations: widget.settings.reduceAnimations,
           ),
           (context, _) => ProfilePage(

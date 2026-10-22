@@ -53,7 +53,7 @@ class LessonProgress {
     this.totalExercises,
   });
 
-  /// Identifiant stable de la leçon — celui de [ArithmeticLesson.id].
+  /// Identifiant stable de la leçon — celui de [CurriculumLesson.id].
   final String lessonId;
 
   /// Intitulé affiché, repris du document pédagogique validé.
@@ -210,7 +210,7 @@ class HomeState {
     return HomeState(
       objective: SequenceObjective(
         sequence: sequence.number,
-        validated: progress.masteredNotions,
+        validated: progress.masteredNotionsIn(ArithmeticLesson.values),
         notions: ArithmeticLesson.values.length,
       ),
       message: _messageFor(progress, date, sequence.number),
@@ -228,7 +228,7 @@ class HomeState {
   /// Une leçon jamais tentée reste « À commencer », avec une barre vide :
   /// c'est la définition de l'état vide demandée pour l'onglet Apprendre.
   static LessonProgress lessonProgress(
-    ArithmeticLesson lesson,
+    CurriculumLesson lesson,
     LearnerProgress progress,
   ) {
     final int total = progress.totalFor(lesson.id);

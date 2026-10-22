@@ -12,6 +12,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../domain/curriculum/curriculum_bank.dart';
 import '../../domain/curriculum/exercise.dart';
 import '../../domain/learning/learner_progress.dart';
 import '../home/home_state.dart';
@@ -48,7 +49,7 @@ class LessonCard extends StatelessWidget {
   });
 
   /// Leçon affichée.
-  final ArithmeticLesson lesson;
+  final CurriculumLesson lesson;
 
   /// État et avancement de la leçon.
   final LessonProgress progress;
@@ -150,6 +151,7 @@ class ChapterAccessPage extends StatelessWidget {
   const ChapterAccessPage({
     super.key,
     required this.onOpenLesson,
+    this.chapterNumber = 1,
     this.chapter,
     this.progressListenable,
     this.reduceAnimations = false,
@@ -157,6 +159,9 @@ class ChapterAccessPage extends StatelessWidget {
 
   /// Appelé avec l'identifiant de la leçon sélectionnée.
   final void Function(String lessonId) onOpenLesson;
+
+  /// Chapitre affiché, 1 par défaut.
+  final int chapterNumber;
 
   /// Chapitre affiché. `null` : chapitre 1 à l'état vide.
   ///
@@ -183,13 +188,18 @@ class ChapterAccessPage extends StatelessWidget {
     return ValueListenableBuilder<LearnerProgress>(
       valueListenable: listenable,
       builder: (BuildContext context, LearnerProgress progress, Widget? _) =>
-          _build(context, LearnState.fromProgress(progress).activeChapter),
+          _build(
+            context,
+            LearnState.fromProgress(progress).chapterByNumber(chapterNumber),
+          ),
     );
   }
 
   Widget _build(BuildContext context, ChapterProgress? chapter) {
     final palette = RelioPaletteScope.of(context);
-    final shown = chapter ?? LearnState.empty().activeChapter;
+    final shown =
+        chapter ?? LearnState.empty().chapterByNumber(chapterNumber);
+    final int number = shown?.number ?? chapterNumber;
 
     return Scaffold(
       backgroundColor: palette.homeBackground,
@@ -207,7 +217,9 @@ class ChapterAccessPage extends StatelessWidget {
           ),
         ),
         title: Text(
-          RelioStrings.chapterCaption,
+          number == 1
+              ? RelioStrings.chapterCaption
+              : RelioStrings.chapterLabel(number),
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w600,
@@ -226,29 +238,34 @@ class ChapterAccessPage extends StatelessWidget {
           ),
           children: <Widget>[
             Text(
-              RelioStrings.chapterTitle,
+              number == 1
+                  ? RelioStrings.chapterTitle
+                  : (shown?.title ?? RelioStrings.chapterLabel(number)),
               style: RelioType.display(palette)
                   .copyWith(color: palette.primary),
             ),
-            const SizedBox(height: RelioSpacing.sm),
-            Text(
-              RelioStrings.chapterIntro,
-              style: RelioType.body(palette)
-                  .copyWith(color: palette.textSecondary),
-            ),
-            const SizedBox(height: RelioSpacing.sectionGap),
-            for (final lesson in ArithmeticLesson.values) ...<Widget>[
-              // Une leçon sans progression connue ne doit pas disparaître :
-              // on affiche un état neutre plutôt que de sauter la ligne.
-              LessonCard(
-                lesson: lesson,
-                progress:
-                    shown?.lessonById(lesson.id) ?? _fallbackProgress(lesson),
-                onTap: () => onOpenLesson(lesson.id),
-                reduceAnimations: reduceAnimations,
+            if (number == 1) ...<Widget>[
+              const SizedBox(height: RelioSpacing.sm),
+              Text(
+                RelioStrings.chapterIntro,
+                style: RelioType.body(palette)
+                    .copyWith(color: palette.textSecondary),
               ),
-              const SizedBox(height: RelioSpacing.cardGap),
             ],
+            const SizedBox(height: RelioSpacing.sectionGap),
+            for (final lesson in CurriculumBank.lessonsForChapter(number))
+              ...<Widget>[
+                // Une leçon sans progression connue ne doit pas disparaître :
+                // on affiche un état neutre plutôt que de sauter la ligne.
+                LessonCard(
+                  lesson: lesson,
+                  progress:
+                      shown?.lessonById(lesson.id) ?? _fallbackProgress(lesson),
+                  onTap: () => onOpenLesson(lesson.id),
+                  reduceAnimations: reduceAnimations,
+                ),
+                const SizedBox(height: RelioSpacing.cardGap),
+              ],
           ],
         ),
       ),
@@ -259,8 +276,8 @@ class ChapterAccessPage extends StatelessWidget {
   ///
   /// Les totaux viennent de la banque validée : même sans fait, la carte
   /// affiche « 0/4 exercices » plutôt qu'un décompte absent.
-  LessonProgress _fallbackProgress(ArithmeticLesson lesson) {
-    final totals = LearnerProgress.officialChapter1ExerciseTotals();
+  LessonProgress _fallbackProgress(CurriculumLesson lesson) {
+    final totals = LearnerProgress.officialExerciseTotals();
 
     return LessonProgress(
       lessonId: lesson.id,

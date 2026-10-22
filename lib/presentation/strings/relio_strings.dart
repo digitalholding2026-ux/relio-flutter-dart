@@ -222,8 +222,15 @@ abstract final class RelioStrings {
   // disponible et laisse les statuts de leçon à l'état de présentation.
   // ---------------------------------------------------------------------
 
-  /// En-tête d'accueil. Le prénom est ajouté séparément s'il est renseigné.
-  static const String greeting = 'Bonjour';
+  /// En-tête d'accueil : la salutation dépend de l'heure locale.
+  ///
+  /// « Bonjour » de 05h00 à 17h59, « Bonsoir » de 18h00 à 04h59. Le prénom est
+  /// ajouté séparément s'il est renseigné.
+  static bool isEvening(DateTime date) => date.hour < 5 || date.hour >= 18;
+
+  /// Salutation correspondant à [date].
+  static String greetingFor(DateTime date) =>
+      isEvening(date) ? 'Bonsoir' : 'Bonjour';
 
   /// Heure locale au format `HH:mm`, pour l'horloge du header.
   static String clockTime(DateTime date) {
@@ -251,12 +258,17 @@ abstract final class RelioStrings {
   /// Message de Relio qui situe l'élève dans l'année scolaire.
   ///
   /// « Bonjour ! Nous sommes en Novembre, tu prépares la Séquence 2. Prêt à
-  /// avancer ? » — le mois et la séquence viennent de la date de l'appareil,
-  /// donc du fuseau horaire local.
+  /// avancer ? » — le mois, la séquence et la salutation viennent de la date
+  /// de l'appareil, donc du fuseau horaire local. Le soir, la salutation
+  /// devient « Bonsoir » et la proposition parle d'une session du soir.
   static String relioSeasonMessage(DateTime date, int sequence) {
     final String month = monthNames[date.month - 1];
-    return 'Bonjour\u00A0! Nous sommes en $month, tu prépares la '
-        'Séquence $sequence. Prêt à avancer\u00A0?';
+    final String greeting = greetingFor(date);
+    final String closing = isEvening(date)
+        ? 'Prêt pour une petite session ce soir\u00A0?'
+        : 'Prêt à avancer\u00A0?';
+    return '$greeting\u00A0! Nous sommes en $month, tu prépares la '
+        'Séquence $sequence. $closing';
   }
 
   /// Message de Relio, dans la carte sous l'en-tête.
@@ -420,6 +432,9 @@ abstract final class RelioStrings {
   /// Sous-titre d'un chapitre actif.
   static const String chapterArithmetic = 'Arithmétique';
 
+  /// Intitulé du chapitre 2, transcrit du programme officiel.
+  static const String chapterThales = 'Théorème de Thalès';
+
   /// Sous-titre d'un chapitre non encore disponible.
   static const String chapterComingSoon = 'Bientôt disponible';
 
@@ -429,6 +444,9 @@ abstract final class RelioStrings {
 
   /// Titre complet du chapitre 1, tel qu'il s'affiche dans le catalogue.
   static String get chapter1CardTitle => chapterCardTitle(1, chapterArithmetic);
+
+  /// Titre complet du chapitre 2, tel qu'il s'affiche dans le catalogue.
+  static String get chapter2CardTitle => chapterCardTitle(2, chapterThales);
 
   /// Libellé court d'un chapitre : « Chapitre 2 ».
   static String chapterLabel(int number) => 'Chapitre $number';

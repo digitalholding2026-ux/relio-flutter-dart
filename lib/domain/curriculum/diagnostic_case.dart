@@ -111,12 +111,24 @@ class DiagnosticCase {
     required this.hypothesis,
     required this.intervention,
     required this.followUp,
+    this.chapterNumber = 1,
     this.priorityTest = false,
     this.clarificationQuestion,
   });
 
   /// Identifiant stable du cas (« D1 » … « D8 »).
+  ///
+  /// Les identifiants ne sont uniques qu'À L'INTÉRIEUR d'un chapitre : le
+  /// chapitre 2 réutilise D1/D2/D3 pour ses propres erreurs. Le moteur doit
+  /// donc filtrer par [chapterNumber] avant de résoudre un code.
   final String id;
+
+  /// Chapitre auquel ce cas appartient.
+  ///
+  /// Ajouté pour que deux chapitres puissent employer les mêmes codes sans se
+  /// confondre : un « D1 » d'arithmétique ne doit jamais ouvrir l'intervention
+  /// d'un « D1 » de Thalès. Les cas existants restent au chapitre 1.
+  final int chapterNumber;
 
   /// Titre court du cas.
   final String title;

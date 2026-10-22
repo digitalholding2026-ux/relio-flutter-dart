@@ -311,11 +311,14 @@ void main() {
       expect(find.textContaining('Score'), findsNothing);
     });
 
-    testWidgets('sans prénom, l’en-tête dit seulement « Bonjour »',
+    testWidgets('sans prénom, l’en-tête dit seulement la salutation',
         (tester) async {
       await pumpApp(tester);
 
-      expect(find.text(RelioStrings.greeting), findsOneWidget);
+      expect(
+        find.text(RelioStrings.greetingFor(DateTime.now())),
+        findsOneWidget,
+      );
     });
 
     testWidgets('avec un prénom, l’en-tête le reprend', (tester) async {
@@ -331,12 +334,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Bonjour Camille'), findsOneWidget);
+      expect(
+        find.text('${RelioStrings.greetingFor(DateTime.now())} Camille'),
+        findsOneWidget,
+      );
     });
   });
 
   group('Apprendre', () {
-    testWidgets('le chapitre 1 est actif, les suivants sont indisponibles',
+    testWidgets('le chapitre 1 est actif, le chapitre 3 est indisponible',
         (tester) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
@@ -347,11 +353,15 @@ void main() {
         find.text(RelioStrings.chapterLessonsValidated(0, 3)),
         findsOneWidget,
       );
+      expect(find.text(RelioStrings.chapter2CardTitle), findsOneWidget);
+      expect(
+        find.text(RelioStrings.chapterLessonsValidated(0, 2)),
+        findsOneWidget,
+      );
 
-      // Chapitres suivants : génériques et « Bientôt disponible ».
-      expect(find.text('Chapitre 2'), findsOneWidget);
+      // Chapitre suivant : générique et « Bientôt disponible ».
       expect(find.text('Chapitre 3'), findsOneWidget);
-      expect(find.text(RelioStrings.chapterComingSoon), findsNWidgets(2));
+      expect(find.text(RelioStrings.chapterComingSoon), findsOneWidget);
     });
 
     testWidgets('un chapitre indisponible n’est pas cliquable',
@@ -360,11 +370,24 @@ void main() {
       await goToTab(tester, RelioTab.learn);
 
       // Aucun écran ne s'ouvre.
-      await tester.tap(find.text('Chapitre 2'));
+      await tester.tap(find.text('Chapitre 3'));
       await tester.pumpAndSettle();
 
       expect(find.byType(LearnPage), findsOneWidget);
       expect(find.byType(ChapterAccessPage), findsNothing);
+    });
+
+    testWidgets('le tap sur le chapitre 2 ouvre ses deux leçons',
+        (tester) async {
+      await pumpApp(tester);
+      await goToTab(tester, RelioTab.learn);
+
+      await tester.tap(find.text(RelioStrings.chapter2CardTitle));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ChapterAccessPage), findsOneWidget);
+      expect(find.text(RelioStrings.chapterThales), findsOneWidget);
+      expect(find.byType(LessonCard), findsNWidgets(2));
     });
 
     testWidgets('le tap sur le chapitre 1 ouvre S1', (tester) async {
@@ -383,8 +406,8 @@ void main() {
       await goToTab(tester, RelioTab.learn);
 
       // La progression est un trait, jamais un pourcentage ni un compteur de
-      // chapitres terminés.
-      expect(find.byType(RelioProgressBar), findsOneWidget);
+      // chapitres terminés. Deux chapitres ouverts portent chacun le leur.
+      expect(find.byType(RelioProgressBar), findsNWidgets(2));
       expect(find.text(RelioStrings.chapterLessonsValidated(0, 3)), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsNothing);
       expect(find.textContaining('%'), findsNothing);
@@ -516,7 +539,10 @@ void main() {
 
       // … et l'accueil l'affiche.
       await goToTab(tester, RelioTab.home);
-      expect(find.text('Bonjour Camille'), findsOneWidget);
+      expect(
+        find.text('${RelioStrings.greetingFor(DateTime.now())} Camille'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('le prénom est persisté en base', (tester) async {

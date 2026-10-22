@@ -199,7 +199,7 @@ void main() {
         _accueil(
           state: HomeState.fromProgress(
             LearnerProgress.empty,
-            now: DateTime(2026, 9, 10),
+            now: DateTime(2026, 9, 10, 10),
           ),
         ),
       );
@@ -207,7 +207,7 @@ void main() {
 
       expect(
         find.text(
-          RelioStrings.relioSeasonMessage(DateTime(2026, 9, 10), 1),
+          RelioStrings.relioSeasonMessage(DateTime(2026, 9, 10, 10), 1),
         ),
         findsOneWidget,
       );

@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:relio/app.dart';
 import 'package:relio/data/db/app_database.dart';
+import 'package:relio/domain/curriculum/chapter2_bank.dart';
 import 'package:relio/presentation/home/pressable_scale.dart';
 import 'package:relio/presentation/screens/app_shell_nav.dart';
 import 'package:relio/presentation/screens/chapter_access_page.dart';
@@ -77,32 +78,54 @@ void main() {
         findsOneWidget,
       );
 
-      // Une seule barre : celle du chapitre actif. Les chapitres suivants
-      // n'ont aucun avancement à montrer.
-      expect(find.byType(RelioProgressBar), findsOneWidget);
+      // Une barre par chapitre ouvert : chapitres 1 et 2. Le chapitre 3
+      // n'a aucun avancement à montrer.
+      expect(find.byType(RelioProgressBar), findsNWidgets(2));
       final bar = tester.widget<RelioProgressBar>(
-        find.byType(RelioProgressBar),
+        find.byType(RelioProgressBar).first,
       );
       // Nouvel élève : aucune leçon validée, donc une barre vide.
       expect(bar.ratio, 0);
       expect(bar.color.toARGB32(), 0xFFF56207);
     });
 
-    testWidgets('les chapitres 2 et 3 restent inertes', (tester) async {
+    testWidgets('le chapitre 2 est ouvert, le chapitre 3 reste inerte',
+        (tester) async {
       await pumpApp(tester);
       await openLearnTab(tester);
 
-      expect(find.text('Chapitre 2'), findsOneWidget);
+      expect(find.text(RelioStrings.chapter2CardTitle), findsOneWidget);
       expect(find.text('Chapitre 3'), findsOneWidget);
-      expect(find.text(RelioStrings.chapterComingSoon), findsNWidgets(2));
+      expect(find.text(RelioStrings.chapterComingSoon), findsOneWidget);
 
-      // Aucun chevron sur les cartes indisponibles : rien à ouvrir.
-      expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+      // Deux chevrons : les chapitres 1 et 2 sont ouvrables.
+      expect(find.byIcon(Icons.chevron_right), findsNWidgets(2));
 
-      await tester.tap(find.text('Chapitre 2'));
+      await tester.tap(find.text('Chapitre 3'));
       await tester.pumpAndSettle();
       expect(find.byType(ChapterAccessPage), findsNothing);
       expect(find.byType(LearnPage), findsOneWidget);
+    });
+
+    testWidgets('le chapitre 2 s’ouvre sur ses deux leçons', (tester) async {
+      await pumpApp(tester);
+      await openLearnTab(tester);
+
+      await tester.tap(find.text(RelioStrings.chapter2CardTitle));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ChapterAccessPage), findsOneWidget);
+      expect(find.text('Chapitre 2'), findsOneWidget);
+      expect(find.text(RelioStrings.chapterThales), findsOneWidget);
+      expect(find.byType(LessonCard), findsNWidgets(2));
+      expect(
+        find.text('Propriété directe (Calculer des longueurs)'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Propriété réciproque (Justifier le parallélisme)'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('le chapitre 1 s’ouvre au tap et se referme par la flèche',
@@ -141,9 +164,43 @@ void main() {
           matching: find.byType(PressableScale),
         ),
       );
-      // Une seule carte est cliquable : les deux autres n'ont pas d'effet.
-      expect(effects, hasLength(1));
-      expect(effects.single.scale, 0.97);
+      // Deux cartes sont cliquables : chapitres 1 et 2 ; la troisième ne
+      // l'est pas et n'a pas d'effet.
+      expect(effects, hasLength(2));
+      for (final effect in effects) {
+        expect(effect.scale, 0.97);
+      }
+    });
+  });
+
+  group('Vue des leçons — chapitre 2', () {
+    testWidgets('affiche les deux leçons et leurs décomptes', (tester) async {
+      await pumpApp(tester);
+      await openLearnTab(tester);
+      await tester.tap(find.text(RelioStrings.chapter2CardTitle));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LessonCard), findsNWidgets(2));
+      expect(find.text(RelioStrings.statusNotStarted), findsNWidgets(2));
+      expect(
+        find.text(RelioStrings.lessonExerciseProgress(0, 1)),
+        findsNWidgets(2),
+      );
+      expect(find.byType(RelioProgressBar), findsNWidgets(2));
+    });
+
+    testWidgets('une leçon du chapitre 2 ouvre son exercice', (tester) async {
+      await pumpApp(tester);
+      await openLearnTab(tester);
+      await tester.tap(find.text(RelioStrings.chapter2CardTitle));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(LessonCard).at(1));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ExercisePage), findsOneWidget);
+      final page = tester.widget<ExercisePage>(find.byType(ExercisePage));
+      expect(page.exercise.id, Chapter2ExerciseIds.ex2);
     });
   });
 
