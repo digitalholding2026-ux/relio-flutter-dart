@@ -38,9 +38,20 @@ class GreetingHeader extends StatelessWidget {
         ? RelioStrings.greeting
         : '${RelioStrings.greeting} $trimmed';
 
-    return Text(
-      text,
-      style: RelioType.display(palette).copyWith(color: palette.primary),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            text,
+            style: RelioType.display(palette).copyWith(color: palette.primary),
+          ),
+        ),
+        const SizedBox(width: RelioSpacing.sm),
+        // Discret, aligné sur la ligne du prénom : il informe sans occuper le
+        // centre de l'écran.
+        const GreetingClock(),
+      ],
     );
   }
 }
@@ -55,6 +66,7 @@ class HomePage extends StatefulWidget {
     required this.onFiveMinutes,
     required this.onWarmup,
     required this.onOpenLesson,
+    required this.onRevision,
     this.homeState,
     this.reduceAnimations = false,
   });
@@ -73,6 +85,9 @@ class HomePage extends StatefulWidget {
 
   /// Ouvre une leçon précise depuis le programme.
   final void Function(String lessonId) onOpenLesson;
+
+  /// Ouvre l'écran Révision (coach d'examen).
+  final VoidCallback onRevision;
 
   /// État à afficher.
   ///
@@ -201,6 +216,13 @@ class _HomePageState extends State<HomePage>
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: RelioSpacing.md),
+            RevisionEntryCard(
+              title: RelioStrings.revisionCardTitle,
+              subtitle: RelioStrings.revisionCardSubtitle,
+              onTap: widget.onRevision,
+              reduceAnimations: widget.reduceAnimations,
             ),
             const SizedBox(height: RelioSpacing.sectionGap),
             Text(

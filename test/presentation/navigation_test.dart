@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:relio/app.dart';
 import 'package:relio/data/db/app_database.dart';
+import 'package:relio/domain/curriculum/academic_calendar.dart';
 import 'package:relio/domain/curriculum/exercise.dart';
 import 'package:relio/domain/settings/learner_settings.dart';
 import 'package:relio/presentation/home/home_widgets.dart';
@@ -196,7 +197,13 @@ void main() {
 
       expect(find.text(RelioStrings.relioMessageFirstSteps), findsOneWidget);
       expect(
-        find.text(RelioStrings.sequenceObjective(1, 0, 3)),
+        find.text(
+          RelioStrings.sequenceObjective(
+            sequenceForDate(DateTime.now()).number,
+            0,
+            ArithmeticLesson.values.length,
+          ),
+        ),
         findsOneWidget,
       );
       // Nouvel élève : on invite à commencer, sans position inventée.

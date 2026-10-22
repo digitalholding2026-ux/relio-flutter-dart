@@ -22,8 +22,10 @@ import 'domain/curriculum/exercise.dart';
 import 'domain/entrytest/entry_test_onboarding.dart';
 import 'domain/entrytest/entry_test_repository.dart';
 import 'domain/learning/learner_progress.dart';
+import 'domain/learning/learning_event.dart';
 import 'domain/learning/learning_event_repository.dart';
 import 'domain/learning/quick_practice.dart';
+import 'domain/learning/revision_plan.dart';
 import 'domain/settings/learner_settings.dart';
 import 'domain/tutor/tutor_client.dart';
 import 'domain/tutor/tutor_client_factory.dart';
@@ -43,6 +45,7 @@ import 'presentation/screens/onboarding/onboarding_flow.dart';
 import 'presentation/screens/onboarding/welcome_page.dart';
 import 'presentation/screens/profile_page.dart';
 import 'presentation/screens/quick_session_end_page.dart';
+import 'presentation/screens/revision_screen.dart';
 import 'presentation/strings/relio_strings.dart';
 import 'presentation/theme/relio_theme.dart';
 import 'presentation/widgets/relio_page_route.dart';
@@ -464,13 +467,14 @@ class _RelioShellState extends State<_RelioShell> {
   /// saisie ; limite ACCEPTÉE et non masquée.
   final Map<String, ExerciseDraft> _drafts = <String, ExerciseDraft>{};
 
-  late final Chapter1Service _service = Chapter1Service(
-    LearningEventRepository(widget.database),
-  );
+  late final LearningEventRepository _eventsRepository =
+      LearningEventRepository(widget.database);
+
+  late final Chapter1Service _service = Chapter1Service(_eventsRepository);
 
   /// Lecture de l'avancement réel — jamais une valeur d'attente.
   late final LearnerProgressRepository _progressRepository =
-      LearnerProgressRepository(LearningEventRepository(widget.database));
+      LearnerProgressRepository(_eventsRepository);
 
   /// Tuteur partagé par tous les exercices.
   ///
@@ -751,6 +755,58 @@ class _RelioShellState extends State<_RelioShell> {
     );
   }
 
+  /// Ouvre l'écran Révision, calculé depuis la date et les faits.
+  Future<void> _openRevision() async {
+    final NavigatorState? navigator = _homeKey.currentState;
+    if (navigator == null) return;
+
+    final RevisionPlan plan = await _loadRevisionPlan();
+    if (!mounted || !navigator.mounted) return;
+
+    await navigator.push<void>(
+      RelioPageRoute<void>(
+        reduceAnimations: widget.settings.reduceAnimations,
+        builder: (_) => RevisionScreen(
+          plan: plan,
+          onStart: () => _startRevisionPreparation(navigator, plan),
+        ),
+      ),
+    );
+  }
+
+  /// Calcule le plan de révision ; un historique illisible ne bloque rien.
+  Future<RevisionPlan> _loadRevisionPlan() async {
+    List<LearningEvent> events = const <LearningEvent>[];
+    try {
+      events = await _eventsRepository.findAll();
+    } catch (_) {
+      // Sans historique, le programme reste consultable et les faiblesses
+      // sont simplement absentes : rien n'est inventé.
+    }
+    return const RevisionPlanBuilder().build(
+      date: DateTime.now(),
+      events: events,
+    );
+  }
+
+  /// Remplace l'écran Révision par la première question de la préparation.
+  void _startRevisionPreparation(NavigatorState navigator, RevisionPlan plan) {
+    final List<Exercise> exercises = plan.pickPreparation();
+    if (exercises.isEmpty || !navigator.mounted) return;
+
+    final QuickSession session = QuickSession(
+      kind: QuickPracticeKind.fiveMinutes,
+      exercises: exercises,
+    );
+
+    navigator.pushReplacement<void, void>(
+      RelioPageRoute<void>(
+        reduceAnimations: widget.settings.reduceAnimations,
+        builder: (_) => _quickSessionPage(navigator, session),
+      ),
+    );
+  }
+
   /// Passe à l'exercice suivant DE LA LEÇON, ou revient à S1 après le dernier.
   Future<void> _goToNext(Exercise exercise, {bool revision = false}) async {
     final navigator = _learnNavigator;
@@ -814,6 +870,7 @@ class _RelioShellState extends State<_RelioShell> {
             onFiveMinutes: _startFiveMinutes,
             onWarmup: _startWarmup,
             onOpenLesson: _openLesson,
+            onRevision: _openRevision,
           ),
           (context, _) => LearnPage(
             learnState: LearnState.fromProgress(progress),

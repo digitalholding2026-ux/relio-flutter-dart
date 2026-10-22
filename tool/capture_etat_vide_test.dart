@@ -152,6 +152,7 @@ void main() {
         onFiveMinutes: () {},
         onWarmup: () {},
         onOpenLesson: (_) {},
+        onRevision: () {},
       ),
     );
   });

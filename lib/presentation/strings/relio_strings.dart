@@ -225,10 +225,45 @@ abstract final class RelioStrings {
   /// En-tête d'accueil. Le prénom est ajouté séparément s'il est renseigné.
   static const String greeting = 'Bonjour';
 
+  /// Heure locale au format `HH:mm`, pour l'horloge du header.
+  static String clockTime(DateTime date) {
+    final String hours = date.hour.toString().padLeft(2, '0');
+    final String minutes = date.minute.toString().padLeft(2, '0');
+    return '$hours:$minutes';
+  }
+
+  /// Noms des mois, en français, pour le repère temporel.
+  static const List<String> monthNames = <String>[
+    'Janvier',
+    'Février',
+    'Mars',
+    'Avril',
+    'Mai',
+    'Juin',
+    'Juillet',
+    'Août',
+    'Septembre',
+    'Octobre',
+    'Novembre',
+    'Décembre',
+  ];
+
+  /// Message de Relio qui situe l'élève dans l'année scolaire.
+  ///
+  /// « Bonjour ! Nous sommes en Novembre, tu prépares la Séquence 2. Prêt à
+  /// avancer ? » — le mois et la séquence viennent de la date de l'appareil,
+  /// donc du fuseau horaire local.
+  static String relioSeasonMessage(DateTime date, int sequence) {
+    final String month = monthNames[date.month - 1];
+    return 'Bonjour\u00A0! Nous sommes en $month, tu prépares la '
+        'Séquence $sequence. Prêt à avancer\u00A0?';
+  }
+
   /// Message de Relio, dans la carte sous l'en-tête.
   ///
-  /// Message PAR DÉFAUT : aucun blocage récent n'est connu. C'est la valeur
-  /// que le moteur remplacera par un texte contextuel.
+  /// Message de DÉMONSTRATION (aperçus, mocks). En production, la carte est
+  /// alimentée par `HomeState.fromProgress` : repère temporel (mois et
+  /// séquence) ou message contextuel selon les faits observés.
   ///
   /// L'espace qui précède « ? » est INSÉCABLE (`\u00A0`) : sans lui, la
   /// ponctuation peut se retrouver seule sur la dernière ligne de la carte.
@@ -324,6 +359,48 @@ abstract final class RelioStrings {
 
   /// Écran de fin de session — message.
   static const String quickSessionEndMessage = 'Tu as bien travaillé.';
+
+  // ---------------------------------------------------------------------
+  // Révision
+  // ---------------------------------------------------------------------
+
+  /// Carte d'accès depuis l'accueil — titre.
+  static const String revisionCardTitle = 'Réviser mon évaluation';
+
+  /// Carte d'accès depuis l'accueil — sous-titre.
+  static const String revisionCardSubtitle = 'Ton coach d’examen';
+
+  /// Titre de l'écran Révision.
+  static const String revisionScreenTitle = 'Révision';
+
+  /// En-tête : préfixe de l'objectif.
+  static const String revisionObjectiveLabel = 'Objectif';
+
+  /// En-tête : consigne affichée sous l'objectif.
+  static const String revisionSubtitle = 'Prépare ton évaluation';
+
+  /// Section 1 — chapitres de la séquence en cours.
+  static const String revisionProgramSection = 'Le programme actuel';
+
+  /// Section 2 — leçons à retravailler.
+  static const String revisionWeakSection = 'Tes points faibles';
+
+  /// Message quand aucune erreur n'a été relevée.
+  static const String revisionNoWeakness =
+      'Aucune erreur relevée pour l’instant. Continue comme ça\u00A0!';
+
+  /// Nombre d'erreurs relevées sur une leçon.
+  static String revisionErrorCount(int count) =>
+      count > 1 ? '$count erreurs relevées' : '1 erreur relevée';
+
+  /// Bouton d'action de l'écran.
+  static const String revisionStart = 'Lancer ma préparation';
+
+  /// Précision affichée quand ni la séquence ni les faiblesses ne fournissent
+  /// d'exercice : la préparation s'appuie alors sur les bases disponibles.
+  static const String revisionFallbackNote =
+      'Les exercices de cette séquence ne sont pas encore disponibles\u00A0: '
+      'ta préparation porte sur les bases déjà ouvertes.';
 
   /// Titre de la section qui liste les leçons du chapitre.
   static const String programSectionTitle = 'Ton programme';

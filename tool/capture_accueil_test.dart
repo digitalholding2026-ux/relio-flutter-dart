@@ -67,6 +67,7 @@ Future<void> capturer(
             onFiveMinutes: () {},
             onWarmup: () {},
             onOpenLesson: (_) {},
+            onRevision: () {},
           ),
         ),
       ),

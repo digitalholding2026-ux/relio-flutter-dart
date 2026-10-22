@@ -15,7 +15,9 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import '../../domain/curriculum/academic_calendar.dart';
 import '../../domain/curriculum/chapter1_bank.dart';
+import '../../domain/curriculum/curriculum_data.dart';
 import '../../domain/curriculum/exercise.dart';
 import '../../domain/learning/learner_progress.dart';
 import '../strings/relio_strings.dart';
@@ -198,14 +200,20 @@ class HomeState {
   ///
   /// C'est l'UNIQUE constructeur utilisé en production. [HomeState.mock]
   /// reste réservé aux tests et aux aperçus.
-  factory HomeState.fromProgress(LearnerProgress progress) {
+  /// [now] permet de fixer la date dans les tests. En production, la date
+  /// locale de l'appareil choisit la séquence : c'est elle qui situe l'élève
+  /// dans l'année scolaire.
+  factory HomeState.fromProgress(LearnerProgress progress, {DateTime? now}) {
+    final DateTime date = now ?? DateTime.now();
+    final AcademicSequence sequence = sequenceForDate(date);
+
     return HomeState(
       objective: SequenceObjective(
-        sequence: 1,
+        sequence: sequence.number,
         validated: progress.masteredNotions,
         notions: ArithmeticLesson.values.length,
       ),
-      message: _messageFor(progress),
+      message: _messageFor(progress, date, sequence.number),
       resume: _resumeTarget(progress),
       lessons: <LessonProgress>[
         for (final ArithmeticLesson lesson in ArithmeticLesson.values)
@@ -244,22 +252,26 @@ class HomeState {
     );
   }
 
-  /// Message de Relio, choisi sur un fait observable.
+  /// Message de Relio, choisi sur un fait observable et la période de l'année.
   ///
   /// Trois cas seulement, dans cet ordre :
   ///  - rien n'a été tenté → invitation à commencer ;
   ///  - exactement un exercice réussi → félicitation et proposition de
   ///    continuer ;
-  ///  - tout le reste → message par défaut.
+  ///  - tout le reste → repère temporel : mois et séquence en cours.
   ///
   /// Le nombre d'exercices vient de l'historique (réussites comprises) : ce
   /// n'est ni un score ni une interprétation de la réponse.
-  static String _messageFor(LearnerProgress progress) {
+  static String _messageFor(
+    LearnerProgress progress,
+    DateTime date,
+    int sequence,
+  ) {
     if (!progress.hasStarted) return RelioStrings.relioMessageFirstSteps;
     if (progress.completedExercises == 1) {
       return RelioStrings.relioMessageFirstExerciseDone;
     }
-    return RelioStrings.relioMessage;
+    return RelioStrings.relioSeasonMessage(date, sequence);
   }
 
   /// Cible de la carte principale : premier exercice non terminé.

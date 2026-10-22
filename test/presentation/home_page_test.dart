@@ -8,6 +8,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:relio/domain/learning/learner_progress.dart';
 import 'package:relio/presentation/home/home_state.dart';
 import 'package:relio/presentation/home/home_widgets.dart';
 import 'package:relio/presentation/screens/home_page.dart';
@@ -20,6 +21,7 @@ Widget _accueil({
   VoidCallback? onContinue,
   VoidCallback? onFiveMinutes,
   VoidCallback? onWarmup,
+  VoidCallback? onRevision,
   void Function(String lessonId)? onOpenLesson,
 }) {
   return RelioPaletteScope(
@@ -33,6 +35,7 @@ Widget _accueil({
         onContinue: onContinue ?? () {},
         onFiveMinutes: onFiveMinutes ?? () {},
         onWarmup: onWarmup ?? () {},
+        onRevision: onRevision ?? () {},
         onOpenLesson: onOpenLesson ?? (_) {},
         // Les animations d'apparition n'ont rien à prouver ici : on teste le
         // contenu, pas le remplissage des barres.
@@ -190,7 +193,16 @@ void main() {
     });
 
     testWidgets('le message et l’objectif partent de zéro', (tester) async {
-      await tester.pumpWidget(_accueil(state: HomeState.empty()));
+      // Date fixée en septembre : la séquence 1 est celle du jour, et le
+      // libellé ne dépend pas du mois où le test s'exécute.
+      await tester.pumpWidget(
+        _accueil(
+          state: HomeState.fromProgress(
+            LearnerProgress.empty,
+            now: DateTime(2026, 9, 10),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text(RelioStrings.relioMessageFirstSteps), findsOneWidget);
@@ -202,6 +214,14 @@ void main() {
     });
 
     testWidgets('les trois leçons sont « À commencer »', (tester) async {
+      // Écran haut : la carte de révision allonge l'accueil, et la liste
+      // paresseuse ne construit pas les leçons restées sous la ligne de
+      // flottaison.
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       await tester.pumpWidget(_accueil(state: HomeState.empty()));
       await tester.pumpAndSettle();
 
@@ -249,6 +269,60 @@ void main() {
         find.text(RelioStrings.relioMessageFirstExerciseDone),
         findsOneWidget,
       );
+    });
+  });
+
+  group('Horloge et révision', () {
+    testWidgets('l’horloge affiche l’heure locale au format HH:mm', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_accueil(state: HomeState.mock()));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GreetingClock), findsOneWidget);
+      expect(
+        find.textContaining(RegExp(r'^\d{2}:\d{2}$')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('l’horloge se recale au changement de minute', (tester) async {
+      DateTime now = DateTime(2026, 11, 22, 9, 5);
+
+      await tester.pumpWidget(
+        RelioPaletteScope(
+          palette: RelioPalette.standard(),
+          child: MaterialApp(
+            theme: RelioTheme.build(),
+            home: Scaffold(body: GreetingClock(now: () => now)),
+          ),
+        ),
+      );
+
+      expect(find.text('09:05'), findsOneWidget);
+
+      now = DateTime(2026, 11, 22, 9, 6);
+      await tester.pump(const Duration(minutes: 1));
+
+      expect(find.text('09:06'), findsOneWidget);
+    });
+
+    testWidgets('la carte de révision ouvre l’écran Révision', (tester) async {
+      int ouvertures = 0;
+
+      await tester.pumpWidget(
+        _accueil(
+          state: HomeState.mock(),
+          onRevision: () => ouvertures++,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text(RelioStrings.revisionCardTitle));
+      await tester.tap(find.text(RelioStrings.revisionCardTitle));
+      await tester.pumpAndSettle();
+
+      expect(ouvertures, 1);
     });
   });
 }

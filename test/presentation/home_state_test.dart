@@ -156,10 +156,17 @@ void main() {
         lessonExerciseTotals: LearnerProgress.officialChapter1ExerciseTotals(),
       );
 
-      final state = HomeState.fromProgress(progress);
+      final state = HomeState.fromProgress(
+        progress,
+        now: DateTime(2026, 11, 10),
+      );
 
       expect(state.started, isTrue);
-      expect(state.message, RelioStrings.relioMessage);
+      expect(
+        state.message,
+        RelioStrings.relioSeasonMessage(DateTime(2026, 11, 10), 2),
+      );
+      expect(state.objective.sequence, 2);
       expect(state.resume.positionLabel, RelioStrings.resumeProgress(1, 4));
       expect(state.lessons.first.status, LessonStatus.inProgress);
       expect(state.lessons.first.fill, 0);

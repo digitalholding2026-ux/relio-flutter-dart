@@ -4,6 +4,8 @@
 /// `RelioTheme` : aucun écran ne porte de valeur littérale.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../branding/relio_mark.dart';
@@ -80,6 +82,80 @@ class _ObjectiveBar extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Horloge du header : heure locale, mise à jour à chaque minute.
+///
+/// Elle se recale sur la minute suivante plutôt que de compter 60 secondes :
+/// un appareil qui sort de veille affiche ainsi l'heure juste au premier
+/// battement, sans dérive cumulative.
+class GreetingClock extends StatefulWidget {
+  /// Crée l'horloge.
+  ///
+  /// [now] remplace l'horloge système dans les tests. En production, la date
+  /// locale de l'appareil est utilisée telle quelle.
+  const GreetingClock({super.key, this.now});
+
+  /// Source de l'heure, injectable pour les tests.
+  final DateTime Function()? now;
+
+  @override
+  State<GreetingClock> createState() => _GreetingClockState();
+}
+
+class _GreetingClockState extends State<GreetingClock> {
+  late DateTime _time;
+  Timer? _timer;
+
+  DateTime _read() => (widget.now ?? DateTime.now)();
+
+  @override
+  void initState() {
+    super.initState();
+    _time = _read();
+    _scheduleNextMinute();
+  }
+
+  /// Programme le rafraîchissement au prochain changement de minute.
+  void _scheduleNextMinute() {
+    final DateTime current = _read();
+    final DateTime nextMinute = DateTime(
+      current.year,
+      current.month,
+      current.day,
+      current.hour,
+      current.minute,
+    ).add(const Duration(minutes: 1));
+    final Duration delay = nextMinute.difference(current);
+
+    _timer = Timer(delay.isNegative ? Duration.zero : delay, () {
+      if (!mounted) return;
+      setState(() => _time = _read());
+      _scheduleNextMinute();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = RelioPaletteScope.of(context);
+
+    return Text(
+      RelioStrings.clockTime(_time),
+      semanticsLabel: 'Heure actuelle',
+      style: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        fontFamily: RelioTheme.fontFamily,
+        color: palette.primary,
+      ),
     );
   }
 }
@@ -308,6 +384,92 @@ class QuickActionCard extends StatelessWidget {
               style: RelioType.caption(palette),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Accès à l'écran Révision, sous les actions rapides.
+///
+/// Pleine largeur : elle annonce une démarche (préparer une évaluation), pas
+/// une envie passagère. Le chevron indique qu'elle ouvre un écran.
+class RevisionEntryCard extends StatelessWidget {
+  /// Crée la carte d'accès à la révision.
+  const RevisionEntryCard({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.reduceAnimations = false,
+  });
+
+  /// Titre de la carte.
+  final String title;
+
+  /// Sous-titre de la carte.
+  final String subtitle;
+
+  /// Action au tap.
+  final VoidCallback onTap;
+
+  /// Désactive l'effet d'appui.
+  final bool reduceAnimations;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = RelioPaletteScope.of(context);
+
+    return PressableScale(
+      onTap: onTap,
+      reduceAnimations: reduceAnimations,
+      child: Container(
+        padding: const EdgeInsets.all(RelioSpacing.lg),
+        decoration: BoxDecoration(
+          color: palette.surface,
+          borderRadius: RelioRadius.bannerAll,
+          border: Border.all(color: palette.outline),
+        ),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: palette.primary.withValues(alpha: 0.12),
+                borderRadius: RelioRadius.cardAll,
+              ),
+              child: Icon(
+                Icons.school_outlined,
+                color: palette.primary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: RelioSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(title, style: RelioType.bodyStrong(palette)),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: RelioType.caption(palette),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: RelioSpacing.sm),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: palette.textMuted,
+              size: 24,
             ),
           ],
         ),
