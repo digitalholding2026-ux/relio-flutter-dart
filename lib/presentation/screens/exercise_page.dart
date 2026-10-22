@@ -22,6 +22,8 @@ import '../../domain/curriculum/chapter1_service.dart';
 import '../../domain/curriculum/exercise.dart';
 import '../../domain/curriculum/rich_hint.dart';
 import '../../domain/curriculum/rich_hint_adapter.dart';
+import '../../domain/tutor/tutor_client.dart';
+import '../../domain/tutor/tutor_exercise_context.dart';
 import '../rules/feedback_selection.dart';
 import '../rules/v1_screen_rules.dart';
 import '../strings/relio_strings.dart';
@@ -69,6 +71,7 @@ class ExercisePage extends StatefulWidget {
     required this.drafts,
     required this.onExit,
     required this.onGoToNext,
+    this.tutor,
     this.requestFocusOnOpen = false,
     this.onFullscreenChanged,
     this.reviewConsumedHints = false,
@@ -90,6 +93,12 @@ class ExercisePage extends StatefulWidget {
 
   /// Passage a l'exercice suivant, ou retour S1 si c'est le dernier.
   final VoidCallback onGoToNext;
+
+  /// Tuteur branché sur le modèle, ou `null` pour le mode repli.
+  ///
+  /// Un écran testé isolément ne fournit aucun client : la conversation
+  /// s'ouvre et répond par la phrase de repli, sans appel réseau.
+  final TutorClient? tutor;
 
   /// Reprendre le focus sur le champ a l'ouverture.
   ///
@@ -171,9 +180,11 @@ class _ExercisePageState extends State<ExercisePage> {
 
     // La cle de tentative existe des l'ouverture de S2 : les indices doivent
     // pouvoir y etre rattaches avant toute soumission.
-    _draft = widget.drafts[widget.exercise.id] ??
-        (widget.drafts[widget.exercise.id] =
-            ExerciseDraft(answerKey: 'tentative-${newId()}'));
+    _draft =
+        widget.drafts[widget.exercise.id] ??
+        (widget.drafts[widget.exercise.id] = ExerciseDraft(
+          answerKey: 'tentative-${newId()}',
+        ));
     _controller.text = _draft.answer;
 
     // Retour par la fleche de l'AppBar : le panneau retrouve est restaure
@@ -212,13 +223,12 @@ class _ExercisePageState extends State<ExercisePage> {
     if (hints.isEmpty) return;
 
     // Tous les fragments des fiches consumed, dans l'ordre de la banque.
-    final blocks = <HintBlock>[
-      for (final hint in hints) ...hint.blocks,
-    ];
+    final blocks = <HintBlock>[for (final hint in hints) ...hint.blocks];
 
     final origin = widget.reviewOrigin;
-    final originNumber =
-        origin == null ? null : V1ScreenRules.positionOf(origin.id);
+    final originNumber = origin == null
+        ? null
+        : V1ScreenRules.positionOf(origin.id);
 
     await showRichHintSheet(
       context,
@@ -277,8 +287,10 @@ class _ExercisePageState extends State<ExercisePage> {
     // ne le saurait plus.
     if (_locked) return;
 
-    final hint =
-        widget.service.nextHint(widget.exercise, _draft.consumedHintOrders);
+    final hint = widget.service.nextHint(
+      widget.exercise,
+      _draft.consumedHintOrders,
+    );
     if (hint == null) return; // Plus d'indice : le bouton disparait.
 
     // Budget AVANT ouverture : sert a savoir si la fiche qu'on va ouvrir est
@@ -333,10 +345,10 @@ class _ExercisePageState extends State<ExercisePage> {
 
   /// Budget d'aide demande au moteur.
   HintBudget _budget() => widget.service.hintBudget(
-        widget.exercise,
-        _draft.consumedHintOrders,
-        previousExerciseId: _previous?.id,
-      );
+    widget.exercise,
+    _draft.consumedHintOrders,
+    previousExerciseId: _previous?.id,
+  );
 
   /// Exercice de reference, propose une fois le budget epuise.
   Exercise? get _previous => V1ScreenRules.previousBefore(widget.exercise);
@@ -439,8 +451,9 @@ class _ExercisePageState extends State<ExercisePage> {
       _draft.consumedHintOrders.clear();
       _draft.shownHints.clear();
       // Une nouvelle tentative necessite une nouvelle cle.
-      widget.drafts[widget.exercise.id] = _draft =
-          ExerciseDraft(answerKey: 'tentative-${newId()}');
+      widget.drafts[widget.exercise.id] = _draft = ExerciseDraft(
+        answerKey: 'tentative-${newId()}',
+      );
       _controller.clear();
     });
     _focusNode.requestFocus();
@@ -570,10 +583,7 @@ class _ExercisePageState extends State<ExercisePage> {
   Widget _transparencyNote(String text) {
     final palette = RelioPaletteScope.of(context);
 
-    return Text(
-      text,
-      style: RelioType.caption(palette).copyWith(height: 1.4),
-    );
+    return Text(text, style: RelioType.caption(palette).copyWith(height: 1.4));
   }
 
   /// Barre d'action fixee : champ, indice, validation.
@@ -586,9 +596,7 @@ class _ExercisePageState extends State<ExercisePage> {
     return Container(
       decoration: BoxDecoration(
         color: palette.surface,
-        border: Border(
-          top: BorderSide(color: palette.outline, width: 1),
-        ),
+        border: Border(top: BorderSide(color: palette.outline, width: 1)),
       ),
       padding: const EdgeInsets.fromLTRB(
         RelioSpacing.horizontal,
@@ -669,18 +677,18 @@ class _ExercisePageState extends State<ExercisePage> {
   }
 
   /// Bouton d'aide, ou `null` s'il n'a rien a offrir.
-///
-/// LE LIBELLE VIENT DU BUDGET, PAS DE L'ECRAN.
-///
-/// `HintBudget.cta` est un enonce ferme : le bouton ne peut donc pas
-/// inventer un cas, ni diverger du compte rendu du moteur. L'ecran ne
-/// recompte rien — il lit le budget, affiche le libelle correspondant.
-///
-/// Le bouton RESTE VISIBLE s'il etait affiche au moment de la validation :
-/// seule sa disponibilite change. Le retirer modifierait la hauteur de la barre
-/// d'action apres chaque reponse, ce qui serait plus derangeant qu'un bouton
-/// inactif.
-Widget? _hintButton() {
+  ///
+  /// LE LIBELLE VIENT DU BUDGET, PAS DE L'ECRAN.
+  ///
+  /// `HintBudget.cta` est un enonce ferme : le bouton ne peut donc pas
+  /// inventer un cas, ni diverger du compte rendu du moteur. L'ecran ne
+  /// recompte rien — il lit le budget, affiche le libelle correspondant.
+  ///
+  /// Le bouton RESTE VISIBLE s'il etait affiche au moment de la validation :
+  /// seule sa disponibilite change. Le retirer modifierait la hauteur de la barre
+  /// d'action apres chaque reponse, ce qui serait plus derangeant qu'un bouton
+  /// inactif.
+  Widget? _hintButton() {
     final budget = _budget();
     final previous = _previous;
 
@@ -689,7 +697,10 @@ Widget? _hintButton() {
     final previousNumber = previous == null
         ? null
         : V1ScreenRules.positionOf(previous.id);
-    final label = RelioStrings.hintCta(budget.cta, previousExerciseNumber: previousNumber);
+    final label = RelioStrings.hintCta(
+      budget.cta,
+      previousExerciseNumber: previousNumber,
+    );
 
     // Budget epuise : on ne demande plus un indice, on propose de relire.
     final isReview = budget.cta == HintCta.reviewPrevious;
@@ -719,7 +730,11 @@ Widget? _hintButton() {
   /// s'y applique pas.
   Widget _askRelioButton() {
     return TextButton.icon(
-      onPressed: () => showRelioTutorSheet(context),
+      onPressed: () => showRelioTutorSheet(
+        context,
+        client: widget.tutor ?? const UnavailableTutorClient(),
+        exercise: TutorExerciseContext.fromExercise(widget.exercise),
+      ),
       icon: const Icon(Icons.chat_bubble_outline, size: 18),
       label: const Text(RelioStrings.askRelio),
     );
@@ -738,8 +753,7 @@ Widget? _hintButton() {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Icon(Icons.error_outline,
-              color: palette.errorText, size: 20),
+          Icon(Icons.error_outline, color: palette.errorText, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -771,10 +785,7 @@ Widget? _hintButton() {
             icon: const Icon(Icons.close, size: 18),
             color: palette.errorText,
             tooltip: 'Fermer',
-            constraints: const BoxConstraints(
-              minWidth: 36,
-              minHeight: 36,
-            ),
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
         ],
       ),

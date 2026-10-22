@@ -40,8 +40,10 @@ abstract final class RelioStrings {
   // ---------------------------------------------------------------------
   // S2 — Tuteur Relio (conversation)
   //
-  // L'interface est branchée ; l'appel au modèle n'existe pas encore. Les
-  // deux textes ci-dessous sont donc les réponses MOCK du tuteur.
+  // L'interface est branchée sur un modèle compatible OpenAI (voir
+  // `docs/TUTEUR_LLM.md`). Sans clé — ou si l'appel échoue — elle affiche le
+  // texte de repli ci-dessous : l'élève n'est jamais laissé sans réponse et
+  // aucun détail technique ne lui est montré.
   // ---------------------------------------------------------------------
 
   /// Bouton secondaire qui ouvre la conversation, sous les indices.
@@ -55,10 +57,16 @@ abstract final class RelioStrings {
       'Salut ! Je suis là pour t’aider à comprendre l’exercice. '
       'Où est-ce que tu bloques ?';
 
-  /// Réponse MOCK tant que le modèle n'est pas branché.
-  static const String tutorMockReply =
-      'Je ne peux pas encore te répondre, mais as-tu essayé de relire '
-      'la règle ?';
+  /// Réponse de repli : aucune clé, réseau absent, appel en échec.
+  ///
+  /// C'est aussi le texte qu'affichait le tuteur avant le branchement du
+  /// modèle ; il reste le comportement de secours, pas une réponse simulée.
+  static const String tutorUnavailableReply =
+      'Je ne peux pas te répondre pour le moment, mais as-tu essayé de '
+      'relire la règle ?';
+
+  /// Indicateur affiché pendant l'appel au modèle.
+  static const String tutorThinking = 'Relio réfléchit…';
 
   /// Placeholder du champ de saisie de la conversation.
   static const String tutorInputHint = 'Écris ton message…';
@@ -130,7 +138,8 @@ abstract final class RelioStrings {
 
   /// Panneau A — reussite autonome.
   static const String successTitle = 'Bonne réponse.';
-  static const String successAutonomous = 'Tu as réussi cet exercice sans aide.';
+  static const String successAutonomous =
+      'Tu as réussi cet exercice sans aide.';
 
   /// Panneau B — reussite assistee.
   static const String successAssisted =
@@ -191,7 +200,8 @@ abstract final class RelioStrings {
   ///
   /// L'espace qui précède « ? » est INSÉCABLE (`\u00A0`) : sans lui, la
   /// ponctuation peut se retrouver seule sur la dernière ligne de la carte.
-  static const String relioMessage = 'Prêt à avancer en maths aujourd’hui\u00A0?';
+  static const String relioMessage =
+      'Prêt à avancer en maths aujourd’hui\u00A0?';
 
   /// Message de Relio quand l'élève n'a encore rien commencé.
   ///
@@ -280,8 +290,7 @@ abstract final class RelioStrings {
       '${chapterLabel(number)} : $title';
 
   /// Titre complet du chapitre 1, tel qu'il s'affiche dans le catalogue.
-  static String get chapter1CardTitle =>
-      chapterCardTitle(1, chapterArithmetic);
+  static String get chapter1CardTitle => chapterCardTitle(1, chapterArithmetic);
 
   /// Libellé court d'un chapitre : « Chapitre 2 ».
   static String chapterLabel(int number) => 'Chapitre $number';
@@ -444,8 +453,7 @@ abstract final class RelioStrings {
   // ---------------------------------------------------------------------
 
   /// Titre de l'écran d'échec au démarrage.
-  static const String startupErrorTitle =
-      'Relio n\'a pas pu démarrer';
+  static const String startupErrorTitle = 'Relio n\'a pas pu démarrer';
 
   /// Message de l'écran d'échec au démarrage.
   ///
@@ -468,7 +476,8 @@ abstract final class RelioStrings {
   static const String nameTitle = 'Comment tu t’appelles ?';
 
   /// Étape Prénom — sous-titre, en Body secondaire.
-  static const String nameSubtitle = 'Pour que je puisse te parler comme il faut.';
+  static const String nameSubtitle =
+      'Pour que je puisse te parler comme il faut.';
 
   /// Étape Prénom — placeholder du champ.
   static const String namePlaceholder = 'Ton prénom';

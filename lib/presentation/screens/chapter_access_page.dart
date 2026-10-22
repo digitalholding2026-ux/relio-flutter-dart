@@ -12,6 +12,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../domain/curriculum/exercise.dart';
+import '../../domain/learning/learner_progress.dart';
 import '../home/home_state.dart';
 import '../home/pressable_scale.dart';
 import '../learn/learn_state.dart';
@@ -75,43 +76,65 @@ class LessonCard extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(RelioSpacing.cardInner),
           decoration: BoxDecoration(
+            // Mêmes jetons que la carte de chapitre de l'onglet Apprendre :
+            // fond blanc, arrondi 16, bordure orange et ombre douce.
             color: palette.surface,
             borderRadius: RelioRadius.bannerAll,
             border: Border.all(
-              color: palette.outline,
-              width: RelioSizes.cardBorderWidth,
+              color: palette.brand,
+              width: RelioSizes.heroBorderWidth,
             ),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: palette.shadow,
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      lesson.title,
-                      style: RelioType.bodyStrong(palette),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    // Le titre garde toute la largeur utile. La pastille
+                    // passe à la ligne suivante quand l'intitulé est long,
+                    // plutôt que de le comprimer en colonne étroite.
+                    Wrap(
+                      spacing: RelioSpacing.sm,
+                      runSpacing: RelioSpacing.xs,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: <Widget>[
+                        Text(
+                          lesson.title,
+                          style: RelioType.sectionTitle(palette),
+                        ),
+                        LessonStatusPill(
+                          label: progress.statusLabel,
+                          color: statusColor,
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: RelioSpacing.sm),
-                  LessonStatusPill(
-                    label: progress.statusLabel,
-                    color: statusColor,
-                  ),
-                ],
+                    const SizedBox(height: RelioSpacing.md),
+                    RelioProgressBar(
+                      ratio: progress.fill,
+                      color: statusColor,
+                      track: palette.outline,
+                    ),
+                    if (countLabel != null) ...<Widget>[
+                      const SizedBox(height: RelioSpacing.xs),
+                      Text(countLabel, style: RelioType.captionSmall(palette)),
+                    ],
+                  ],
+                ),
               ),
-              const SizedBox(height: RelioSpacing.md),
-              RelioProgressBar(
-                ratio: progress.fill,
-                color: statusColor,
-                track: palette.outline,
-              ),
-              if (countLabel != null) ...<Widget>[
-                const SizedBox(height: RelioSpacing.xs),
-                Text(countLabel, style: RelioType.captionSmall(palette)),
-              ],
+              const SizedBox(width: RelioSpacing.md),
+              // Le chevron dit que toute la carte ouvre la leçon ; l'effet
+              // d'appui porte sur la surface entière.
+              Icon(Icons.chevron_right, color: palette.textSecondary),
             ],
           ),
         ),
@@ -180,16 +203,14 @@ class ChapterAccessPage extends StatelessWidget {
           children: <Widget>[
             Text(
               RelioStrings.chapterTitle,
-              style: RelioType.display(palette).copyWith(
-                color: palette.primary,
-              ),
+              style: RelioType.display(palette)
+                  .copyWith(color: palette.primary),
             ),
             const SizedBox(height: RelioSpacing.sm),
             Text(
               RelioStrings.chapterIntro,
-              style: RelioType.body(palette).copyWith(
-                color: palette.textSecondary,
-              ),
+              style: RelioType.body(palette)
+                  .copyWith(color: palette.textSecondary),
             ),
             const SizedBox(height: RelioSpacing.sectionGap),
             for (final lesson in ArithmeticLesson.values) ...<Widget>[
@@ -211,12 +232,19 @@ class ChapterAccessPage extends StatelessWidget {
   }
 
   /// État neutre d'une leçon absente du chapitre fourni.
+  ///
+  /// Les totaux viennent de la banque validée : même sans fait, la carte
+  /// affiche « 0/4 exercices » plutôt qu'un décompte absent.
   LessonProgress _fallbackProgress(ArithmeticLesson lesson) {
+    final totals = LearnerProgress.officialChapter1ExerciseTotals();
+
     return LessonProgress(
       lessonId: lesson.id,
       title: lesson.title,
       status: LessonStatus.notStarted,
       fill: 0,
+      completedExercises: 0,
+      totalExercises: totals[lesson.id] ?? 0,
     );
   }
 }

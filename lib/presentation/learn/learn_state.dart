@@ -18,6 +18,7 @@ import 'package:flutter/foundation.dart';
 import '../../domain/curriculum/chapter1_bank.dart';
 import '../../domain/curriculum/exercise.dart';
 import '../../domain/learning/learner_progress.dart';
+import '../../domain/learning/learning_event.dart';
 import '../home/home_state.dart';
 import '../strings/relio_strings.dart';
 
@@ -114,7 +115,12 @@ class LearnState {
   }
 
   /// État d'un nouvel élève : aucune leçon commencée, aucune progression.
-  factory LearnState.empty() => LearnState.fromProgress(LearnerProgress.empty);
+  ///
+  /// Les totaux officiels restent ceux de la banque : une leçon jamais tentée
+  /// affiche « 0/4 exercices », jamais « 0/0 ».
+  factory LearnState.empty() => LearnState.fromProgress(
+    LearnerProgress.fromEvents(const <LearningEvent>[]),
+  );
 
   /// État calculé depuis les faits observés.
   ///

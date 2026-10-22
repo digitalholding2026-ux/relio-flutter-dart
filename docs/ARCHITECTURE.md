@@ -149,13 +149,20 @@ Ces règles sont mécaniques et ne portent aucun jugement pédagogique. Un nouve
 « À commencer » et une barre de chapitre vide — jamais une progression
 inventée. Rien n'est persisté : la projection est recalculée, jamais écrite.
 
-### 2.5 Tuteur Relio — interface seule
+### 2.5 Tuteur Relio — conversation branchée
 
 S2 propose « Demander à Relio », sous les indices. Le panneau occupe 75 % de
-la hauteur et affiche un fil de discussion. Aucun appel réseau n'est effectué :
-les réponses sont des mocks explicites (`RelioStrings.tutorMockReply`).
-L'interface est prête ; brancher le modèle remplacera la production de la
-réponse sans toucher à la mise en page.
+la hauteur et affiche un fil de discussion.
+
+Le tuteur appelle un modèle **compatible OpenAI** (`POST /chat/completions`)
+avec le prompt système officiel (`docs/TUTEUR_LLM.md`), l'énoncé et la
+réponse attendue de l'exercice ouvert. Le prompt interdit de révéler la
+réponse ; les réponses tiennent en 2 à 3 phrases.
+
+Sans clé `TUTOR_API_KEY` — ou en cas d'échec réseau, HTTP ou de réponse
+illisible — l'élève reçoit la phrase de repli
+(`RelioStrings.tutorUnavailableReply`). La conversation n'est pas persistée et
+aucun fait d'apprentissage n'est transmis.
 
 ---
 

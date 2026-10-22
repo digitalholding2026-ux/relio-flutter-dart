@@ -23,6 +23,8 @@ import 'domain/entrytest/entry_test_repository.dart';
 import 'domain/learning/learner_progress.dart';
 import 'domain/learning/learning_event_repository.dart';
 import 'domain/settings/learner_settings.dart';
+import 'domain/tutor/tutor_client.dart';
+import 'domain/tutor/tutor_client_factory.dart';
 import 'presentation/home/home_state.dart';
 import 'presentation/learn/learn_state.dart';
 import 'presentation/rules/v1_screen_rules.dart';
@@ -307,45 +309,45 @@ class _RelioAppState extends State<RelioApp> {
               home: EntryTransition(
                 child: switch (_stage) {
                   _Stage.deciding => const _SplashGate(
-                      key: ValueKey<_Stage>(_Stage.deciding),
-                    ),
+                    key: ValueKey<_Stage>(_Stage.deciding),
+                  ),
 
                   // L'ouverture montre la marque, puis rend la main. Elle porte
                   // le prechargement de l'accueil : il a toute la durée de la
                   // revelation pour deriver, en silence.
                   _Stage.opening => OpeningPage(
-                      key: const ValueKey<_Stage>(_Stage.opening),
-                      reduceAnimations: settings.reduceAnimations,
-                      onFinished: _onOpeningFinished,
-                      preload: IntroPreloader(widget.database).run,
-                    ),
+                    key: const ValueKey<_Stage>(_Stage.opening),
+                    reduceAnimations: settings.reduceAnimations,
+                    onFinished: _onOpeningFinished,
+                    preload: IntroPreloader(widget.database).run,
+                  ),
 
                   _Stage.welcome => WelcomePage(
-                      key: const ValueKey<_Stage>(_Stage.welcome),
-                      reduceAnimations: settings.reduceAnimations,
-                      onStart: _completeFirstLaunch,
-                    ),
+                    key: const ValueKey<_Stage>(_Stage.welcome),
+                    reduceAnimations: settings.reduceAnimations,
+                    onStart: _completeFirstLaunch,
+                  ),
 
                   _Stage.onboarding => OnboardingFlow(
-                      key: const ValueKey<_Stage>(_Stage.onboarding),
-                      onboarding: _entryOnboarding,
-                      reduceAnimations: settings.reduceAnimations,
-                      onCompleted: _onOnboardingCompleted,
-                    ),
+                    key: const ValueKey<_Stage>(_Stage.onboarding),
+                    onboarding: _entryOnboarding,
+                    reduceAnimations: settings.reduceAnimations,
+                    onCompleted: _onOnboardingCompleted,
+                  ),
 
                   _Stage.home => _RelioShell(
-                      key: const ValueKey<_Stage>(_Stage.home),
-                      database: widget.database,
-                      settings: settings,
-                      controller: _controller,
-                    ),
+                    key: const ValueKey<_Stage>(_Stage.home),
+                    database: widget.database,
+                    settings: settings,
+                    controller: _controller,
+                  ),
 
                   // Jamais un fond blanc sans issue : on dit ce qu'il se passe
                   // et on donne un moyen de recommencer.
                   _Stage.startupFailed => _StartupError(
-                      key: const ValueKey<_Stage>(_Stage.startupFailed),
-                      onRetry: _retryStartup,
-                    ),
+                    key: const ValueKey<_Stage>(_Stage.startupFailed),
+                    onRetry: _retryStartup,
+                  ),
                 },
               ),
             ),
@@ -364,9 +366,8 @@ class _SplashGate extends StatelessWidget {
   const _SplashGate({super.key});
 
   @override
-  Widget build(BuildContext context) => const Scaffold(
-        backgroundColor: Color(0xFFFFFFFF),
-      );
+  Widget build(BuildContext context) =>
+      const Scaffold(backgroundColor: Color(0xFFFFFFFF));
 }
 
 /// Écran d'échec du démarrage, avec réessai.
@@ -447,12 +448,19 @@ class _RelioShellState extends State<_RelioShell> {
   /// saisie ; limite ACCEPTÉE et non masquée.
   final Map<String, ExerciseDraft> _drafts = <String, ExerciseDraft>{};
 
-  late final Chapter1Service _service =
-      Chapter1Service(LearningEventRepository(widget.database));
+  late final Chapter1Service _service = Chapter1Service(
+    LearningEventRepository(widget.database),
+  );
 
   /// Lecture de l'avancement réel — jamais une valeur d'attente.
   late final LearnerProgressRepository _progressRepository =
       LearnerProgressRepository(LearningEventRepository(widget.database));
+
+  /// Tuteur partagé par tous les exercices.
+  ///
+  /// Construit une fois : sans clé compilee, c'est un client indisponible et
+  /// la conversation affiche la phrase de repli, sans appel reseau.
+  late final TutorClient _tutor = buildTutorClient();
 
   /// Avancement affiché. Démarre à l'état VIDE : avant la première lecture,
   /// l'écran ne prétend rien savoir de l'élève.
@@ -492,6 +500,7 @@ class _RelioShellState extends State<_RelioShell> {
 
   @override
   void dispose() {
+    _tutor.close();
     _hideBottomBar.dispose();
     super.dispose();
   }
@@ -547,6 +556,7 @@ class _RelioShellState extends State<_RelioShell> {
           service: _service,
           exercise: exercise,
           drafts: _drafts,
+          tutor: _tutor,
           // S1 est désormais empilé : son retour ramène à l'écran précédent.
           onExit: () => navigator.pop(),
           onGoToNext: () => _goToNext(exercise),
@@ -580,6 +590,7 @@ class _RelioShellState extends State<_RelioShell> {
           service: _service,
           exercise: next,
           drafts: _drafts,
+          tutor: _tutor,
           onExit: () => navigator.pop(),
           onGoToNext: () => _goToNext(next),
           onFullscreenChanged: _setFullscreen,
@@ -603,28 +614,28 @@ class _RelioShellState extends State<_RelioShell> {
       ],
       tabs: <Widget Function(BuildContext, GlobalKey<NavigatorState>)>[
         (context, _) => HomePage(
-              name: widget.settings.name,
-              reduceAnimations: widget.settings.reduceAnimations,
-              // État calculé depuis les faits : « COMMENCER » pour un nouvel
-              // élève, « REPRENDRE » dès la première tentative.
-              homeState: HomeState.fromProgress(_progress),
-              // La carte principale et les deux actions rapides ouvrent le
-              // même chapitre : c'est le seul parcours disponible en V1.
-              onContinue: _openChapter1,
-              onFiveMinutes: _openChapter1,
-              onWarmup: _openChapter1,
-              onOpenLesson: _openLesson,
-            ),
+          name: widget.settings.name,
+          reduceAnimations: widget.settings.reduceAnimations,
+          // État calculé depuis les faits : « COMMENCER » pour un nouvel
+          // élève, « REPRENDRE » dès la première tentative.
+          homeState: HomeState.fromProgress(_progress),
+          // La carte principale et les deux actions rapides ouvrent le
+          // même chapitre : c'est le seul parcours disponible en V1.
+          onContinue: _openChapter1,
+          onFiveMinutes: _openChapter1,
+          onWarmup: _openChapter1,
+          onOpenLesson: _openLesson,
+        ),
         (context, _) => LearnPage(
-              learnState: LearnState.fromProgress(_progress),
-              onOpenChapter1: _openChapter1,
-              reduceAnimations: widget.settings.reduceAnimations,
-            ),
+          learnState: LearnState.fromProgress(_progress),
+          onOpenChapter1: _openChapter1,
+          reduceAnimations: widget.settings.reduceAnimations,
+        ),
         (context, _) => ProfilePage(
-              settings: widget.settings,
-              progress: _progress,
-              onChanged: _onSettingsChanged,
-            ),
+          settings: widget.settings,
+          progress: _progress,
+          onChanged: _onSettingsChanged,
+        ),
       ],
     );
   }

@@ -5,7 +5,8 @@
 ///  - le panneau occupe 75 % de la hauteur, sans déborder sur petit écran ;
 ///  - la marque, le titre et le message d'accueil sont VISIBLES (pas seulement
 ///    présents dans l'arbre) ;
-///  - l'envoi affiche la question de l'élève puis la réponse MOCK ;
+///  - l'envoi affiche la question de l'élève puis la réponse du tuteur
+///    (phrase de repli quand aucune clé n'est compilée) ;
 ///  - un envoi vide ne produit rien.
 library;
 
@@ -61,8 +62,12 @@ void main() {
       expect(find.text(RelioStrings.askHint), findsOneWidget);
       expect(find.text(RelioStrings.askRelio), findsOneWidget);
 
-      final double indice = tester.getTopLeft(find.text(RelioStrings.askHint)).dy;
-      final double relio = tester.getTopLeft(find.text(RelioStrings.askRelio)).dy;
+      final double indice = tester
+          .getTopLeft(find.text(RelioStrings.askHint))
+          .dy;
+      final double relio = tester
+          .getTopLeft(find.text(RelioStrings.askRelio))
+          .dy;
       expect(relio, greaterThan(indice));
 
       // L'ajout du bouton ne fait pas déborder la barre d'action.
@@ -71,8 +76,9 @@ void main() {
   });
 
   group('Tuteur — ouverture', () {
-    testWidgets('le panneau occupe 75 % de la hauteur et montre la marque',
-        (tester) async {
+    testWidgets('le panneau occupe 75 % de la hauteur et montre la marque', (
+      tester,
+    ) async {
       await pumpExercise(tester);
       await openTutor(tester);
 
@@ -105,8 +111,9 @@ void main() {
   });
 
   group('Tuteur — conversation', () {
-    testWidgets('envoyer affiche la question puis la réponse MOCK',
-        (tester) async {
+    testWidgets('envoyer affiche la question puis la réponse du tuteur', (
+      tester,
+    ) async {
       await pumpExercise(tester);
       await openTutor(tester);
 
@@ -122,7 +129,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Je bloque sur le PGCD.'), findsOneWidget);
-      expect(find.text(RelioStrings.tutorMockReply), findsOneWidget);
+      expect(find.text(RelioStrings.tutorUnavailableReply), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -133,7 +140,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pumpAndSettle();
 
-      expect(find.text(RelioStrings.tutorMockReply), findsNothing);
+      expect(find.text(RelioStrings.tutorUnavailableReply), findsNothing);
       expect(find.text(RelioStrings.tutorGreeting), findsOneWidget);
     });
 

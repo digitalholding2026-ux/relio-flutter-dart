@@ -26,6 +26,8 @@ import 'package:relio/app.dart';
 import 'package:relio/data/db/app_database.dart';
 import 'package:relio/domain/learning/learner_progress.dart';
 import 'package:relio/domain/settings/learner_settings.dart';
+import 'package:relio/domain/tutor/tutor_client.dart';
+import 'package:relio/domain/tutor/tutor_exercise_context.dart';
 import 'package:relio/presentation/home/home_state.dart';
 import 'package:relio/presentation/learn/learn_state.dart';
 import 'package:relio/presentation/screens/app_shell_nav.dart';
@@ -96,8 +98,9 @@ Future<void> capturer(
 
   final ByteData? data = await tester.runAsync<ByteData?>(() async {
     final ui.Image image = await boundary.toImage(pixelRatio: 2);
-    final ByteData? bytes =
-        await image.toByteData(format: ui.ImageByteFormat.png);
+    final ByteData? bytes = await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
     image.dispose();
     return bytes;
   });
@@ -213,7 +216,14 @@ void main() {
             backgroundColor: RelioPalette.standard().homeBackground,
             body: Center(
               child: ElevatedButton(
-                onPressed: () => showRelioTutorSheet(context),
+                onPressed: () => showRelioTutorSheet(
+                  context,
+                  client: const UnavailableTutorClient(),
+                  exercise: const TutorExerciseContext(
+                    statement: '',
+                    expectedAnswer: '',
+                  ),
+                ),
                 child: const Text('Ouvrir'),
               ),
             ),

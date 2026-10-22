@@ -1,10 +1,14 @@
 /// Tuteur Relio — conversation dans l'écran d'exercice.
 ///
-/// INTERFACE SEULEMENT. Aucun appel réseau, aucun modèle : les réponses du
-/// tuteur sont des MOCK explicitement marqués comme tels
-/// ([RelioStrings.tutorMockReply]). Le jour où l'API existera, seule
-/// [_RelioTutorSheetState._replyTo] changera — la mise en page, elle, ne
-/// bougera pas.
+/// Le panneau ne connaît que le contrat [TutorClient] : le modèle réel
+/// ([OpenAiTutorClient], configuré par `docs/TUTEUR_LLM.md`), un faux client
+/// de test ou le mode repli sont interchangeables.
+///
+/// Le cerveau du tuteur est le prompt système officiel
+/// ([kTutorSystemPrompt]) ; l'énoncé et la réponse attendue de l'exercice en
+/// cours lui sont transmis, avec interdiction de révéler la réponse. Si
+/// l'appel échoue, l'élève reçoit [RelioStrings.tutorUnavailableReply] : aucun
+/// message d'erreur technique n'est affiché.
 ///
 /// Le panneau occupe 75 % de la hauteur : l'énoncé de l'exercice reste
 /// partiellement visible derrière, et la conversation ne donne pas
@@ -13,6 +17,9 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../domain/tutor/tutor_client.dart';
+import '../../domain/tutor/tutor_exercise_context.dart';
+import '../../domain/tutor/tutor_message.dart';
 import '../branding/relio_mark.dart';
 import '../strings/relio_strings.dart';
 import '../theme/relio_theme.dart';
@@ -21,7 +28,14 @@ import '../theme/relio_theme.dart';
 const double kRelioTutorSheetHeightFactor = 0.75;
 
 /// Ouvre la conversation avec le tuteur et attend sa fermeture.
-Future<void> showRelioTutorSheet(BuildContext context) {
+///
+/// [client] est le tuteur partagé par l'application ; [exercise] est
+/// l'exercice réellement ouvert, transmis au modèle.
+Future<void> showRelioTutorSheet(
+  BuildContext context, {
+  required TutorClient client,
+  required TutorExerciseContext exercise,
+}) {
   final palette = RelioPaletteScope.of(context);
 
   return showModalBottomSheet<void>(
@@ -38,27 +52,25 @@ Future<void> showRelioTutorSheet(BuildContext context) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
-    builder: (BuildContext context) => const RelioTutorSheet(),
+    builder: (BuildContext context) =>
+        RelioTutorSheet(client: client, exercise: exercise),
   );
-}
-
-/// Un message de la conversation.
-@immutable
-class TutorMessage {
-  /// Crée un message.
-  const TutorMessage({required this.text, required this.fromRelio});
-
-  /// Contenu affiché.
-  final String text;
-
-  /// `true` : message du tuteur ; `false` : message de l'élève.
-  final bool fromRelio;
 }
 
 /// Panneau de conversation.
 class RelioTutorSheet extends StatefulWidget {
   /// Crée le panneau.
-  const RelioTutorSheet({super.key});
+  const RelioTutorSheet({
+    super.key,
+    required this.client,
+    required this.exercise,
+  });
+
+  /// Tuteur chargé de répondre.
+  final TutorClient client;
+
+  /// Exercice en cours, transmis au modèle à chaque appel.
+  final TutorExerciseContext exercise;
 
   @override
   State<RelioTutorSheet> createState() => _RelioTutorSheetState();
@@ -74,6 +86,9 @@ class _RelioTutorSheetState extends State<RelioTutorSheet> {
     const TutorMessage(text: RelioStrings.tutorGreeting, fromRelio: true),
   ];
 
+  /// Un appel est en cours : l'envoi est verrouillé et le fil l'annonce.
+  bool _sending = false;
+
   @override
   void dispose() {
     _controller.dispose();
@@ -81,18 +96,44 @@ class _RelioTutorSheetState extends State<RelioTutorSheet> {
     super.dispose();
   }
 
-  /// Envoie la saisie, puis affiche la réponse MOCK du tuteur.
-  void _send() {
+  /// Envoie la saisie au tuteur, puis affiche sa réponse.
+  ///
+  /// Le message de l'élève apparaît immédiatement ; l'indicateur
+  /// [RelioStrings.tutorThinking] reste affiché le temps de l'appel. En cas
+  /// d'échec, la réponse de repli prend la place — la conversation continue.
+  Future<void> _send() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _sending) return;
+
+    final studentMessage = TutorMessage(text: text, fromRelio: false);
+    final history = <TutorMessage>[..._messages, studentMessage];
 
     setState(() {
-      _messages.add(TutorMessage(text: text, fromRelio: false));
-      _messages.add(
-        const TutorMessage(text: RelioStrings.tutorMockReply, fromRelio: true),
-      );
+      _messages.add(studentMessage);
+      _sending = true;
     });
     _controller.clear();
+    _scrollToBottom();
+
+    String reply;
+    try {
+      reply = await widget.client.reply(
+        exercise: widget.exercise,
+        history: history,
+      );
+    } on TutorException {
+      reply = RelioStrings.tutorUnavailableReply;
+    } on Object {
+      // Un client de test (ou une évolution du contrat) ne doit jamais
+      // laisser l'élève sans réponse.
+      reply = RelioStrings.tutorUnavailableReply;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _messages.add(TutorMessage(text: reply, fromRelio: true));
+      _sending = false;
+    });
     _scrollToBottom();
   }
 
@@ -119,8 +160,10 @@ class _RelioTutorSheetState extends State<RelioTutorSheet> {
     // l'espace libre serait coupé, et le champ de saisie deviendrait
     // inatteignable.
     final available = size.height - insets - MediaQuery.paddingOf(context).top;
-    final height = (size.height * kRelioTutorSheetHeightFactor)
-        .clamp(0.0, available <= 0 ? size.height : available);
+    final height = (size.height * kRelioTutorSheetHeightFactor).clamp(
+      0.0,
+      available <= 0 ? size.height : available,
+    );
 
     return Padding(
       padding: EdgeInsets.only(bottom: insets),
@@ -140,14 +183,17 @@ class _RelioTutorSheetState extends State<RelioTutorSheet> {
                 child: ListView.builder(
                   controller: _scroll,
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-                  itemCount: _messages.length,
+                  itemCount: _messages.length + (_sending ? 1 : 0),
                   itemBuilder: (BuildContext context, int index) {
+                    if (index == _messages.length) {
+                      return _ThinkingBubble(palette: palette);
+                    }
                     final message = _messages[index];
                     return _MessageBubble(
                       message: message,
                       // Les messages du tuteur sont annoncés aux lecteurs
-                      // d'écran : sans cela, la réponse mock passerait
-                      // inaperçue.
+                      // d'écran : sans cela, une réponse arrivée en cours de
+                      // lecture passerait inaperçue.
                       liveRegion: message.fromRelio && index > 0,
                     );
                   },
@@ -230,7 +276,9 @@ class _RelioTutorSheetState extends State<RelioTutorSheet> {
           ),
           const SizedBox(width: RelioSpacing.sm),
           IconButton.filled(
-            onPressed: _send,
+            // Pendant l'appel, le bouton est désactivé : deux envois
+            // simultanés mélangeraient les réponses dans le fil.
+            onPressed: _sending ? null : _send,
             icon: const Icon(Icons.send_rounded, size: 20),
             tooltip: RelioStrings.tutorSend,
             style: IconButton.styleFrom(
@@ -293,6 +341,64 @@ class _MessageBubble extends StatelessWidget {
                   color: fromRelio ? palette.textPrimary : palette.onPrimary,
                 ),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bulle d'attente affichée pendant l'appel au modèle.
+class _ThinkingBubble extends StatelessWidget {
+  const _ThinkingBubble({required this.palette});
+
+  final RelioPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Semantics(
+          liveRegion: true,
+          label: RelioStrings.tutorThinking,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: RelioSpacing.md,
+              vertical: RelioSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: palette.primaryContainer,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(4),
+                topRight: Radius.circular(16),
+                bottomLeft: Radius.circular(16),
+                bottomRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: palette.primary,
+                  ),
+                ),
+                const SizedBox(width: RelioSpacing.sm),
+                Text(
+                  RelioStrings.tutorThinking,
+                  style: RelioType.body(palette).copyWith(
+                    height: 1.45,
+                    color: palette.textPrimary,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
