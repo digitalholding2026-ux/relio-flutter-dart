@@ -80,12 +80,14 @@ void main() {
     });
 
     test('chaque mois renvoie la séquence attendue', () {
+      // Le mois de bascule appartient à la séquence qui commence :
+      // octobre → S2 et mars → S5, comme l'indique la consigne.
       const Map<int, int> expected = <int, int>{
-        1: 3,
+        1: 4,
         2: 4,
-        3: 4,
+        3: 5,
         4: 5,
-        5: 5,
+        5: 6,
         6: 6,
         7: 6,
         8: 6,
@@ -109,7 +111,11 @@ void main() {
       final AcademicSequence sequence = sequenceForDate(DateTime(2026, 3, 1));
 
       expect(officialProgram, contains(sequence));
-      expect(sequence.title, 'Séquence 4 (Janvier - Mars)');
+      expect(sequence.title, 'Séquence 5 (Mars - Mai)');
+    });
+
+    test('mars renvoie la séquence 5, comme l’indique la consigne', () {
+      expect(sequenceForDate(DateTime(2026, 3, 15)).number, 5);
     });
 
     test('les séquences précédentes sont celles de numéro inférieur', () {

@@ -6,16 +6,18 @@
 /// |---|---|
 /// | septembre | 1 |
 /// | octobre, novembre | 2 |
-/// | décembre, janvier | 3 |
-/// | février, mars | 4 |
-/// | avril, mai | 5 |
-/// | juin, juillet, août | 6 |
+/// | décembre | 3 |
+/// | janvier, février | 4 |
+/// | mars, avril | 5 |
+/// | mai, juin, juillet, août | 6 |
 ///
 /// Les intitulés du programme se chevauchent (S1 va de septembre à octobre,
-/// S2 d'octobre à novembre…). Le mois de bascule est attribué à la séquence
-/// qui COMMENCE : octobre vaut donc S2, comme l'indique la consigne. Juillet
-/// et août sont hors année scolaire : la dernière séquence reste l'objectif,
-/// plutôt que d'annoncer une séquence qui n'a pas encore commencé.
+/// S2 d'octobre à novembre, S4 de janvier à mars, S5 de mars à mai…). Le mois
+/// de bascule est attribué à la séquence qui COMMENCE : octobre vaut donc S2
+/// et mars vaut S5, comme l'indique la consigne. Janvier, début de la S4, vaut
+/// de même S4. Juillet et août sont hors année scolaire : la dernière séquence
+/// reste l'objectif, plutôt que d'annoncer une séquence qui n'a pas encore
+/// commencé.
 ///
 /// Aucune notion de l'élève n'intervient : la date seule décide. L'horloge
 /// est un paramètre, ce qui rend la règle testable sans attendre un mois
@@ -30,9 +32,9 @@ int sequenceNumberForMonth(int month) {
   return switch (month) {
     9 => 1,
     10 || 11 => 2,
-    12 || 1 => 3,
-    2 || 3 => 4,
-    4 || 5 => 5,
+    12 => 3,
+    1 || 2 => 4,
+    3 || 4 => 5,
     _ => 6,
   };
 }
