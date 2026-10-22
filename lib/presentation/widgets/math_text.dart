@@ -22,6 +22,11 @@
 /// **telle quelle**. Un texte imparfaitement formaté vaut mieux qu'un texte
 /// mal formaté. Le formateur ne réécrit jamais un caractère : il ne fait que
 /// choisir un style par fragment.
+///
+/// NETTOYAGE DES BALISES : une étape SÉPARÉE, [normalizeTutorText], retire les
+/// délimiteurs LaTeX et remplace les opérateurs ASCII par leurs glyphes. Elle
+/// est appliquée aux seules réponses du tuteur, avant [MathText] : le texte de
+/// l'élève n'est jamais réécrit.
 library;
 
 import 'package:flutter/foundation.dart' as diagnostics;
@@ -136,6 +141,55 @@ bool _contientChiffre(String c) {
   final u = c.codeUnitAt(0);
   return u >= 0x30 && u <= 0x39;
 }
+
+/// Nettoie une réponse du tuteur avant affichage.
+///
+/// Le modèle écrit parfois du LaTeX (`\(`, `\)`) ou des opérateurs ASCII
+/// (`-`, `*`, `/`). Ce nettoyage est PUREMENT typographique :
+///
+///  - les délimiteurs `\(`, `\)`, `\[`, `\]` sont retirés ;
+///  - les commandes `\times`, `\div`, `\cdot` deviennent `×`, `÷`, `×` ;
+///  - `-`, `*`, `/` deviennent `−`, `×`, `÷` **uniquement entre deux
+///    opérandes** (chiffre ou parenthèse). Un tiret de mot (« peut-être »,
+///    « a-t-il ») n'est donc jamais touché.
+///
+/// Aucune autre réécriture : la fonction ne comprend pas le sens du texte,
+/// elle ne fait que remplacer des glyphes. Le texte de l'élève n'est jamais
+/// passé par ici : ses mots restent exactement les siens.
+String normalizeTutorText(String text) {
+  if (text.isEmpty) return text;
+
+  final cleaned = text
+      .replaceAll(r'\(', '')
+      .replaceAll(r'\)', '')
+      .replaceAll(r'\[', '')
+      .replaceAll(r'\]', '')
+      .replaceAll(r'\times', '×')
+      .replaceAll(r'\div', '÷')
+      .replaceAll(r'\cdot', '×');
+
+  // Opérateur binaire : le seul cas où le glyphe mathématique est sûr.
+  // Les délimiteurs ne sont pas consommés par le match, donc les opérateurs
+  // successifs (« 2*3*4 ») sont tous traités.
+  return cleaned.replaceAllMapped(
+    RegExp(r'(?<=[\d)])\s*([-*/])\s*(?=[\d(])'),
+    (Match match) {
+      final segment = match.group(0)!;
+      final operator = match.group(1)!;
+      final index = segment.indexOf(operator);
+      return '${segment.substring(0, index)}${_operatorGlyph(operator)}'
+          '${segment.substring(index + 1)}';
+    },
+  );
+}
+
+/// Glyphe typographique d'un opérateur ASCII.
+String _operatorGlyph(String operator) => switch (operator) {
+      '-' => '−',
+      '*' => '×',
+      '/' => '÷',
+      _ => operator,
+    };
 
 /// Positions des variables isolées dans [text].
 Set<int> _variablePositions(String text) {

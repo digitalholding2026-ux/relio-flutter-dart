@@ -93,7 +93,17 @@ class _HomePageState extends State<HomePage>
   /// Durée de l'apparition du programme.
   static const Duration _entranceDuration = Duration(milliseconds: 900);
 
-  late final HomeState _state = widget.homeState ?? HomeState.empty();
+  /// Repli quand aucun état n'est fourni : montage isolé, tests, aperçus.
+  static final HomeState _emptyState = HomeState.empty();
+
+  /// État affiché, RELU à chaque construction.
+  ///
+  /// Il ne peut pas être figé dans un `late final` : la coquille reconstruit
+  /// cet écran après chaque lecture de l'historique. Un état figé à la
+  /// première construction laisserait l'accueil sur « Commencer » alors que
+  /// l'exercice 1 vient d'être réussi.
+  HomeState get _state => widget.homeState ?? _emptyState;
+
   late final AnimationController _entrance;
 
   @override

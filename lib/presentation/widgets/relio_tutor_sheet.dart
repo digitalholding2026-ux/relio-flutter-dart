@@ -27,6 +27,7 @@ import '../../domain/tutor/tutor_message.dart';
 import '../branding/relio_mark.dart';
 import '../strings/relio_strings.dart';
 import '../theme/relio_theme.dart';
+import 'math_text.dart';
 
 /// Fraction de la hauteur d'écran occupée par la conversation.
 const double kRelioTutorSheetHeightFactor = 0.75;
@@ -370,13 +371,24 @@ class _MessageBubble extends StatelessWidget {
                   bottomRight: const Radius.circular(16),
                 ),
               ),
-              child: Text(
-                message.text,
-                style: RelioType.body(palette).copyWith(
-                  height: 1.45,
-                  color: fromRelio ? palette.textPrimary : palette.onPrimary,
-                ),
-              ),
+              // Réponse du tuteur : balises LaTeX retirées et opérateurs
+              // rendus en glyphes. Le message de l'élève, lui, est affiché
+              // tel qu'il l'a écrit.
+              child: fromRelio
+                  ? MathText(
+                      text: normalizeTutorText(message.text),
+                      style: RelioType.body(palette).copyWith(
+                        height: 1.45,
+                        color: palette.textPrimary,
+                      ),
+                    )
+                  : Text(
+                      message.text,
+                      style: RelioType.body(palette).copyWith(
+                        height: 1.45,
+                        color: palette.onPrimary,
+                      ),
+                    ),
             ),
           ),
         ),

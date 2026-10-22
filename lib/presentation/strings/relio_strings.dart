@@ -220,6 +220,13 @@ abstract final class RelioStrings {
   static const String relioMessageFirstSteps =
       'Prêt à faire tes premiers pas en maths\u00A0?';
 
+  /// Message de Relio quand l'élève vient de réussir son premier exercice.
+  ///
+  /// Fait mesuré, pas jugement : un seul exercice terminé. Au-delà, le message
+  /// par défaut reprend la main pour ne pas répéter la même félicitation.
+  static const String relioMessageFirstExerciseDone =
+      'Bien joué pour le premier exercice\u00A0! On continue\u00A0?';
+
   /// Message de Relio quand une hésitation récente sur les soustractions a été
   /// observée.
   ///

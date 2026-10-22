@@ -21,9 +21,11 @@ const TutorExerciseContext _exercise = TutorExerciseContext(
 
 /// Client qui répond immédiatement et garde trace de l'appel.
 class _FakeTutorClient implements TutorClient {
-  _FakeTutorClient();
+  _FakeTutorClient([
+    this.replyText = 'Et si tu commençais par les diviseurs ?',
+  ]);
 
-  final String replyText = 'Et si tu commençais par les diviseurs ?';
+  final String replyText;
 
   TutorExerciseContext? lastExercise;
   List<TutorMessage>? lastHistory;
@@ -195,6 +197,42 @@ void main() {
       expect(find.text('Reprenons : quel est le diviseur commun ?'),
           findsOneWidget);
       expect(find.text(RelioStrings.tutorBusyReply), findsNothing);
+    });
+  });
+
+  group('Tuteur — nettoyage des réponses', () {
+    testWidgets('les balises LaTeX ne sont jamais affichées', (tester) async {
+      final client = _FakeTutorClient(r'\(18 - 12 = 6\). Tu suis ?');
+      await _pumpSheet(tester, client);
+
+      await _send(tester, 'Je ne comprends pas.');
+      await tester.pumpAndSettle();
+
+      // Le texte est lisible : délimiteurs retirés, signe moins typographique.
+      expect(find.text('18 − 12 = 6. Tu suis ?'), findsOneWidget);
+      expect(find.textContaining(r'\('), findsNothing);
+      expect(find.textContaining(r'\)'), findsNothing);
+    });
+
+    testWidgets('les opérateurs ASCII deviennent des glyphes', (tester) async {
+      final client = _FakeTutorClient('Fais 8/2 puis 2*3.');
+      await _pumpSheet(tester, client);
+
+      await _send(tester, 'Comment ?');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fais 8÷2 puis 2×3.'), findsOneWidget);
+    });
+
+    testWidgets('le message de l’élève reste exactement le sien', (tester) async {
+      final client = _FakeTutorClient();
+      await _pumpSheet(tester, client);
+
+      await _send(tester, 'J’ai trouvé 8/2.');
+      await tester.pumpAndSettle();
+
+      // Aucune réécriture du texte de l'élève, même sur un opérateur.
+      expect(find.text('J’ai trouvé 8/2.'), findsOneWidget);
     });
   });
 

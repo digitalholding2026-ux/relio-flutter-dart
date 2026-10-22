@@ -210,4 +210,45 @@ void main() {
       expect(find.text(RelioStrings.statusMastered), findsNothing);
     });
   });
+
+  group('Mise à jour de l’état', () {
+    /// État d'un élève qui vient de réussir l'exercice 1.
+    final HomeState premierExerciceReussi = HomeState(
+      objective: const SequenceObjective(
+        sequence: 1,
+        validated: 0,
+        notions: 3,
+      ),
+      message: RelioStrings.relioMessageFirstExerciseDone,
+      resume: ResumeTarget(
+        chapterTitle: RelioStrings.chapter1CardTitle,
+        positionLabel: RelioStrings.resumeProgress(2, 4),
+      ),
+      lessons: HomeState.empty().lessons,
+    );
+
+    testWidgets('un nouvel état remplace l’ancien : Commencer → Continuer',
+        (tester) async {
+      await tester.pumpWidget(_accueil(state: HomeState.empty()));
+      await tester.pumpAndSettle();
+
+      expect(find.text(RelioStrings.startLabel), findsOneWidget);
+      expect(find.text(RelioStrings.startFirstExercise), findsOneWidget);
+
+      // La coquille reconstruit l'accueil après avoir relu l'historique : le
+      // nouvel état doit être PRIS EN COMPTE, même si l'écran existait déjà.
+      await tester.pumpWidget(_accueil(state: premierExerciceReussi));
+      await tester.pumpAndSettle();
+
+      expect(find.text(RelioStrings.startLabel), findsNothing);
+      expect(find.text(RelioStrings.startFirstExercise), findsNothing);
+      expect(find.text(RelioStrings.resumeLabel), findsOneWidget);
+      expect(find.text(RelioStrings.resumeContinue), findsOneWidget);
+      expect(find.text(RelioStrings.resumeProgress(2, 4)), findsOneWidget);
+      expect(
+        find.text(RelioStrings.relioMessageFirstExerciseDone),
+        findsOneWidget,
+      );
+    });
+  });
 }

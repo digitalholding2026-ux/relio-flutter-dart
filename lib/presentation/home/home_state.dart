@@ -205,9 +205,7 @@ class HomeState {
         validated: progress.masteredNotions,
         notions: ArithmeticLesson.values.length,
       ),
-      message: progress.hasStarted
-          ? RelioStrings.relioMessage
-          : RelioStrings.relioMessageFirstSteps,
+      message: _messageFor(progress),
       resume: _resumeTarget(progress),
       lessons: <LessonProgress>[
         for (final ArithmeticLesson lesson in ArithmeticLesson.values)
@@ -244,6 +242,24 @@ class HomeState {
       completedExercises: done,
       totalExercises: total,
     );
+  }
+
+  /// Message de Relio, choisi sur un fait observable.
+  ///
+  /// Trois cas seulement, dans cet ordre :
+  ///  - rien n'a été tenté → invitation à commencer ;
+  ///  - exactement un exercice réussi → félicitation et proposition de
+  ///    continuer ;
+  ///  - tout le reste → message par défaut.
+  ///
+  /// Le nombre d'exercices vient de l'historique (réussites comprises) : ce
+  /// n'est ni un score ni une interprétation de la réponse.
+  static String _messageFor(LearnerProgress progress) {
+    if (!progress.hasStarted) return RelioStrings.relioMessageFirstSteps;
+    if (progress.completedExercises == 1) {
+      return RelioStrings.relioMessageFirstExerciseDone;
+    }
+    return RelioStrings.relioMessage;
   }
 
   /// Cible de la carte principale : premier exercice non terminé.

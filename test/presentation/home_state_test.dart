@@ -165,6 +165,31 @@ void main() {
       expect(state.lessons.first.fill, 0);
     });
 
+    test('un premier exercice réussi annonce la suite et la position', () {
+      final lesson = ArithmeticLesson.lesson1Subtractions;
+      final first = Chapter1Bank.exercises.firstWhere(
+        (exercise) =>
+            exercise.kind == BankElementKind.exercise &&
+            exercise.lesson == lesson,
+      );
+
+      final progress = LearnerProgress(
+        startedLessonIds: <String>{lesson.id},
+        completedExerciseIds: <String>{first.id},
+        completedExerciseIdsByLesson: <String, Set<String>>{
+          lesson.id: <String>{first.id},
+        },
+        lessonExerciseTotals: LearnerProgress.officialChapter1ExerciseTotals(),
+      );
+
+      final state = HomeState.fromProgress(progress);
+
+      // L'accueil propose de CONTINUER, avec la position réelle.
+      expect(state.started, isTrue);
+      expect(state.resume.positionLabel, RelioStrings.resumeProgress(2, 4));
+      expect(state.message, RelioStrings.relioMessageFirstExerciseDone);
+    });
+
     test('une leçon entièrement réussie devient maîtrisée', () {
       final lesson = ArithmeticLesson.lesson1Subtractions;
       // Les identifiants sont ceux de la banque : la reprise doit pouvoir les
