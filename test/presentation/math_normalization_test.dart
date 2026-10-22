@@ -19,9 +19,17 @@ void main() {
     });
 
     test('convertit les opérateurs entre deux opérandes', () {
-      expect(normalizeTutorText('8/2'), '8÷2');
       expect(normalizeTutorText('2*3*4'), '2×3×4');
       expect(normalizeTutorText('(18-12)'), '(18−12)');
+    });
+
+    test('le slash est conservé : c’est une fraction, pas une division', () {
+      expect(normalizeTutorText('8/2'), '8/2');
+
+      final fragments = formatMathText('8/2');
+      expect(fragments.single.isFraction, isTrue);
+      expect(fragments.single.numerator, '8');
+      expect(fragments.single.denominator, '2');
     });
 
     test('ne touche jamais aux tirets de mot', () {

@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:relio/domain/curriculum/rich_hint.dart';
 import 'package:relio/presentation/strings/relio_strings.dart';
 import 'package:relio/presentation/theme/relio_theme.dart';
+import 'package:relio/presentation/widgets/fraction_span.dart';
 import 'package:relio/presentation/widgets/rich_hint_sheet.dart';
 
 /// Palette de référence, pour comparer les couleurs(expected).
@@ -197,6 +198,24 @@ void main() {
       final digits = _findSpanContaining(rich.text, '12');
       expect(digits, isNotNull);
       expect(digits!.style?.fontFeatures, isNotNull);
+    });
+  });
+
+  group('Fractions dans les fiches', () {
+    testWidgets('un TextBlock empile la fraction', (tester) async {
+      await _pumpBlock(tester, const TextBlock('La moitié vaut 1/2 ici.'));
+
+      expect(find.byType(FractionSpan), findsOneWidget);
+      final FractionSpan fraction =
+          tester.widget<FractionSpan>(find.byType(FractionSpan));
+      expect(fraction.numerator, '1');
+      expect(fraction.denominator, '2');
+    });
+
+    testWidgets('un MathBlock empile la fraction', (tester) async {
+      await _pumpBlock(tester, const MathBlock('3/4 + 1/4 = 1'));
+
+      expect(find.byType(FractionSpan), findsNWidgets(2));
     });
   });
 

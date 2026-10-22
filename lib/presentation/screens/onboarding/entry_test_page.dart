@@ -375,49 +375,55 @@ class _EntryTestPageState extends State<EntryTestPage> {
     );
   }
 
-  /// Carte de choix : hauteur 56 dp, rayon 12.
+  /// Carte de choix : hauteur MINIMALE 56 dp, rayon 12.
   ///
   /// Ni radio, ni coche : l'état se lit au trait et au fond, et le texte
-  /// reste lisible dans les deux cas.
+  /// reste lisible dans les deux cas. Une fraction empilée est plus haute
+  /// qu'une ligne de texte : la carte grandit pour l'accueillir, plutôt que de
+  /// rogner le numérateur ou le dénominateur.
   Widget _choiceCard(RelioPalette palette, String choice) {
     final bool selected = _choice == choice;
     final bool locked = _phase == _QuestionPhase.submitting;
 
-    return SizedBox(
-      height: OnboardingMetrics.choiceHeight,
-      width: double.infinity,
-      child: Material(
-        color: selected ? palette.primaryContainer : palette.surface,
+    final TextStyle style = selected
+        ? RelioType.bodyStrong(palette)
+        : RelioType.body(palette).copyWith(
+            fontWeight: FontWeight.w500,
+          );
+
+    return Material(
+      color: selected ? palette.primaryContainer : palette.surface,
+      borderRadius: RelioRadius.cardAll,
+      child: InkWell(
         borderRadius: RelioRadius.cardAll,
-        child: InkWell(
-          borderRadius: RelioRadius.cardAll,
-          onTap: locked
-              ? null
-              : () => setState(() {
-                    _choice = choice;
-                    _phase = _QuestionPhase.filled;
-                  }),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: RelioRadius.cardAll,
-              border: Border.all(
-                color: selected ? palette.primary : palette.outline,
-                width: selected
-                    ? RelioSizes.fieldBorderWidth
-                    : RelioSizes.cardBorderWidth,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              // Fractions en forme « slash » : jamais empilées.
-              choice,
-              style: selected
-                  ? RelioType.bodyStrong(palette)
-                  : RelioType.body(palette).copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
+        onTap: locked
+            ? null
+            : () => setState(() {
+                  _choice = choice;
+                  _phase = _QuestionPhase.filled;
+                }),
+        child: Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(
+            minHeight: OnboardingMetrics.choiceHeight,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: RelioSpacing.md,
+            vertical: 10,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: RelioRadius.cardAll,
+            border: Border.all(
+              color: selected ? palette.primary : palette.outline,
+              width: selected
+                  ? RelioSizes.fieldBorderWidth
+                  : RelioSizes.cardBorderWidth,
             ),
           ),
+          alignment: Alignment.center,
+          // Les choix peuvent être des fractions (2/3, 2/4, 3/4) : elles
+          // s'affichent empilées, à la taille du texte de la carte.
+          child: MathText(text: choice, style: style),
         ),
       ),
     );

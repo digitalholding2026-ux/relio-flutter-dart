@@ -12,6 +12,8 @@ import 'package:relio/domain/tutor/tutor_client.dart';
 import 'package:relio/domain/tutor/tutor_exercise_context.dart';
 import 'package:relio/domain/tutor/tutor_message.dart';
 import 'package:relio/presentation/strings/relio_strings.dart';
+import 'package:relio/presentation/widgets/fraction_span.dart';
+import 'package:relio/presentation/widgets/math_text.dart';
 import 'package:relio/presentation/widgets/relio_tutor_sheet.dart';
 
 const TutorExerciseContext _exercise = TutorExerciseContext(
@@ -44,6 +46,17 @@ class _FakeTutorClient implements TutorClient {
 
   @override
   void close() {}
+}
+
+/// Un fragment du texte est-il peint en rouge ?
+bool _aDuRouge(InlineSpan span) {
+  if (span is TextSpan) {
+    if (span.style?.color == kHighlightRed) return true;
+    for (final InlineSpan child in span.children ?? const <InlineSpan>[]) {
+      if (_aDuRouge(child)) return true;
+    }
+  }
+  return false;
 }
 
 /// Client dont la réponse est libérée par le test : l'attente est observable.
@@ -214,14 +227,18 @@ void main() {
       expect(find.textContaining(r'\)'), findsNothing);
     });
 
-    testWidgets('les opérateurs ASCII deviennent des glyphes', (tester) async {
+    testWidgets('les opérateurs ASCII deviennent des glyphes, les fractions s’empilent',
+        (tester) async {
       final client = _FakeTutorClient('Fais 8/2 puis 2*3.');
       await _pumpSheet(tester, client);
 
       await _send(tester, 'Comment ?');
       await tester.pumpAndSettle();
 
-      expect(find.text('Fais 8÷2 puis 2×3.'), findsOneWidget);
+      // 8/2 est une FRACTION : elle est empilée, pas convertie en division.
+      expect(find.byType(FractionSpan), findsOneWidget);
+      expect(find.textContaining('puis 2×3.'), findsOneWidget);
+      expect(find.textContaining('÷'), findsNothing);
     });
 
     testWidgets('le message de l’élève reste exactement le sien', (tester) async {
@@ -233,6 +250,29 @@ void main() {
 
       // Aucune réécriture du texte de l'élève, même sur un opérateur.
       expect(find.text('J’ai trouvé 8/2.'), findsOneWidget);
+    });
+
+    testWidgets('la mise en évidence du modèle est rendue en rouge',
+        (tester) async {
+      final client = _FakeTutorClient(
+        'Multiplie par <red>4</red> : 2/3 devient 8/12.',
+      );
+      await _pumpSheet(tester, client);
+
+      await _send(tester, 'Comment ?');
+      await tester.pumpAndSettle();
+
+      final RichText bulle = tester
+          .widgetList<RichText>(find.byType(RichText))
+          .firstWhere((r) => r.text.toPlainText().contains('Multiplie'));
+
+      // Les balises sont consommées, le contenu reste.
+      expect(bulle.text.toPlainText(), contains('Multiplie par 4'));
+      expect(bulle.text.toPlainText(), isNot(contains('<red>')));
+      expect(_aDuRouge(bulle.text), isTrue);
+
+      // Et les fractions du modèle s'empilent.
+      expect(find.byType(FractionSpan), findsNWidgets(2));
     });
   });
 

@@ -21,6 +21,7 @@ import 'package:relio/presentation/screens/onboarding/onboarding_flow.dart';
 import 'package:relio/presentation/strings/relio_strings.dart';
 import 'package:relio/presentation/theme/relio_theme.dart';
 
+import '../helpers/fraction_finders.dart';
 import '../helpers/test_database.dart';
 
 void main() {
@@ -189,7 +190,8 @@ void main() {
 
     testWidgets('la question a choix tient dans l\'ecran',
         (WidgetTester tester) async {
-      // Question 2 : trois cartes de 56 dp, les plus hautes de toutes.
+      // Question 2 : trois cartes de 56 dp minimum. Les fractions empilées
+      // grandissent les cartes : c'est justement ce qu'il faut vérifier.
       final EntryTestSession q2 = session.withAnswer(
         await onboarding.submitAnswer(
           session: session,
@@ -202,7 +204,10 @@ void main() {
 
       expect(tester.takeException(), isNull);
       for (final String f in <String>['2/3', '2/4', '3/4']) {
-        final Rect carte = tester.getRect(find.text(f));
+        final Finder choix = fraction(f);
+        expect(choix, findsOneWidget, reason: 'la fraction $f est absente');
+
+        final Rect carte = tester.getRect(choix);
         expect(carte.bottom, lessThanOrEqualTo(hauteurEcran),
             reason: 'la carte $f sort de l\'ecran');
       }

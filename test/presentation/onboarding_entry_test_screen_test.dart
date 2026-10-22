@@ -25,6 +25,7 @@ import 'package:relio/presentation/strings/relio_strings.dart';
 import 'package:relio/presentation/theme/relio_theme.dart';
 import 'package:relio/presentation/widgets/math_text.dart';
 
+import '../helpers/fraction_finders.dart';
 import '../helpers/test_database.dart';
 
 /// Orchestrateur dont l'ecriture echoue TOUJOURS.
@@ -115,7 +116,7 @@ void main() {
     if (question == null) return;
 
     if (question.isChoice) {
-      await tester.tap(find.text(question.expectedValue));
+      await tester.tap(fraction(question.expectedValue));
     } else {
       await tester.enterText(find.byType(TextField), question.expectedValue);
     }
@@ -166,10 +167,16 @@ void main() {
       await repondre(tester);
 
       expect(find.text('2 sur 5'), findsOneWidget);
-      // Fractions en forme slash, jamais empilees.
-      expect(find.text('2/3'), findsOneWidget);
-      expect(find.text('2/4'), findsOneWidget);
-      expect(find.text('3/4'), findsOneWidget);
+      // L'énoncé lui-même porte une fraction empilée (« 1/2 »).
+      expect(fraction('1/2'), findsOneWidget);
+      // Fractions EMPILÉES : numérateur, barre, dénominateur. La notation
+      // source « 2/3 » n'est plus affichée telle quelle.
+      expect(fraction('2/3'), findsOneWidget);
+      expect(fraction('2/4'), findsOneWidget);
+      expect(fraction('3/4'), findsOneWidget);
+      expect(find.text('2/3'), findsNothing);
+      expect(find.text('2/4'), findsNothing);
+      expect(find.text('3/4'), findsNothing);
     });
 
     testWidgets('aucun AppBar sur l\'ecran de test', (WidgetTester tester) async {
@@ -262,7 +269,7 @@ void main() {
 
       expect(bouton().onPressed, isNull);
 
-      await tester.tap(find.text('2/4'));
+      await tester.tap(fraction('2/4'));
       await tester.pump();
 
       expect(bouton().onPressed, isNotNull);

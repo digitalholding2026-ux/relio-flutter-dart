@@ -4,6 +4,12 @@
 ///
 /// Ce que fait EXACTEMENT ce formateur :
 ///
+///  - reconnaît une **fraction écrite `chiffres/chiffres`** (`1/2`, `12/5`,
+///    `3/4`) et la rend EMPILÉE : numérateur, barre horizontale, dénominateur
+///    ([FractionSpan]). C'est la notation des cahiers et des manuels ;
+///  - met en évidence le contenu de `<red>...</red>` en [kHighlightRed], et
+///    retire les balises du texte visible. Une fraction peut être entièrement
+///    rouge, et du rouge peut entourer une fraction ou une opération ;
 ///  - met en italique une **variable isolée** (une lettre minuscule seule,
 ///    entourée d'un espace, d'un `=`, d'une parenthèse ou d'une virgule) ;
 ///  - passe les **chiffres** en chiffres tabulaires ;
@@ -11,17 +17,24 @@
 ///    donc uprights ;
 ///  - ne touche à aucun mot.
 ///
+/// DIVISION OU FRACTION ? Seul le SLASH fait une fraction. Les divisions
+/// écrites avec `÷` (« 24 ÷ 6 ») restent en ligne : le formateur ne les
+/// transforme jamais.
+///
 /// Ce qu'il ne fait PAS, et ne fera pas sans nouvelle décision :
 ///
-///  - ni fractions, ni exposants, ni racines, ni sommes, ni intégrales ;
+///  - ni exposants, ni racines, ni sommes, ni intégrales ;
+///  - aucune fraction écrite avec des espaces (« 1 / 2 ») : seule la forme
+///    collée `chiffres/chiffres` est reconnue, car elle seule est sans ambiguïté ;
 ///  - aucune mise en page multi-ligne de calcul ;
 ///  - aucune tentative de comprendre le sens mathématique du texte ;
 ///  - aucune bibliothèque externe.
 ///
 /// PRINCIPE DE ROBUSTESSE : toute notation non reconnue est laissée
 /// **telle quelle**. Un texte imparfaitement formaté vaut mieux qu'un texte
-/// mal formaté. Le formateur ne réécrit jamais un caractère : il ne fait que
-/// choisir un style par fragment.
+/// mal formaté. Le formateur ne réécrit jamais un mot : il choisit un style
+/// par fragment, et la seule chose qu'il retire est une balise qu'il sait lire
+/// (`<red>`, `</red>`).
 ///
 /// NETTOYAGE DES BALISES : une étape SÉPARÉE, [normalizeTutorText], retire les
 /// délimiteurs LaTeX et remplace les opérateurs ASCII par leurs glyphes. Elle
@@ -32,16 +45,36 @@ library;
 import 'package:flutter/foundation.dart' as diagnostics;
 import 'package:flutter/material.dart';
 
+import 'fraction_span.dart';
+
 /// Un fragment de texte et son style.
 ///
 /// L'unité de sortie du formateur : jamais un caractère isolé, toujours un
 /// fragment maximal partageant le même traitement.
+///
+/// Une **fraction** est un fragment d'un autre genre : son [text] reste la
+/// notation source (`1/2`), mais [numerator] et [denominator] permettent de
+/// l'empiler. La concaténation des [text] rend donc le texte visible, au
+/// caractère près — les balises `<red>`, elles, sont retirées.
 class MathFragment {
   const MathFragment({
     required this.text,
     this.italic = false,
     this.tabular = false,
-  });
+    this.highlighted = false,
+  })  : numerator = null,
+        denominator = null;
+
+  /// Fraction empilée : [top] au-dessus de [bottom].
+  const MathFragment.fraction({
+    required String top,
+    required String bottom,
+    this.highlighted = false,
+  })  : text = '$top/$bottom',
+        italic = false,
+        tabular = true,
+        numerator = top,
+        denominator = bottom;
 
   /// Le texte, jamais modifié.
   final String text;
@@ -52,11 +85,39 @@ class MathFragment {
   /// Contient des chiffres : à rendre en tabulaire.
   final bool tabular;
 
+  /// Fragment encadré par `<red>` : à rendre en [kHighlightRed].
+  final bool highlighted;
+
+  /// Numérateur, ou `null` quand le fragment n'est pas une fraction.
+  final String? numerator;
+
+  /// Dénominateur, ou `null` quand le fragment n'est pas une fraction.
+  final String? denominator;
+
+  /// Ce fragment doit-il être empilé en fraction ?
+  bool get isFraction => numerator != null && denominator != null;
+
   @override
-  String toString() =>
-      'MathFragment("$text"${italic ? ', italic' : ''}'
-      '${tabular ? ', tabular' : ''})';
+  String toString() {
+    final String rouge = highlighted ? ', red' : '';
+    if (isFraction) {
+      return 'MathFragment.fraction("$numerator/$denominator"$rouge)';
+    }
+    return 'MathFragment("$text"${italic ? ', italic' : ''}'
+        '${tabular ? ', tabular' : ''}$rouge)';
+  }
 }
+
+/// Rouge de mise en évidence.
+///
+/// `#B91C1C` plutôt que `#DC2626` : le rouge plus sombre garde un contraste
+/// supérieur à 4,5:1 sur les fonds clairs de l'application (blanc, gris des
+/// encadrés, orange pâle des points à retenir) et sur les bulles du tuteur.
+const Color kHighlightRed = Color(0xFFB91C1C);
+
+/// Balise de mise en évidence, telle que le moteur et le modèle l'écrivent.
+const String kRedOpenTag = '<red>';
+const String kRedCloseTag = '</red>';
 
 /// Acronymes du programme, jamais italiques.
 ///
@@ -94,45 +155,147 @@ bool isIsolatedVariable(String letter, String? before, String? after) {
   return avantOk && apresOk;
 }
 
+/// Motif d'une fraction empilée : `chiffres/chiffres`.
+///
+/// Les bornes écartent les nombres qui font partie d'une écriture plus longue :
+/// `10/12/2026` n'est pas une fraction. Seule une paire isolée est reconnue.
+/// Aucun espace n'est toléré : `24 / 6` est une division écrite à la main, et
+/// `24 ÷ 6` n'est jamais concerné.
+final RegExp _fractionPattern = RegExp(r'(?<![\d/])(\d+)/(\d+)(?![\d/])');
+
 /// Découpe [text] en fragments stylables.
 ///
 /// Fonction PURE : aucun widget, aucun style, aucun contexte. C'est ce qui
 /// la rend testable directement, et réutilisable pour les interventions du
 /// moteur le jour où celles-ci s'afficheront.
+///
+/// MISE EN ÉVIDENCE : `<red>...</red>` colore son contenu en [kHighlightRed].
+/// Les balises sont retirées du texte visible. Une fraction peut être
+/// entièrement rouge (`<red>1/2</red>`), et du rouge peut encadrer plusieurs
+/// fragments (`(2 × <red>4</red>)`).
 List<MathFragment> formatMathText(String text) {
   if (text.isEmpty) return const <MathFragment>[];
 
-  final variables = _variablePositions(text);
   final fragments = <MathFragment>[];
-
-  bool estVariable(int i) => i >= 0 && i < text.length && variables.contains(i);
-  bool estChiffre(int i) =>
-      i >= 0 && i < text.length && _contientChiffre(text[i]);
-
-  var start = 0;
-  for (var i = 1; i <= text.length; i++) {
-    final finDeFragment = i == text.length;
-    final change = !finDeFragment &&
-        (estVariable(i) != estVariable(start) ||
-            estChiffre(i) != estChiffre(i - 1));
-
-    if (finDeFragment || change) {
-      final fragment = text.substring(start, i);
-      if (fragment.isNotEmpty) {
-        fragments.add(MathFragment(
-          text: fragment,
-          italic: estVariable(start),
-          tabular: _contientChiffre(fragment),
-        ));
-      }
-      start = i;
-    }
+  for (final run in _highlightRuns(text)) {
+    fragments.addAll(_formatRun(run.text, highlighted: run.highlighted));
   }
 
   // Un fragment italique doit rester une lettre isolée : le découpage ne
   // doit jamais fusionner une variable avec son voisin.
   assert(fragments.every((f) => !f.italic || f.text.length == 1),
       'un fragment italique doit être une lettre isolée');
+
+  return fragments;
+}
+
+/// Portion de texte partageant le même état de mise en évidence.
+class _Run {
+  const _Run(this.text, {required this.highlighted});
+
+  final String text;
+  final bool highlighted;
+}
+
+/// Sépare le texte de ses balises `<red>` / `</red>`.
+///
+/// La profondeur est gérée : les balises peuvent être imbriquées, même si
+/// `<red>` dans `<red>` ne change rien au rendu. Les balises sont RETIRÉES du
+/// texte visible. Une fermante orpheline est ignorée, une ouvrante non fermée
+/// colore jusqu'à la fin : mieux vaut un rendu imparfait qu'un texte qui
+/// affiche du balisage.
+List<_Run> _highlightRuns(String text) {
+  final runs = <_Run>[];
+  final buffer = StringBuffer();
+  var depth = 0;
+
+  void flush() {
+    if (buffer.isEmpty) return;
+    runs.add(_Run(buffer.toString(), highlighted: depth > 0));
+    buffer.clear();
+  }
+
+  var i = 0;
+  while (i < text.length) {
+    if (text.startsWith(kRedOpenTag, i)) {
+      flush();
+      depth++;
+      i += kRedOpenTag.length;
+      continue;
+    }
+    if (text.startsWith(kRedCloseTag, i)) {
+      flush();
+      if (depth > 0) depth--;
+      i += kRedCloseTag.length;
+      continue;
+    }
+    buffer.write(text[i]);
+    i++;
+  }
+  flush();
+  return runs;
+}
+
+/// Découpe un texte SANS balise en fragments.
+List<MathFragment> _formatRun(String text, {required bool highlighted}) {
+  if (text.isEmpty) return const <MathFragment>[];
+
+  final variables = _variablePositions(text);
+  final fractions = _fractionPattern.allMatches(text).toList();
+  final fragments = <MathFragment>[];
+
+  bool estVariable(int i) => i >= 0 && i < text.length && variables.contains(i);
+  bool estChiffre(int i) =>
+      i >= 0 && i < text.length && _contientChiffre(text[i]);
+
+  void ajouterTexte(int debut, int fin) {
+    if (fin <= debut) return;
+    fragments.add(MathFragment(
+      text: text.substring(debut, fin),
+      italic: estVariable(debut),
+      tabular: _contientChiffre(text[debut]),
+      highlighted: highlighted,
+    ));
+  }
+
+  var cursor = 0;
+  var i = 1;
+  var prochaine = 0;
+
+  while (true) {
+    // Une fraction commence-t-elle exactement ici ? Elle est traitée d'un
+    // bloc : le reste du texte garde ses découpages habituels.
+    if (prochaine < fractions.length && fractions[prochaine].start == cursor) {
+      final match = fractions[prochaine];
+      fragments.add(MathFragment.fraction(
+        top: match.group(1)!,
+        bottom: match.group(2)!,
+        highlighted: highlighted,
+      ));
+      cursor = match.end;
+      prochaine++;
+      i = cursor + 1;
+      if (cursor >= text.length) break;
+      continue;
+    }
+
+    if (i >= text.length) {
+      ajouterTexte(cursor, text.length);
+      break;
+    }
+
+    final fractionAlaFin =
+        prochaine < fractions.length && fractions[prochaine].start == i;
+    final change = fractionAlaFin ||
+        estVariable(i) != estVariable(cursor) ||
+        estChiffre(i) != estChiffre(i - 1);
+
+    if (change) {
+      ajouterTexte(cursor, i);
+      cursor = i;
+    }
+    i++;
+  }
 
   return fragments;
 }
@@ -145,13 +308,16 @@ bool _contientChiffre(String c) {
 /// Nettoie une réponse du tuteur avant affichage.
 ///
 /// Le modèle écrit parfois du LaTeX (`\(`, `\)`) ou des opérateurs ASCII
-/// (`-`, `*`, `/`). Ce nettoyage est PUREMENT typographique :
+/// (`-`, `*`). Ce nettoyage est PUREMENT typographique :
 ///
 ///  - les délimiteurs `\(`, `\)`, `\[`, `\]` sont retirés ;
 ///  - les commandes `\times`, `\div`, `\cdot` deviennent `×`, `÷`, `×` ;
-///  - `-`, `*`, `/` deviennent `−`, `×`, `÷` **uniquement entre deux
-///    opérandes** (chiffre ou parenthèse). Un tiret de mot (« peut-être »,
-///    « a-t-il ») n'est donc jamais touché.
+///  - `-` et `*` deviennent `−` et `×` **uniquement entre deux opérandes**
+///    (chiffre ou parenthèse). Un tiret de mot (« peut-être », « a-t-il »)
+///    n'est donc jamais touché.
+///
+/// Le SLASH est volontairement conservé : `1/2` est une fraction, et c'est le
+/// formateur qui l'empile. Une division doit passer par `÷`.
 ///
 /// Aucune autre réécriture : la fonction ne comprend pas le sens du texte,
 /// elle ne fait que remplacer des glyphes. Le texte de l'élève n'est jamais
@@ -172,7 +338,7 @@ String normalizeTutorText(String text) {
   // Les délimiteurs ne sont pas consommés par le match, donc les opérateurs
   // successifs (« 2*3*4 ») sont tous traités.
   return cleaned.replaceAllMapped(
-    RegExp(r'(?<=[\d)])\s*([-*/])\s*(?=[\d(])'),
+    RegExp(r'(?<=[\d)])\s*([-*])\s*(?=[\d(])'),
     (Match match) {
       final segment = match.group(0)!;
       final operator = match.group(1)!;
@@ -187,7 +353,6 @@ String normalizeTutorText(String text) {
 String _operatorGlyph(String operator) => switch (operator) {
       '-' => '−',
       '*' => '×',
-      '/' => '÷',
       _ => operator,
     };
 
@@ -229,8 +394,9 @@ bool _estMot(String c) {
 
 /// Texte à notation mathématique, mis en forme par le formateur.
 ///
-/// À utiliser sur les **énoncés** et les **indices** uniquement. Les
-/// libellés d'interface (titres de panneaux, boutons, messages fixes) ne
+/// À utiliser partout où du contenu peut porter une notation : **énoncés**,
+/// **indices**, **choix du test d'entrée**, **réponses du tuteur**. Les
+/// libellés d'interface fixes (titres de panneaux, messages système) ne
 /// passent pas par ici : ils n'ont pas de notation à traiter.
 class MathText extends StatelessWidget {
   const MathText({
@@ -252,28 +418,52 @@ class MathText extends StatelessWidget {
   Widget build(BuildContext context) {
     final fragments = formatMathText(text);
 
+    // Le style effectif d'un fragment de texte est celui que [Text.rich]
+    // compose avec le [DefaultTextStyle] ambiant. Les fractions sont des
+    // widgets, hors de cette composition : il faut leur passer le résultat.
+    final TextStyle styleEffectif =
+        DefaultTextStyle.of(context).style.merge(style);
+
     return Text.rich(
       TextSpan(
         style: style,
         children: <InlineSpan>[
           for (final fragment in fragments)
-            TextSpan(
-              text: fragment.text,
-              style: _styleFor(fragment),
-            ),
+            if (fragment.isFraction)
+              WidgetSpan(
+                // `middle` : le milieu de la fraction coïncide avec le milieu
+                // de la ligne. La ligne de base des mots voisins ne bouge
+                // pas ; seule la hauteur de ligne grandit.
+                alignment: PlaceholderAlignment.middle,
+                child: FractionSpan(
+                  numerator: fragment.numerator!,
+                  denominator: fragment.denominator!,
+                  style: fragment.highlighted
+                      ? styleEffectif.copyWith(color: kHighlightRed)
+                      : styleEffectif,
+                ),
+              )
+            else
+              TextSpan(
+                text: fragment.text,
+                style: _styleFor(fragment),
+              ),
         ],
       ),
     );
   }
 
   TextStyle _styleFor(MathFragment fragment) {
-    if (!fragment.italic && !fragment.tabular) return const TextStyle();
+    if (!fragment.italic && !fragment.tabular && !fragment.highlighted) {
+      return const TextStyle();
+    }
 
     return TextStyle(
       // `fontStyle: italic` sélectionne le FICHIER italique de la famille
       // Inter : contours réellement inclinés, pas un oblique simulé.
       fontStyle: fragment.italic ? FontStyle.italic : null,
       fontFeatures: fragment.tabular ? const <FontFeature>[_tabular] : null,
+      color: fragment.highlighted ? kHighlightRed : null,
     );
   }
 

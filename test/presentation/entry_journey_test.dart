@@ -19,6 +19,7 @@ import 'package:relio/domain/settings/learner_settings.dart';
 import 'package:relio/presentation/screens/app_shell.dart';
 import 'package:relio/presentation/strings/relio_strings.dart';
 
+import '../helpers/fraction_finders.dart';
 import '../helpers/test_database.dart';
 
 /// Résumé de ce qui est visible, pour un échec exploitable.
@@ -83,7 +84,7 @@ void main() {
     String? choix,
   }) async {
     if (choix != null) {
-      await tester.tap(find.text(choix));
+      await tester.tap(fraction(choix));
       await tester.pump();
     } else {
       await tester.enterText(find.byType(TextField), numerique!);
