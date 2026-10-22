@@ -226,13 +226,18 @@ void main() {
       expect(find.byType(ChapterAccessPage), findsOneWidget);
     });
 
-    testWidgets('le tap sur une action rapide ouvre S1', (tester) async {
+    testWidgets('le tap sur une action rapide ouvre un exercice',
+        (tester) async {
       await pumpApp(tester);
 
       await tester.tap(find.text(RelioStrings.quickFiveTitle));
       await tester.pumpAndSettle();
 
-      expect(find.byType(ChapterAccessPage), findsOneWidget);
+      // La session rapide ouvre S2 directement : plus de passage par S1.
+      expect(find.byType(ExercisePage), findsOneWidget);
+      expect(find.byType(ChapterAccessPage), findsNothing);
+      expect(find.text(RelioStrings.quickSessionTitle), findsOneWidget);
+      expect(find.text(RelioStrings.quickSessionProgress(1, 3)), findsOneWidget);
     });
 
     testWidgets('un appui rapproche la carte avant de naviguer', (tester) async {
@@ -255,7 +260,7 @@ void main() {
       await gesture.up();
       await tester.pumpAndSettle();
 
-      expect(find.byType(ChapterAccessPage), findsOneWidget);
+      expect(find.byType(ExercisePage), findsOneWidget);
     });
 
     testWidgets('« Ton programme » liste les leçons et leur statut',

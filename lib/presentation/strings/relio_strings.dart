@@ -296,6 +296,35 @@ abstract final class RelioStrings {
   /// Action rapide — sous-titre.
   static const String quickWarmupSubtitle = 'Question du jour';
 
+  /// Titre de S2 quand l'écran est ouvert en échauffement.
+  ///
+  /// Même mot que la carte d'accueil : l'élève retrouve exactement ce qu'il a
+  /// touché, et la barre haute ne lui annonce pas une leçon qu'il n'a pas
+  /// choisie.
+  static const String quickWarmupScreenTitle = 'Échauffement';
+
+  /// Titre de S2 quand l'écran est ouvert en session rapide.
+  static const String quickSessionTitle = 'Session rapide';
+
+  /// Progression d'une session rapide : « Question 1 sur 3 ».
+  static String quickSessionProgress(int current, int total) =>
+      'Question $current sur $total';
+
+  /// Bouton de passage à l'exercice suivant d'une session rapide.
+  static const String quickSessionNext = 'Suivant';
+
+  /// Bouton de fin de session, sur le dernier exercice.
+  static const String quickSessionFinish = 'Terminer la session';
+
+  /// Bouton de sortie vers l'accueil, en échauffement.
+  static const String quickBackHome = 'Retour à l’accueil';
+
+  /// Écran de fin de session — titre.
+  static const String quickSessionEndTitle = 'Session terminée !';
+
+  /// Écran de fin de session — message.
+  static const String quickSessionEndMessage = 'Tu as bien travaillé.';
+
   /// Titre de la section qui liste les leçons du chapitre.
   static const String programSectionTitle = 'Ton programme';
 

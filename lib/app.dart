@@ -12,6 +12,7 @@
 library;
 
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 
@@ -22,6 +23,7 @@ import 'domain/entrytest/entry_test_onboarding.dart';
 import 'domain/entrytest/entry_test_repository.dart';
 import 'domain/learning/learner_progress.dart';
 import 'domain/learning/learning_event_repository.dart';
+import 'domain/learning/quick_practice.dart';
 import 'domain/settings/learner_settings.dart';
 import 'domain/tutor/tutor_client.dart';
 import 'domain/tutor/tutor_client_factory.dart';
@@ -40,6 +42,7 @@ import 'presentation/screens/onboarding/entry_kit.dart';
 import 'presentation/screens/onboarding/onboarding_flow.dart';
 import 'presentation/screens/onboarding/welcome_page.dart';
 import 'presentation/screens/profile_page.dart';
+import 'presentation/screens/quick_session_end_page.dart';
 import 'presentation/strings/relio_strings.dart';
 import 'presentation/theme/relio_theme.dart';
 import 'presentation/widgets/relio_page_route.dart';
@@ -79,6 +82,7 @@ class RelioApp extends StatefulWidget {
     required this.database,
     this.settingsController,
     this.showIntro = true,
+    this.quickPracticePicker,
   });
 
   final AppDatabase database;
@@ -96,6 +100,13 @@ class RelioApp extends StatefulWidget {
   /// première-ouverture / ouvertures suivantes est prise par ailleurs, dans
   /// [_RelioAppState], à partir du drapeau persisté.
   final bool showIntro;
+
+  /// Pioche des séances courtes.
+  ///
+  /// `null` : tirage réel sur la banque du chapitre 1. Les tests injectent un
+  /// catalogue fixe pour rendre la file déterministe, sans toucher au hasard
+  /// de production.
+  final QuickPracticePicker? quickPracticePicker;
 
   @override
   State<RelioApp> createState() => _RelioAppState();
@@ -340,6 +351,7 @@ class _RelioAppState extends State<RelioApp> {
                     database: widget.database,
                     settings: settings,
                     controller: _controller,
+                    quickPracticePicker: widget.quickPracticePicker,
                   ),
 
                   // Jamais un fond blanc sans issue : on dit ce qu'il se passe
@@ -431,11 +443,15 @@ class _RelioShell extends StatefulWidget {
     required this.database,
     required this.settings,
     required this.controller,
+    this.quickPracticePicker,
   });
 
   final AppDatabase database;
   final LearnerSettings settings;
   final SettingsController controller;
+
+  /// Pioche des séances courtes, ou `null` pour le tirage réel.
+  final QuickPracticePicker? quickPracticePicker;
 
   @override
   State<_RelioShell> createState() => _RelioShellState();
@@ -461,6 +477,13 @@ class _RelioShellState extends State<_RelioShell> {
   /// Construit une fois : sans clé compilée, c'est le mode simulé
   /// (`MockTutorClient`) — même fil, même attente, aucun appel réseau.
   late final TutorClient _tutor = buildTutorClient();
+
+  /// Pioche des séances courtes de l'accueil.
+  ///
+  /// Le hasard est réel : deux échauffements consécutifs ne proposent pas
+  /// forcément le même exercice.
+  late final QuickPracticePicker _quickPractice =
+      widget.quickPracticePicker ?? QuickPracticePicker(random: Random());
 
   /// Avancement affiché. Démarre à l'état VIDE : avant la première lecture,
   /// l'écran ne prétend rien savoir de l'élève.
@@ -602,6 +625,132 @@ class _RelioShellState extends State<_RelioShell> {
     await _refreshProgress();
   }
 
+  /// Ouvre l'échauffement : UN exercice, tiré des leçons en cours.
+  ///
+  /// La page est empilée dans l'onglet ACCUEIL : la flèche de retour ramène
+  /// donc à l'accueil, jamais à S1 — l'élève n'a pas ouvert de leçon.
+  /// La barre basse disparaît comme sur tout S2, par le signal de l'écran.
+  Future<void> _startWarmup() async {
+    await _refreshProgress();
+    if (!mounted) return;
+
+    final session = _quickPractice.warmup(_progress.value);
+    if (session.isEmpty) return;
+
+    final navigator = _homeKey.currentState;
+    if (navigator == null) return;
+
+    await navigator.push<void>(
+      RelioPageRoute<void>(
+        reduceAnimations: widget.settings.reduceAnimations,
+        builder: (_) => ExercisePage(
+          service: _service,
+          exercise: session.current,
+          drafts: _drafts,
+          tutor: _tutor,
+          modeEchauffement: true,
+          nextLabel: RelioStrings.quickBackHome,
+          // Le brouillon d'un échauffement ne sert pas au parcours : il est
+          // effacé en sortant, comme après « Exercice suivant ».
+          onExit: () => _leaveQuickExercise(navigator, session.current),
+          onGoToNext: () => _leaveQuickExercise(navigator, session.current),
+          onFullscreenChanged: _setFullscreen,
+          onAttemptRecorded: _refreshProgress,
+        ),
+      ),
+    );
+
+    await _refreshProgress();
+  }
+
+  /// Ferme l'échauffement et revient à l'accueil.
+  void _leaveQuickExercise(NavigatorState navigator, Exercise exercise) {
+    _drafts.remove(exercise.id);
+    if (navigator.mounted) navigator.pop();
+  }
+
+  /// Ouvre « J'ai 5 minutes » : une file de TROIS exercices.
+  ///
+  /// Chaque validation mène au suivant par « Suivant », sans repasser par
+  /// l'accueil ni par S1. Après le troisième, l'écran de fin propose le
+  /// retour à l'accueil.
+  Future<void> _startFiveMinutes() async {
+    await _refreshProgress();
+    if (!mounted) return;
+
+    final session = _quickPractice.fiveMinutes(_progress.value);
+    if (session.isEmpty) return;
+
+    final navigator = _homeKey.currentState;
+    if (navigator == null) return;
+
+    await navigator.push<void>(
+      RelioPageRoute<void>(
+        reduceAnimations: widget.settings.reduceAnimations,
+        builder: (_) => _quickSessionPage(navigator, session),
+      ),
+    );
+
+    await _refreshProgress();
+  }
+
+  /// Page S2 d'une étape de session rapide.
+  ExercisePage _quickSessionPage(
+    NavigatorState navigator,
+    QuickSession session,
+  ) {
+    return ExercisePage(
+      service: _service,
+      exercise: session.current,
+      drafts: _drafts,
+      tutor: _tutor,
+      progressionSession: RelioStrings.quickSessionProgress(
+        session.position,
+        session.length,
+      ),
+      progressionRatio: session.ratio,
+      nextLabel: session.hasNext
+          ? RelioStrings.quickSessionNext
+          : RelioStrings.quickSessionFinish,
+      onExit: () => navigator.pop(),
+      onGoToNext: () => _advanceQuickSession(navigator, session),
+      onFullscreenChanged: _setFullscreen,
+      onAttemptRecorded: _refreshProgress,
+    );
+  }
+
+  /// Passe à l'exercice suivant de la file, ou affiche la fin de session.
+  ///
+  /// Remplacement de page, jamais empilement : l'élève ne doit pas pouvoir
+  /// revenir sur un exercice déjà validé, et la pile de l'accueil garde une
+  /// seule entrée pour toute la session.
+  void _advanceQuickSession(NavigatorState navigator, QuickSession session) {
+    if (!navigator.mounted) return;
+
+    _drafts.remove(session.current.id);
+
+    if (session.hasNext) {
+      navigator.pushReplacement<void, void>(
+        RelioPageRoute<void>(
+          reduceAnimations: widget.settings.reduceAnimations,
+          builder: (_) => _quickSessionPage(navigator, session.next()),
+        ),
+      );
+      return;
+    }
+
+    navigator.pushReplacement<void, void>(
+      RelioPageRoute<void>(
+        reduceAnimations: widget.settings.reduceAnimations,
+        builder: (_) => QuickSessionEndPage(
+          onHome: () {
+            if (navigator.mounted) navigator.pop();
+          },
+        ),
+      ),
+    );
+  }
+
   /// Passe à l'exercice suivant DE LA LEÇON, ou revient à S1 après le dernier.
   Future<void> _goToNext(Exercise exercise, {bool revision = false}) async {
     final navigator = _learnNavigator;
@@ -659,11 +808,11 @@ class _RelioShellState extends State<_RelioShell> {
             // État calculé depuis les faits : « COMMENCER » pour un nouvel
             // élève, « REPRENDRE » dès la première tentative.
             homeState: HomeState.fromProgress(progress),
-            // La carte principale et les deux actions rapides ouvrent le
-            // même chapitre : c'est le seul parcours disponible en V1.
+            // La carte principale ouvre le chapitre ; les deux actions rapides
+            // ouvrent directement un exercice, sans passer par S1.
             onContinue: _openChapter1,
-            onFiveMinutes: _openChapter1,
-            onWarmup: _openChapter1,
+            onFiveMinutes: _startFiveMinutes,
+            onWarmup: _startWarmup,
             onOpenLesson: _openLesson,
           ),
           (context, _) => LearnPage(

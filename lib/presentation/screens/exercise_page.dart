@@ -36,6 +36,7 @@ import '../widgets/answer_field.dart';
 import '../widgets/feedback_panel.dart';
 import '../widgets/hint_area.dart';
 import '../widgets/math_text.dart';
+import '../widgets/relio_progress_bar.dart';
 import '../widgets/relio_tutor_sheet.dart';
 import '../widgets/rich_hint_sheet.dart';
 
@@ -99,6 +100,10 @@ class ExercisePage extends StatefulWidget {
     this.returnLabel,
     this.reviewOrigin,
     this.revision = false,
+    this.modeEchauffement = false,
+    this.progressionSession,
+    this.progressionRatio,
+    this.nextLabel,
   });
 
   final Chapter1Service service;
@@ -173,6 +178,31 @@ class ExercisePage extends StatefulWidget {
   /// Aucune règle pédagogique n'est modifiée : la correction et la
   /// progression restent celles du moteur.
   final bool revision;
+
+  /// La séance a été ouverte depuis la carte « Échauffement ».
+  ///
+  /// L'écran ne change ni le moteur ni la correction : seul le contexte de
+  /// navigation change. Le titre annonce « Échauffement » et la sortie ramène
+  /// à l'accueil, puisque l'élève n'est pas passé par S1.
+  final bool modeEchauffement;
+
+  /// Progression affichée d'une session rapide : « Question 1 sur 3 ».
+  ///
+  /// `null` hors session rapide. C'est un libellé d'interface calculé par
+  /// l'appelant : l'écran ne connaît ni la file, ni le nombre total.
+  final String? progressionSession;
+
+  /// Part de la session accomplie, entre 0 et 1.
+  ///
+  /// Alimente la barre sous le titre. `null` hors session rapide.
+  final double? progressionRatio;
+
+  /// Libellé du bouton de passage à l'exercice suivant, ou `null` pour le
+  /// libellé habituel.
+  ///
+  /// L'échauffement et la session rapide ne mènent pas au même endroit que le
+  /// parcours : « Retour à l'accueil », « Suivant », « Terminer la session ».
+  final String? nextLabel;
 
   @override
   State<ExercisePage> createState() => _ExercisePageState();
@@ -664,7 +694,13 @@ class _ExercisePageState extends State<ExercisePage> {
         ),
         // Titre tronque : le titre de la lecon 3 est long.
         title: Text(
-          widget.revision ? RelioStrings.revision : exercise.lesson.title,
+          widget.modeEchauffement
+              ? RelioStrings.quickWarmupScreenTitle
+              : widget.progressionSession != null
+              ? RelioStrings.quickSessionTitle
+              : widget.revision
+              ? RelioStrings.revision
+              : exercise.lesson.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
@@ -678,6 +714,7 @@ class _ExercisePageState extends State<ExercisePage> {
       body: SafeArea(
         child: Column(
           children: <Widget>[
+            if (widget.progressionSession != null) _sessionHeader(),
             Expanded(
               child: ListView(
                 controller: _scrollController,
@@ -716,6 +753,7 @@ class _ExercisePageState extends State<ExercisePage> {
                         });
                       },
                       onClarificationSubmit: _submitClarification,
+                      nextLabel: widget.nextLabel,
                     ),
                   ],
                 ],
@@ -724,6 +762,42 @@ class _ExercisePageState extends State<ExercisePage> {
             _bottomBar(keyboard),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Bandeau de session rapide : « Question 1 sur 3 » et sa barre.
+  ///
+  /// Placé SOUS l'AppBar, hors de la zone défilante : la position dans la
+  /// session ne doit jamais sortir de l'écran quand l'élève fait défiler un
+  /// énoncé long. Aucun chiffre de résultat : seule la position est affichée.
+  Widget _sessionHeader() {
+    final palette = RelioPaletteScope.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        RelioSpacing.horizontal,
+        10,
+        RelioSpacing.horizontal,
+        2,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            widget.progressionSession!,
+            style: RelioType.caption(palette).copyWith(
+              fontWeight: FontWeight.w600,
+              color: palette.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          RelioProgressBar(
+            ratio: widget.progressionRatio ?? 0,
+            color: palette.brand,
+            track: palette.outline,
+          ),
+        ],
       ),
     );
   }

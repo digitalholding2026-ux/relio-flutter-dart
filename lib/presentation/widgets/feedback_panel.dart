@@ -22,6 +22,7 @@ class FeedbackPanelView extends StatelessWidget {
     this.selectedClarification,
     this.onClarificationSelected,
     this.onClarificationSubmit,
+    this.nextLabel,
   });
 
   /// Contenu et actions a afficher.
@@ -30,6 +31,13 @@ class FeedbackPanelView extends StatelessWidget {
   final VoidCallback onRetry;
   final VoidCallback onNext;
   final VoidCallback onContinue;
+
+  /// Libelle du bouton de passage a la suite, ou `null` pour le libelle du
+  /// parcours (« Exercice suivant »).
+  ///
+  /// Une seance courte ne mene pas a l'exercice suivant de la lecon : son
+  /// appelant fournit donc le mot juste (« Suivant », « Retour a l'accueil »).
+  final String? nextLabel;
 
   /// Option actuellement choisie dans le panneau D.
   final String? selectedClarification;
@@ -206,7 +214,7 @@ class FeedbackPanelView extends StatelessWidget {
       buttons.add(
         OutlinedButton(
           onPressed: onNext,
-          child: const Text(RelioStrings.nextExercise),
+          child: Text(nextLabel ?? RelioStrings.nextExercise),
         ),
       );
     }

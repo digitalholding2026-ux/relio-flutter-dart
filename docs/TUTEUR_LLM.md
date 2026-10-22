@@ -96,11 +96,15 @@ flutter build apk --release --target-platform android-arm64 \
 ### Script de build
 
 `tool/build_apk.ps1` construit l'APK en injectant la clé sans l'écrire dans le
-dépôt : il lit `$env:TUTOR_API_KEY`, sinon `tool/tutor.env` (gitignoré). Sans
-clé, il produit quand même un APK en mode simulé et l'annonce.
+dépôt : il lit `$env:TUTOR_API_KEY`, sinon `tool/tutor.env` (gitignoré).
+
+**Sans clé, le script refuse de produire l'APK** : une release muette n'appelle
+aucun modèle et affiche le message du tuteur simulé, ce qui se confond avec une
+panne de l'IA.
 
 ```powershell
-powershell -File tool/build_apk.ps1
+powershell -File tool/build_apk.ps1              # clé requise
+powershell -File tool/build_apk.ps1 -AllowMock   # diagnostic, mode simulé
 ```
 
 `TUTOR_MODEL` n'a pas besoin d'être fourni : `openrouter/auto` évite de
@@ -124,6 +128,27 @@ Sans `TUTOR_API_KEY`, la fabrique renvoie `MockTutorClient`
 Ce mode sert à tester l'interface avant l'injection de la clé. Il ne produit
 aucun contenu pédagogique : inventer une correction reviendrait à écrire du
 cours sans validation (règle 8).
+
+### Vérifier qu'un APK contient réellement la clé
+
+Un APK de release construit sans clé embarque le mode simulé. L'élève voit
+alors le message de repli alors que le réseau et l'API fonctionnent : le
+symptôme ressemble à une panne du tuteur.
+
+Le binaire AOT contient la clé et le texte du mode simulé. On peut donc
+trancher sans installer l'application :
+
+```powershell
+$dir = Join-Path $env:TEMP 'relio-apk'
+Expand-Archive 'relio-socle-vX.apk' $dir -Force
+$so  = Join-Path $dir 'lib\arm64-v8a\libapp.so'
+$txt = [Text.Encoding]::GetEncoding(28591).GetString([IO.File]::ReadAllBytes($so))
+"clé compilée : $($txt.Contains('sk-or-v1'))"
+"mode simulé  : $($txt.Contains('Je ne peux pas encore te répondre'))"
+```
+
+Une release correcte donne `clé compilée : True` et `mode simulé : False`.
+L'APK `apk-v0.4.4-32` donnait l'inverse : c'est la cause du repli constaté.
 
 ## Panne en cours de conversation
 
