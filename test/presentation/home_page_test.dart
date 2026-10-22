@@ -46,7 +46,7 @@ void main() {
   group('Objectif de séquence', () {
     testWidgets('affiche « Séquence 1 • 2 notions sur 5 validées »',
         (tester) async {
-      await tester.pumpWidget(_accueil());
+      await tester.pumpWidget(_accueil(state: HomeState.mock()));
       await tester.pumpAndSettle();
 
       expect(
@@ -57,7 +57,7 @@ void main() {
     });
 
     testWidgets('la barre d’objectif est au-dessus du prénom', (tester) async {
-      await tester.pumpWidget(_accueil());
+      await tester.pumpWidget(_accueil(state: HomeState.mock()));
       await tester.pumpAndSettle();
 
       final double barre =
@@ -68,7 +68,7 @@ void main() {
     });
 
     testWidgets('le trait reflète la part validée, sans chiffre', (tester) async {
-      await tester.pumpWidget(_accueil());
+      await tester.pumpWidget(_accueil(state: HomeState.mock()));
       await tester.pumpAndSettle();
 
       final double largeur =
@@ -92,7 +92,7 @@ void main() {
   group('Message contextuel', () {
     testWidgets('sans blocage récent, le message par défaut s’affiche',
         (tester) async {
-      await tester.pumpWidget(_accueil());
+      await tester.pumpWidget(_accueil(state: HomeState.mock()));
       await tester.pumpAndSettle();
 
       expect(find.text(RelioStrings.relioMessage), findsOneWidget);
@@ -166,11 +166,48 @@ void main() {
     });
 
     testWidgets('aucun « Défi de la semaine » sur l’accueil', (tester) async {
-      await tester.pumpWidget(_accueil());
+      await tester.pumpWidget(_accueil(state: HomeState.mock()));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Défi'), findsNothing);
       expect(find.textContaining('défi'), findsNothing);
+    });
+  });
+
+  group('État vide — nouvel élève', () {
+    testWidgets('la carte invite à COMMENCER, en orange, sans position',
+        (tester) async {
+      await tester.pumpWidget(_accueil(state: HomeState.empty()));
+      await tester.pumpAndSettle();
+
+      final label = tester.widget<Text>(find.text(RelioStrings.startLabel));
+      expect(label.style?.color, RelioPalette.standard().brand);
+
+      expect(find.text(RelioStrings.startFirstExercise), findsOneWidget);
+      expect(find.text(RelioStrings.resumeLabel), findsNothing);
+      expect(find.text(RelioStrings.resumeProgress(2, 4)), findsNothing);
+      expect(find.text(RelioStrings.chapter1CardTitle), findsOneWidget);
+    });
+
+    testWidgets('le message et l’objectif partent de zéro', (tester) async {
+      await tester.pumpWidget(_accueil(state: HomeState.empty()));
+      await tester.pumpAndSettle();
+
+      expect(find.text(RelioStrings.relioMessageFirstSteps), findsOneWidget);
+      expect(find.text(RelioStrings.relioMessage), findsNothing);
+      expect(
+        find.text(RelioStrings.sequenceObjective(1, 0, 3)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('les trois leçons sont « À commencer »', (tester) async {
+      await tester.pumpWidget(_accueil(state: HomeState.empty()));
+      await tester.pumpAndSettle();
+
+      expect(find.text(RelioStrings.statusNotStarted), findsNWidgets(3));
+      expect(find.text(RelioStrings.statusInProgress), findsNothing);
+      expect(find.text(RelioStrings.statusMastered), findsNothing);
     });
   });
 }

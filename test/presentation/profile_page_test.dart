@@ -12,6 +12,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:relio/domain/learning/learner_progress.dart';
 import 'package:relio/domain/settings/learner_settings.dart';
 import 'package:relio/presentation/screens/profile_page.dart';
 import 'package:relio/presentation/strings/relio_strings.dart';
@@ -22,6 +23,7 @@ Widget buildProfileHarness({
   required LearnerSettings settings,
   required ValueChanged<LearnerSettings> onChanged,
   double textScale = 1,
+  LearnerProgress progress = LearnerProgress.empty,
 }) {
   final palette = RelioPalette.of(highContrast: settings.highContrast);
 
@@ -34,8 +36,36 @@ Widget buildProfileHarness({
     ),
     home: RelioPaletteScope(
       palette: palette,
-      child: ProfilePage(settings: settings, onChanged: onChanged),
+      child: ProfilePage(
+        settings: settings,
+        progress: progress,
+        onChanged: onChanged,
+      ),
     ),
+  );
+}
+
+/// Avancement de démonstration : [completed] exercices répartis sur trois
+/// leçons de quatre exercices (donc trois notions maîtrisées au maximum).
+LearnerProgress _progressWith({int lessons = 3, int perLesson = 4}) {
+  final byLesson = <String, Set<String>>{};
+  final all = <String>{};
+  final totals = <String, int>{};
+
+  for (var lesson = 0; lesson < lessons; lesson++) {
+    final id = 'lecon-$lesson';
+    totals[id] = perLesson;
+    byLesson[id] = <String>{
+      for (var index = 0; index < perLesson; index++) '$id-ex-$index',
+    };
+    all.addAll(byLesson[id]!);
+  }
+
+  return LearnerProgress(
+    startedLessonIds: byLesson.keys.toSet(),
+    completedExerciseIds: all,
+    completedExerciseIdsByLesson: byLesson,
+    lessonExerciseTotals: totals,
   );
 }
 
@@ -44,6 +74,7 @@ Future<LearnerSettings> pumpProfile(
   WidgetTester tester, {
   LearnerSettings settings = LearnerSettings.defaults,
   double textScale = 1,
+  LearnerProgress progress = LearnerProgress.empty,
 }) async {
   var current = settings;
 
@@ -53,6 +84,7 @@ Future<LearnerSettings> pumpProfile(
         return buildProfileHarness(
           settings: current,
           textScale: textScale,
+          progress: progress,
           onChanged: (LearnerSettings next) {
             setState(() => current = next);
           },
@@ -156,16 +188,26 @@ void main() {
   });
 
   group('Carte « Mon parcours »', () {
-    testWidgets('affiche les deux faits factices et leurs icônes', (
-      tester,
-    ) async {
+    testWidgets('un nouvel élève voit deux zéros', (tester) async {
       await pumpProfile(tester);
 
       expect(find.text(RelioStrings.profileJourneyTitle), findsOneWidget);
-      expect(find.text('12 Exercices terminés'), findsOneWidget);
-      expect(find.text('3 Notions maîtrisées'), findsOneWidget);
+      // État vide : aucun exercice terminé, aucune notion maîtrisée.
+      expect(find.text('0 Exercice terminé'), findsOneWidget);
+      expect(find.text('0 Notion maîtrisée'), findsOneWidget);
       expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
       expect(find.byIcon(Icons.flag_outlined), findsOneWidget);
+    });
+
+    testWidgets('les deux faits affichent les décomptes fournis',
+        (tester) async {
+      await pumpProfile(tester, progress: _progressWith());
+
+      expect(
+        find.text(RelioStrings.completedExercises(12)),
+        findsOneWidget,
+      );
+      expect(find.text(RelioStrings.masteredNotions(3)), findsOneWidget);
     });
 
     testWidgets('aucune note, aucun score, aucun pourcentage', (tester) async {

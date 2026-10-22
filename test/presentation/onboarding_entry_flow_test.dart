@@ -215,7 +215,7 @@ void main() {
       await monter(tester);
       await laisserResoudre(tester);
 
-      expect(find.text(RelioStrings.welcomeStart), findsNothing,
+      expect(find.text(RelioStrings.welcomeTitle), findsNothing,
           reason: 'ni l\'ouverture ni la Bienvenue ne doivent être rejouées');
       expect(find.byType(OnboardingFlow), findsNothing);
     });

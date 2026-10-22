@@ -1,11 +1,11 @@
 /// Modèles de l'onglet « Apprendre » — catalogue et leçons.
 ///
-/// DONNÉES FACTICES, ET ASSUMÉES COMME TELLES.
+/// DEUX SOURCES, UN SEUL TYPE.
 ///
-/// Aucun de ces objets n'est lu ni écrit en base. Ils décrivent la FORME que
-/// le moteur remplira plus tard : chapitres, leçons, états et avancement.
-/// L'interface n'a donc pas à changer de structure le jour où les faits
-/// observés seront disponibles.
+///  - [LearnState.fromProgress] est utilisée en PRODUCTION : elle reflète les
+///    faits observés, donc une leçon jamais commencée est « À commencer » avec
+///    une barre vide ;
+///  - [LearnState.mock] ne sert plus qu'aux tests et aux aperçus.
 ///
 /// ⚠️ Rien ici n'est persisté. La règle 5 interdit de stocker une maîtrise, un
 /// score ou un niveau ; ces états sont une PROJECTION d'affichage, calculée à
@@ -17,6 +17,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../domain/curriculum/chapter1_bank.dart';
 import '../../domain/curriculum/exercise.dart';
+import '../../domain/learning/learner_progress.dart';
 import '../home/home_state.dart';
 import '../strings/relio_strings.dart';
 
@@ -97,7 +98,7 @@ class LearnState {
     return null;
   }
 
-  /// État de démonstration, en attendant les données du moteur.
+  /// État de démonstration, pour les tests et les aperçus.
   ///
   /// Les intitulés de leçons sont ceux du document validé (via
   /// [ArithmeticLesson]) : le mock n'invente aucun contenu pédagogique. Seuls
@@ -106,6 +107,33 @@ class LearnState {
     return LearnState(
       chapters: <ChapterProgress>[
         mockChapter1(),
+        const ChapterProgress(number: 2, available: false),
+        const ChapterProgress(number: 3, available: false),
+      ],
+    );
+  }
+
+  /// État d'un nouvel élève : aucune leçon commencée, aucune progression.
+  factory LearnState.empty() => LearnState.fromProgress(LearnerProgress.empty);
+
+  /// État calculé depuis les faits observés.
+  ///
+  /// C'est l'UNIQUE constructeur utilisé en production. Les totaux viennent de
+  /// la banque validée : une leçon non tentée affiche « 0/4 exercices » et une
+  /// barre vide, jamais un avancement inventé.
+  factory LearnState.fromProgress(LearnerProgress progress) {
+    return LearnState(
+      chapters: <ChapterProgress>[
+        ChapterProgress(
+          number: 1,
+          available: true,
+          title: RelioStrings.chapterArithmetic,
+          lessons: List<LessonProgress>.unmodifiable(<LessonProgress>[
+            for (final ArithmeticLesson lesson in ArithmeticLesson.values)
+              HomeState.lessonProgress(lesson, progress),
+          ]),
+          validatedLessons: progress.masteredNotions,
+        ),
         const ChapterProgress(number: 2, available: false),
         const ChapterProgress(number: 3, available: false),
       ],

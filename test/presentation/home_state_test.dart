@@ -6,7 +6,9 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:relio/domain/curriculum/chapter1_bank.dart';
 import 'package:relio/domain/curriculum/exercise.dart';
+import 'package:relio/domain/learning/learner_progress.dart';
 import 'package:relio/presentation/home/home_state.dart';
 import 'package:relio/presentation/strings/relio_strings.dart';
 
@@ -64,12 +66,18 @@ void main() {
       );
     });
 
-    test('couvre les trois états d’affichage', () {
+    test('couvre les trois états d’affichage du mock', () {
       final state = HomeState.mock();
 
+      // Le mock n'utilise pas l'état vide : « À commencer » appartient à
+      // l'état réel, pas à la démonstration.
       expect(
         state.lessons.map((l) => l.status).toSet(),
-        LessonStatus.values.toSet(),
+        <LessonStatus>{
+          LessonStatus.inProgress,
+          LessonStatus.toReview,
+          LessonStatus.mastered,
+        },
       );
       expect(state.lessons[0].statusLabel, RelioStrings.statusInProgress);
       expect(state.lessons[1].statusLabel, RelioStrings.statusToReview);
@@ -86,7 +94,7 @@ void main() {
       final state = HomeState.mock();
 
       expect(state.message.contains('%'), isFalse);
-      expect(state.resume.positionLabel.contains('%'), isFalse);
+      expect(state.resume.positionLabel!.contains('%'), isFalse);
       for (final lesson in state.lessons) {
         expect(lesson.statusLabel.contains('%'), isFalse);
         expect(lesson.statusLabel.toLowerCase().contains('score'), isFalse);
@@ -119,5 +127,72 @@ void main() {
     const objective = SequenceObjective(sequence: 1, validated: 0, notions: 0);
 
     expect(objective.ratio, 0);
+  });
+
+  group('HomeState.fromProgress', () {
+    test('un historique vide donne l’état de premier démarrage', () {
+      final state = HomeState.fromProgress(LearnerProgress.empty);
+
+      expect(state.started, isFalse);
+      expect(state.message, RelioStrings.relioMessageFirstSteps);
+      expect(state.resume.positionLabel, isNull);
+      expect(state.resume.chapterTitle, RelioStrings.chapter1CardTitle);
+      expect(state.objective.validated, 0);
+      expect(state.objective.notions, ArithmeticLesson.values.length);
+      expect(
+        state.lessons.map((lesson) => lesson.status),
+        everyElement(LessonStatus.notStarted),
+      );
+      expect(
+        state.lessons.map((lesson) => lesson.fill),
+        everyElement(0.0),
+      );
+    });
+
+    test('une tentative suffit pour proposer de reprendre', () {
+      final lesson = ArithmeticLesson.lesson1Subtractions;
+      final progress = LearnerProgress(
+        startedLessonIds: <String>{lesson.id},
+        lessonExerciseTotals: LearnerProgress.officialChapter1ExerciseTotals(),
+      );
+
+      final state = HomeState.fromProgress(progress);
+
+      expect(state.started, isTrue);
+      expect(state.message, RelioStrings.relioMessage);
+      expect(state.resume.positionLabel, RelioStrings.resumeProgress(1, 4));
+      expect(state.lessons.first.status, LessonStatus.inProgress);
+      expect(state.lessons.first.fill, 0);
+    });
+
+    test('une leçon entièrement réussie devient maîtrisée', () {
+      final lesson = ArithmeticLesson.lesson1Subtractions;
+      // Les identifiants sont ceux de la banque : la reprise doit pouvoir les
+      // reconnaître pour passer à la leçon suivante.
+      final completed = Chapter1Bank.exercises
+          .where(
+            (exercise) =>
+                exercise.kind == BankElementKind.exercise &&
+                exercise.lesson == lesson,
+          )
+          .map((exercise) => exercise.id)
+          .toSet();
+      final progress = LearnerProgress(
+        startedLessonIds: <String>{lesson.id},
+        completedExerciseIds: completed,
+        completedExerciseIdsByLesson: <String, Set<String>>{
+          lesson.id: completed,
+        },
+        lessonExerciseTotals: LearnerProgress.officialChapter1ExerciseTotals(),
+      );
+
+      final state = HomeState.fromProgress(progress);
+
+      expect(state.objective.validated, 1);
+      expect(state.lessons.first.status, LessonStatus.mastered);
+      expect(state.lessons.first.fill, 1);
+      // La reprise pointe le premier exercice de la leçon suivante.
+      expect(state.resume.positionLabel, RelioStrings.resumeProgress(1, 3));
+    });
   });
 }

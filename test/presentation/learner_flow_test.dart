@@ -91,14 +91,16 @@ void main() {
       final page = tester.widget<ChapterAccessPage>(find.byType(ChapterAccessPage));
       expect(page.onOpenLesson, isNotNull);
 
-      // États factices : orange « En cours », gris « À revoir », vert
-      // « Maîtrisé ». L'information est toujours doublée d'un libellé.
-      expect(find.text(RelioStrings.statusInProgress), findsOneWidget);
-      expect(find.text(RelioStrings.statusToReview), findsOneWidget);
-      expect(find.text(RelioStrings.statusMastered), findsOneWidget);
+      // Aucun fait : les trois leçons sont « À commencer ». L'information est
+      // toujours doublée d'un libellé, jamais portée par la couleur seule.
+      expect(find.text(RelioStrings.statusNotStarted), findsNWidgets(3));
+      expect(find.text(RelioStrings.statusInProgress), findsNothing);
+      expect(find.text(RelioStrings.statusToReview), findsNothing);
+      expect(find.text(RelioStrings.statusMastered), findsNothing);
 
-      // Décompte factice d'exercices, sans pourcentage.
-      expect(find.text(RelioStrings.lessonExerciseProgress(2, 4)), findsOneWidget);
+      // Décomptes réels : zéro exercice terminé, sans pourcentage.
+      expect(find.text(RelioStrings.lessonExerciseProgress(0, 4)), findsNWidgets(2));
+      expect(find.text(RelioStrings.lessonExerciseProgress(0, 3)), findsOneWidget);
       expect(find.textContaining('%'), findsNothing);
       expect(find.byType(LinearProgressIndicator), findsNothing);
     });

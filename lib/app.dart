@@ -20,8 +20,11 @@ import 'domain/curriculum/chapter1_service.dart';
 import 'domain/curriculum/exercise.dart';
 import 'domain/entrytest/entry_test_onboarding.dart';
 import 'domain/entrytest/entry_test_repository.dart';
+import 'domain/learning/learner_progress.dart';
 import 'domain/learning/learning_event_repository.dart';
 import 'domain/settings/learner_settings.dart';
+import 'presentation/home/home_state.dart';
+import 'presentation/learn/learn_state.dart';
 import 'presentation/rules/v1_screen_rules.dart';
 import 'presentation/screens/app_shell.dart';
 import 'presentation/screens/app_shell_nav.dart';
@@ -447,6 +450,35 @@ class _RelioShellState extends State<_RelioShell> {
   late final Chapter1Service _service =
       Chapter1Service(LearningEventRepository(widget.database));
 
+  /// Lecture de l'avancement réel — jamais une valeur d'attente.
+  late final LearnerProgressRepository _progressRepository =
+      LearnerProgressRepository(LearningEventRepository(widget.database));
+
+  /// Avancement affiché. Démarre à l'état VIDE : avant la première lecture,
+  /// l'écran ne prétend rien savoir de l'élève.
+  LearnerProgress _progress = LearnerProgress.empty;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshProgress();
+  }
+
+  /// Relit les faits et met à jour l'accueil, le programme et le profil.
+  ///
+  /// Une lecture en échec ne casse rien : l'état vide reste affiché, ce qui
+  /// est exact — on ne sait simplement rien de plus.
+  Future<void> _refreshProgress() async {
+    try {
+      final progress = await _progressRepository.load();
+      if (!mounted) return;
+      setState(() => _progress = progress);
+    } catch (_) {
+      // Historique illisible : l'écran garde l'état vide plutôt que d'afficher
+      // une progression inventée.
+    }
+  }
+
   final GlobalKey<AppShellState> _shellKey = GlobalKey<AppShellState>();
   final GlobalKey<NavigatorState> _homeKey = GlobalKey<NavigatorState>();
   final GlobalKey<NavigatorState> _learnKey = GlobalKey<NavigatorState>();
@@ -468,25 +500,30 @@ class _RelioShellState extends State<_RelioShell> {
 
   /// Ouvre S1, puis S2, dans la pile de l'onglet Apprendre.
   ///
-  /// « Commence ici » (Accueil) et le chapitre 1 (Apprendre) convergent donc
-  /// vers le MÊME parcours, sans dupliquer la pile.
+  /// « Commencer » (Accueil) et le chapitre 1 (Apprendre) convergent donc vers
+  /// le MÊME parcours, sans dupliquer la pile.
   ///
   /// Bascule AUSSI sur l'onglet Apprendre : pousser une page dans la pile d'un
   /// onglet sans l'afficher laisserait S1 invisible.
-  void _openChapter1() {
+  Future<void> _openChapter1() async {
     _shellKey.currentState?.selectTab(RelioTab.learn);
 
     final navigator = _learnNavigator;
     if (navigator == null) return;
-    navigator.push<void>(
+    await navigator.push<void>(
       RelioPageRoute<void>(
         reduceAnimations: widget.settings.reduceAnimations,
         builder: (_) => ChapterAccessPage(
           onOpenLesson: _openLesson,
+          // Les leçons affichées sont celles que les faits décrivent : une
+          // leçon jamais tentée reste « À commencer ».
+          chapter: LearnState.fromProgress(_progress).activeChapter,
           reduceAnimations: widget.settings.reduceAnimations,
         ),
       ),
     );
+    // Le parcours est refermé : les faits peuvent avoir changé.
+    await _refreshProgress();
   }
 
   /// Ouvre S2 sur le premier exercice de la leçon.
@@ -517,6 +554,10 @@ class _RelioShellState extends State<_RelioShell> {
         ),
       ),
     );
+
+    // Retour à S1 : l'exercice peut avoir été réussi, donc les décomptes de
+    // l'accueil et du profil doivent être relus.
+    await _refreshProgress();
   }
 
   /// Passe à l'exercice suivant, ou revient à S1 après le dernier.
@@ -564,7 +605,10 @@ class _RelioShellState extends State<_RelioShell> {
         (context, _) => HomePage(
               name: widget.settings.name,
               reduceAnimations: widget.settings.reduceAnimations,
-              // La carte « Continuer » et les deux actions rapides ouvrent le
+              // État calculé depuis les faits : « COMMENCER » pour un nouvel
+              // élève, « REPRENDRE » dès la première tentative.
+              homeState: HomeState.fromProgress(_progress),
+              // La carte principale et les deux actions rapides ouvrent le
               // même chapitre : c'est le seul parcours disponible en V1.
               onContinue: _openChapter1,
               onFiveMinutes: _openChapter1,
@@ -572,11 +616,13 @@ class _RelioShellState extends State<_RelioShell> {
               onOpenLesson: _openLesson,
             ),
         (context, _) => LearnPage(
+              learnState: LearnState.fromProgress(_progress),
               onOpenChapter1: _openChapter1,
               reduceAnimations: widget.settings.reduceAnimations,
             ),
         (context, _) => ProfilePage(
               settings: widget.settings,
+              progress: _progress,
               onChanged: _onSettingsChanged,
             ),
       ],

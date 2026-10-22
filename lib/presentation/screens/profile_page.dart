@@ -11,14 +11,15 @@
 ///  4. la carte « Affichage » — taille du texte, contraste renforcé ;
 ///  5. la carte « Accessibilité » — réduction des animations.
 ///
-/// DONNÉES FACTICES : les deux décomptes de « Mon parcours » sont des valeurs
-/// d'attente (12 exercices, 3 notions), pas des faits lus en base. Elles sont
-/// regroupées ici pour être remplacées en un point le jour où le moteur les
-/// fournira. Aucune note, aucun score, aucun pourcentage n'est affiché.
+/// DONNÉES RÉELLES : les deux décomptes de « Mon parcours » viennent du
+/// moteur, par [LearnerProgress] — donc d'un calcul sur les événements
+/// d'apprentissage. Un nouvel élève voit « 0 Exercice terminé » et
+/// « 0 Notion maîtrisée ». Aucune note, aucun score, aucun pourcentage.
 ///
 /// La règle 5 d'`AGENTS.md` interdit d'introduire un champ de maîtrise, de
 /// score ou de niveau dans le MODÈLE et le SCHÉMA : ces valeurs n'existent
-/// dans aucune table, et [LearnerSettings] ne les contient pas.
+/// dans aucune table. [LearnerProgress] est une projection recalculée à chaque
+/// lecture, jamais persistée.
 ///
 /// PERSISTANCE : locale, immédiate, sans bouton « Enregistrer ». La perte des
 /// préférences à la désinstallation est ACCEPTÉE en V1.
@@ -26,6 +27,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../domain/learning/learner_progress.dart';
 import '../../domain/settings/learner_settings.dart';
 import '../home/pressable_scale.dart';
 import '../strings/relio_strings.dart';
@@ -37,6 +39,7 @@ class ProfilePage extends StatefulWidget {
     super.key,
     required this.settings,
     required this.onChanged,
+    this.progress = LearnerProgress.empty,
   });
 
   /// Préférences courantes.
@@ -45,20 +48,16 @@ class ProfilePage extends StatefulWidget {
   /// Notifie toute modification : l'application reconstruit le thème.
   final ValueChanged<LearnerSettings> onChanged;
 
+  /// Décomptes affichés dans « Mon parcours ».
+  ///
+  /// Par défaut : l'état vide. Sans données, l'écran n'invente rien.
+  final LearnerProgress progress;
+
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  // ---------------------------------------------------------------------
-  // Données factices de « Mon parcours ».
-  //
-  // À BRANCHER : ces deux décomptes seront lus depuis le moteur. Ils sont
-  // volontairement regroupés ici, et nulle part ailleurs dans l'écran.
-  // ---------------------------------------------------------------------
-  static const int _completedExercises = 12;
-  static const int _masteredNotions = 3;
-
   late final TextEditingController _nameController = TextEditingController(
     text: widget.settings.name,
   );
@@ -142,8 +141,8 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: RelioSpacing.sectionGap),
             _JourneyCard(
-              completedExercises: _completedExercises,
-              masteredNotions: _masteredNotions,
+              completedExercises: widget.progress.completedExercises,
+              masteredNotions: widget.progress.masteredNotions,
             ),
             const SizedBox(height: RelioSpacing.sectionGap),
             _DisplayCard(

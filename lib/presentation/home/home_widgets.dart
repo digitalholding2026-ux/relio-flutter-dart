@@ -128,13 +128,14 @@ class RelioMessageCard extends StatelessWidget {
   }
 }
 
-/// Carte principale : le chapitre à reprendre, et le bouton pour y aller.
+/// Carte principale : le chapitre à reprendre — ou à commencer.
 class ResumeCard extends StatelessWidget {
   /// Crée la carte de reprise.
   const ResumeCard({
     super.key,
     required this.target,
     required this.onContinue,
+    this.started = true,
     this.reduceAnimations = false,
   });
 
@@ -143,6 +144,9 @@ class ResumeCard extends StatelessWidget {
 
   /// Ouvre la leçon en cours.
   final VoidCallback onContinue;
+
+  /// `false` : rien n'a encore été commencé, la carte invite à démarrer.
+  final bool started;
 
   /// Désactive l'effet d'appui.
   final bool reduceAnimations;
@@ -186,7 +190,7 @@ class ResumeCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   Text(
-                    RelioStrings.resumeLabel,
+                    started ? RelioStrings.resumeLabel : RelioStrings.startLabel,
                     style: RelioType.overline(palette).copyWith(
                       color: palette.brand,
                     ),
@@ -196,13 +200,15 @@ class ResumeCard extends StatelessWidget {
                     target.chapterTitle,
                     style: RelioType.titleBold(palette),
                   ),
-                  const SizedBox(height: RelioSpacing.xs),
-                  Text(
-                    target.positionLabel,
-                    style: RelioType.body(palette).copyWith(
-                      color: palette.textSecondary,
+                  if (target.positionLabel != null) ...<Widget>[
+                    const SizedBox(height: RelioSpacing.xs),
+                    Text(
+                      target.positionLabel!,
+                      style: RelioType.body(palette).copyWith(
+                        color: palette.textSecondary,
+                      ),
                     ),
-                  ),
+                  ],
                   const SizedBox(height: RelioSpacing.lg),
                   PressableScale(
                     onTap: onContinue,
@@ -216,7 +222,9 @@ class ResumeCard extends StatelessWidget {
                         borderRadius: RelioRadius.cardAll,
                       ),
                       child: Text(
-                        RelioStrings.resumeContinue,
+                        started
+                            ? RelioStrings.resumeContinue
+                            : RelioStrings.startFirstExercise,
                         style: RelioType.bodyStrong(palette).copyWith(
                           color: palette.onPrimary,
                         ),
@@ -335,6 +343,7 @@ class LessonTimelineTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = RelioPaletteScope.of(context);
     final Color statusColor = switch (lesson.status) {
+      LessonStatus.notStarted => palette.textMuted,
       LessonStatus.toReview => palette.textSecondary,
       LessonStatus.inProgress => palette.brand,
       LessonStatus.mastered => palette.successText,

@@ -8,9 +8,9 @@
 ///  3. deux actions rapides — ce qu'il peut faire s'il a peu de temps ;
 ///  4. le programme — où il en est.
 ///
-/// DONNÉES FACTICES : l'accueil n'affiche pour l'instant que le contenu de
-/// [HomeState.mock]. Aucun fait d'apprentissage n'est lu en base : les leçons
-/// et leurs états sont une projection d'attente, pas un résultat.
+/// DONNÉES RÉELLES : l'état est fourni par la coquille, calculé depuis les
+/// événements d'apprentissage ([HomeState.fromProgress]). Le défaut de l'écran
+/// est l'ÉTAT VIDE : sans données, on n'affiche aucune progression inventée.
 library;
 
 import 'package:flutter/material.dart';
@@ -76,9 +76,9 @@ class HomePage extends StatefulWidget {
 
   /// État à afficher.
   ///
-  /// `null` en production : l'écran prend alors [HomeState.mock]. Ce paramètre
-  /// existe pour que les tests et, plus tard, le moteur puissent imposer un
-  /// état sans toucher à la mise en page.
+  /// `null` : [HomeState.empty]. Ce défaut est volontaire — un écran monté
+  /// sans données ne doit jamais montrer une progression de démonstration.
+  /// La coquille de l'application fournit l'état réel.
   final HomeState? homeState;
 
   /// Supprime les animations d'apparition et d'appui.
@@ -93,7 +93,7 @@ class _HomePageState extends State<HomePage>
   /// Durée de l'apparition du programme.
   static const Duration _entranceDuration = Duration(milliseconds: 900);
 
-  late final HomeState _state = widget.homeState ?? HomeState.mock();
+  late final HomeState _state = widget.homeState ?? HomeState.empty();
   late final AnimationController _entrance;
 
   @override
@@ -156,6 +156,7 @@ class _HomePageState extends State<HomePage>
             const SizedBox(height: RelioSpacing.xl),
             ResumeCard(
               target: _state.resume,
+              started: _state.started,
               onContinue: widget.onContinue,
               reduceAnimations: widget.reduceAnimations,
             ),

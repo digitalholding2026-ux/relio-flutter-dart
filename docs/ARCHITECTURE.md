@@ -132,6 +132,31 @@ Les requêtes d'agrégation sont déjà disponibles (`findByNotion`,
 `count`, `findByType`) pour que les règles futures s'appuient sur des faits,
 sans avoir à modifier le schéma.
 
+### 2.4 Projection d'affichage (`LearnerProgress`)
+
+L'interface ne lit jamais un état stocké : elle relit les événements et en
+déduit des décomptes, à chaque affichage
+(`lib/domain/learning/learner_progress.dart`).
+
+| Affichage | Fait qui le produit |
+|---|---|
+| Leçon commencée | au moins une tentative soumise sur la leçon |
+| Exercice terminé | au moins une réponse correcte sur l'exercice |
+| Leçon maîtrisée | tous ses exercices officiels terminés |
+
+Ces règles sont mécaniques et ne portent aucun jugement pédagogique. Un nouvel
+élève voit donc `0 Exercice terminé`, `0 Notion maîtrisée`, trois leçons
+« À commencer » et une barre de chapitre vide — jamais une progression
+inventée. Rien n'est persisté : la projection est recalculée, jamais écrite.
+
+### 2.5 Tuteur Relio — interface seule
+
+S2 propose « Demander à Relio », sous les indices. Le panneau occupe 75 % de
+la hauteur et affiche un fil de discussion. Aucun appel réseau n'est effectué :
+les réponses sont des mocks explicites (`RelioStrings.tutorMockReply`).
+L'interface est prête ; brancher le modèle remplacera la production de la
+réponse sans toucher à la mise en page.
+
 ---
 
 ## 3. Persistence, hors ligne et migrations

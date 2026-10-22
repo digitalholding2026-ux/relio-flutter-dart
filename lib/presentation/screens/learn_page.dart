@@ -4,9 +4,9 @@
 /// liste plate. Un chapitre ouvert porte son avancement ; les chapitres
 /// suivants sont annoncés sans être cliquables.
 ///
-/// DONNÉES FACTICES : [LearnState.mock] fournit les états et les décomptes.
-/// Aucun fait d'apprentissage n'est lu en base. Les types de [LearnState] sont
-/// ceux que le moteur remplira : l'écran n'aura pas à changer de structure.
+/// DONNÉES RÉELLES : l'état vient de la coquille, calculé depuis les
+/// événements d'apprentissage ([LearnState.fromProgress]). Le défaut de
+/// l'écran est l'état vide : aucune progression inventée.
 ///
 /// Aucun personnage n'est utilisé ici : la marque et le personnage restent sur
 /// l'ouverture, le prénom et la clôture.
@@ -142,8 +142,8 @@ class LearnPage extends StatelessWidget {
 
   /// État à afficher.
   ///
-  /// `null` en production : l'écran prend alors [LearnState.mock]. Ce
-  /// paramètre existe pour les tests et, plus tard, pour le moteur.
+  /// `null` : [LearnState.empty]. Un écran monté sans données ne doit jamais
+  /// montrer une progression de démonstration.
   final LearnState? learnState;
 
   /// Désactive les effets d'appui.
@@ -152,7 +152,7 @@ class LearnPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = RelioPaletteScope.of(context);
-    final state = learnState ?? LearnState.mock();
+    final state = learnState ?? LearnState.empty();
 
     return Scaffold(
       // Même teinte que l'accueil : les cartes blanches se détachent sans

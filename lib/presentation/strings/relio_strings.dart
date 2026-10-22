@@ -38,6 +38,35 @@ abstract final class RelioStrings {
   static String hintLabel(int order) => 'Indice $order';
 
   // ---------------------------------------------------------------------
+  // S2 — Tuteur Relio (conversation)
+  //
+  // L'interface est branchée ; l'appel au modèle n'existe pas encore. Les
+  // deux textes ci-dessous sont donc les réponses MOCK du tuteur.
+  // ---------------------------------------------------------------------
+
+  /// Bouton secondaire qui ouvre la conversation, sous les indices.
+  static const String askRelio = 'Demander à Relio';
+
+  /// Titre du panneau de conversation.
+  static const String tutorTitle = 'Tuteur Relio';
+
+  /// Premier message du tuteur à l'ouverture.
+  static const String tutorGreeting =
+      'Salut ! Je suis là pour t’aider à comprendre l’exercice. '
+      'Où est-ce que tu bloques ?';
+
+  /// Réponse MOCK tant que le modèle n'est pas branché.
+  static const String tutorMockReply =
+      'Je ne peux pas encore te répondre, mais as-tu essayé de relire '
+      'la règle ?';
+
+  /// Placeholder du champ de saisie de la conversation.
+  static const String tutorInputHint = 'Écris ton message…';
+
+  /// Libellé accessible du bouton d'envoi.
+  static const String tutorSend = 'Envoyer';
+
+  // ---------------------------------------------------------------------
   // S2 — Fiche d'aide riche (Bottom Sheet)
   // ---------------------------------------------------------------------
 
@@ -164,6 +193,13 @@ abstract final class RelioStrings {
   /// ponctuation peut se retrouver seule sur la dernière ligne de la carte.
   static const String relioMessage = 'Prêt à avancer en maths aujourd’hui\u00A0?';
 
+  /// Message de Relio quand l'élève n'a encore rien commencé.
+  ///
+  /// État VIDE : on ne parle ni de reprise, ni d'avancement, puisqu'il n'y en
+  /// a aucun.
+  static const String relioMessageFirstSteps =
+      'Prêt à faire tes premiers pas en maths\u00A0?';
+
   /// Message de Relio quand une hésitation récente sur les soustractions a été
   /// observée.
   ///
@@ -186,12 +222,18 @@ abstract final class RelioStrings {
   /// Étiquette de la carte principale.
   static const String resumeLabel = 'REPRENDRE';
 
+  /// Étiquette de la carte principale quand rien n'a encore été commencé.
+  static const String startLabel = 'COMMENCER';
+
   /// Sous-texte de la carte principale : position dans le chapitre.
   static String resumeProgress(int current, int total) =>
       'Exercice $current sur $total';
 
   /// Libellé du bouton de la carte principale.
   static const String resumeContinue = 'Continuer';
+
+  /// Libellé du bouton de la carte principale au premier démarrage.
+  static const String startFirstExercise = 'Commencer';
 
   /// Action rapide — titre.
   static const String quickFiveTitle = 'J’ai 5 minutes';
@@ -216,6 +258,9 @@ abstract final class RelioStrings {
 
   /// Statut d'une leçon à reprendre.
   static const String statusToReview = 'À revoir';
+
+  /// Statut d'une leçon jamais commencée — état vide par défaut.
+  static const String statusNotStarted = 'À commencer';
 
   // ---------------------------------------------------------------------
   // Apprendre
@@ -297,12 +342,20 @@ abstract final class RelioStrings {
   /// Libellé du fait « notions maîtrisées ».
   static const String masteredNotionsLabel = 'Notions maîtrisées';
 
-  /// Fait affiché : « 12 Exercices terminés ».
-  static String completedExercises(int count) =>
-      '$count $completedExercisesLabel';
+  /// Fait affiché : « 12 Exercices terminés », « 0 Exercice terminé ».
+  ///
+  /// L'accord suit l'usage français : zéro et un restent au singulier
+  /// (« 0 exercice terminé »), au-delà le pluriel l'emporte.
+  static String completedExercises(int count) {
+    final bool plural = count > 1;
+    return '$count ${plural ? 'Exercices terminés' : 'Exercice terminé'}';
+  }
 
-  /// Fait affiché : « 3 Notions maîtrisées ».
-  static String masteredNotions(int count) => '$count $masteredNotionsLabel';
+  /// Fait affiché : « 3 Notions maîtrisées », « 0 Notion maîtrisée ».
+  static String masteredNotions(int count) {
+    final bool plural = count > 1;
+    return '$count ${plural ? 'Notions maîtrisées' : 'Notion maîtrisée'}';
+  }
 
   static const String textSizeLabel = 'Taille du texte';
   static const String highContrastLabel = 'Contraste renforcé';

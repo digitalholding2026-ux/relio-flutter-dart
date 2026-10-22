@@ -1,32 +1,33 @@
 /// Modèles de l'écran d'accueil.
 ///
-/// DONNÉES FACTICES, ET ASSUMÉES COMME TELLES.
+/// DEUX SOURCES, UN SEUL TYPE.
 ///
-/// Aucun de ces objets n'est lu ni écrit en base : l'accueil ne reçoit pour
-/// l'instant aucune donnée d'apprentissage. Ils décrivent la FORME que le
-/// moteur remplira plus tard — un chapitre à reprendre, des leçons et leur
-/// état d'avancement — afin que l'écran n'ait pas à changer de structure le
-/// jour où les faits observés seront disponibles.
+///  - [HomeState.fromProgress] est utilisée en PRODUCTION : les décomptes et
+///    les états viennent des événements d'apprentissage, donc un nouvel élève
+///    voit « 0 » et jamais une progression inventée ;
+///  - [HomeState.mock] ne sert plus qu'aux tests et aux aperçus.
 ///
-/// Le jour où le cœur fournira ces données, seule [HomeState.mock] disparaîtra :
-/// les widgets d'accueil ne dépendent que des types ci-dessous.
-///
-/// ⚠️ Rien ici n'est persisté. La règle 5 interdit de stocker une maîtrise, un
-/// score ou un niveau ; ces états sont une PROJECTION d'affichage, calculée à
-/// la volée à partir de faits observables. Ils ne doivent jamais rejoindre le
-/// schéma de la base.
+/// Aucun de ces objets n'est persisté. La règle 5 interdit de stocker une
+/// maîtrise, un score ou un niveau ; ces états sont une PROJECTION d'affichage,
+/// calculée à la volée à partir de faits observables. Ils ne doivent jamais
+/// rejoindre le schéma de la base.
 library;
 
 import 'package:flutter/foundation.dart';
 
+import '../../domain/curriculum/chapter1_bank.dart';
 import '../../domain/curriculum/exercise.dart';
+import '../../domain/learning/learner_progress.dart';
 import '../strings/relio_strings.dart';
 
 /// État d'une leçon tel qu'il s'affiche dans la liste « Ton programme ».
 ///
-/// Trois états seulement, et jamais un pourcentage : l'élève voit où il en est,
+/// Quatre états seulement, et jamais un pourcentage : l'élève voit où il en est,
 /// pas une note.
 enum LessonStatus {
+  /// Jamais commencée : pastille grise, barre vide.
+  notStarted,
+
   /// Commencée, non terminée : à reprendre en priorité.
   toReview,
 
@@ -88,25 +89,31 @@ class LessonProgress {
   /// L'information n'est jamais portée par la seule couleur : chaque état est
   /// doublé de ce texte.
   String get statusLabel => switch (status) {
+        LessonStatus.notStarted => RelioStrings.statusNotStarted,
         LessonStatus.toReview => RelioStrings.statusToReview,
         LessonStatus.inProgress => RelioStrings.statusInProgress,
         LessonStatus.mastered => RelioStrings.statusMastered,
       };
 }
 
-/// Chapitre proposé en reprise dans la carte principale.@immutable
+/// Chapitre proposé en carte principale (reprise, ou premier démarrage).
+@immutable
 class ResumeTarget {
   /// Crée la cible de reprise.
   const ResumeTarget({
     required this.chapterTitle,
-    required this.positionLabel,
+    this.positionLabel,
   });
 
   /// Titre du chapitre, repris du document validé.
   final String chapterTitle;
 
   /// Position dans le chapitre : « Exercice 2 sur 4 ».
-  final String positionLabel;
+  ///
+  /// `null` au premier démarrage : il n'y a encore aucune position à
+  /// annoncer, et en inventer une serait exactement ce que l'état vide doit
+  /// éviter.
+  final String? positionLabel;
 }
 
 /// Objectif de séquence affiché en tête d'accueil.
@@ -163,6 +170,7 @@ class HomeState {
     required this.message,
     required this.resume,
     required this.lessons,
+    this.started = true,
   });
 
   /// Objectif de séquence, affiché au-dessus du prénom.
@@ -171,13 +179,113 @@ class HomeState {
   /// Message de Relio sous l'en-tête.
   final String message;
 
-  /// Chapitre à reprendre.
+  /// Chapitre à reprendre, ou à commencer.
   final ResumeTarget resume;
 
   /// Leçons du chapitre courant, dans l'ordre du programme.
   final List<LessonProgress> lessons;
 
-  /// État de démonstration, en attendant les données du moteur.
+  /// L'élève a-t-il déjà soumis au moins une tentative ?
+  ///
+  /// `false` : la carte principale propose de COMMENCER, sans position ni
+  /// progression inventée. `true` : elle propose de REPRENDRE.
+  final bool started;
+
+  /// État d'un nouvel élève : aucun fait, aucun décompte inventé.
+  factory HomeState.empty() => HomeState.fromProgress(LearnerProgress.empty);
+
+  /// État calculé depuis les faits observés.
+  ///
+  /// C'est l'UNIQUE constructeur utilisé en production. [HomeState.mock]
+  /// reste réservé aux tests et aux aperçus.
+  factory HomeState.fromProgress(LearnerProgress progress) {
+    return HomeState(
+      objective: SequenceObjective(
+        sequence: 1,
+        validated: progress.masteredNotions,
+        notions: ArithmeticLesson.values.length,
+      ),
+      message: progress.hasStarted
+          ? RelioStrings.relioMessage
+          : RelioStrings.relioMessageFirstSteps,
+      resume: _resumeTarget(progress),
+      lessons: <LessonProgress>[
+        for (final ArithmeticLesson lesson in ArithmeticLesson.values)
+          lessonProgress(lesson, progress),
+      ],
+      started: progress.hasStarted,
+    );
+  }
+
+  /// État d'affichage d'une leçon, déduit des faits.
+  ///
+  /// Une leçon jamais tentée reste « À commencer », avec une barre vide :
+  /// c'est la définition de l'état vide demandée pour l'onglet Apprendre.
+  static LessonProgress lessonProgress(
+    ArithmeticLesson lesson,
+    LearnerProgress progress,
+  ) {
+    final int total = progress.totalFor(lesson.id);
+    final int done = progress.completedIn(lesson.id);
+    final LessonStatus status;
+    if (!progress.startedLesson(lesson.id)) {
+      status = LessonStatus.notStarted;
+    } else if (total > 0 && done >= total) {
+      status = LessonStatus.mastered;
+    } else {
+      status = LessonStatus.inProgress;
+    }
+
+    return LessonProgress(
+      lessonId: lesson.id,
+      title: lesson.title,
+      status: status,
+      fill: total == 0 ? 0 : (done / total).clamp(0.0, 1.0),
+      completedExercises: done,
+      totalExercises: total,
+    );
+  }
+
+  /// Cible de la carte principale : premier exercice non terminé.
+  static ResumeTarget _resumeTarget(LearnerProgress progress) {
+    if (!progress.hasStarted) {
+      // Premier démarrage : le titre porte le numéro du chapitre, puisqu'il
+      // n'y a ni position ni leçon à rappeler.
+      return ResumeTarget(chapterTitle: RelioStrings.chapter1CardTitle);
+    }
+
+    for (final ArithmeticLesson lesson in ArithmeticLesson.values) {
+      final exercises = Chapter1Bank.exercises
+          .where(
+            (exercise) =>
+                exercise.kind == BankElementKind.exercise &&
+                exercise.lesson == lesson,
+          )
+          .toList();
+      if (exercises.isEmpty) continue;
+
+      final done = progress.completedExerciseIdsByLesson[lesson.id] ??
+          const <String>{};
+      final int index = exercises.indexWhere((e) => !done.contains(e.id));
+      if (index >= 0) {
+        return ResumeTarget(
+          chapterTitle: RelioStrings.chapterArithmetic,
+          positionLabel: RelioStrings.resumeProgress(index + 1, exercises.length),
+        );
+      }
+    }
+
+    // Tout est terminé : on annonce la dernière position connue plutôt qu'une
+    // position inventée.
+    final firstLesson = ArithmeticLesson.values.first;
+    final int total = progress.totalFor(firstLesson.id);
+    return ResumeTarget(
+      chapterTitle: RelioStrings.chapterArithmetic,
+      positionLabel: RelioStrings.resumeProgress(total, total),
+    );
+  }
+
+  /// État de démonstration, pour les tests et les aperçus.
   ///
   /// Les intitulés de leçons sont ceux du document validé (via
   /// [ArithmeticLesson]) : le mock n'invente aucun contenu pédagogique. Seuls

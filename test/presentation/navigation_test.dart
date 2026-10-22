@@ -82,7 +82,7 @@ void main() {
         (tester) async {
       await pumpApp(tester);
 
-      expect(find.text(RelioStrings.relioMessage), findsOneWidget);
+      expect(find.text(RelioStrings.relioMessageFirstSteps), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });
@@ -189,20 +189,22 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
     }
 
-    testWidgets('affiche le message de Relio et la carte « Reprendre »',
+    testWidgets('affiche le message de Relio et la carte « Commencer »',
         (tester) async {
       useTallScreen(tester);
       await pumpApp(tester);
 
-      expect(find.text(RelioStrings.relioMessage), findsOneWidget);
+      expect(find.text(RelioStrings.relioMessageFirstSteps), findsOneWidget);
       expect(
-        find.text(RelioStrings.sequenceObjective(1, 2, 5)),
+        find.text(RelioStrings.sequenceObjective(1, 0, 3)),
         findsOneWidget,
       );
-      expect(find.text(RelioStrings.resumeLabel), findsOneWidget);
-      expect(find.text(RelioStrings.chapterArithmetic), findsOneWidget);
-      expect(find.text(RelioStrings.resumeProgress(2, 4)), findsOneWidget);
-      expect(find.text(RelioStrings.resumeContinue), findsOneWidget);
+      // Nouvel élève : on invite à commencer, sans position inventée.
+      expect(find.text(RelioStrings.startLabel), findsOneWidget);
+      expect(find.text(RelioStrings.chapter1CardTitle), findsOneWidget);
+      expect(find.text(RelioStrings.resumeLabel), findsNothing);
+      expect(find.text(RelioStrings.resumeProgress(2, 4)), findsNothing);
+      expect(find.text(RelioStrings.startFirstExercise), findsOneWidget);
     });
 
     testWidgets('affiche les deux actions rapides', (tester) async {
@@ -215,10 +217,10 @@ void main() {
       expect(find.text(RelioStrings.quickWarmupSubtitle), findsOneWidget);
     });
 
-    testWidgets('le tap sur « Continuer » ouvre S1', (tester) async {
+    testWidgets('le tap sur « Commencer » ouvre S1', (tester) async {
       await pumpApp(tester);
 
-      await tester.tap(find.text(RelioStrings.resumeContinue));
+      await tester.tap(find.text(RelioStrings.startFirstExercise));
       await tester.pumpAndSettle();
 
       expect(find.byType(ChapterAccessPage), findsOneWidget);
@@ -265,9 +267,10 @@ void main() {
       for (final lesson in ArithmeticLesson.values) {
         expect(find.text(lesson.title), findsOneWidget);
       }
-      expect(find.text(RelioStrings.statusInProgress), findsOneWidget);
-      expect(find.text(RelioStrings.statusToReview), findsOneWidget);
-      expect(find.text(RelioStrings.statusMastered), findsOneWidget);
+      expect(find.text(RelioStrings.statusNotStarted), findsNWidgets(3));
+      expect(find.text(RelioStrings.statusInProgress), findsNothing);
+      expect(find.text(RelioStrings.statusToReview), findsNothing);
+      expect(find.text(RelioStrings.statusMastered), findsNothing);
     });
 
     testWidgets('le tap sur une leçon du programme ouvre l’exercice',
@@ -323,7 +326,7 @@ void main() {
       expect(find.byType(LearnPage), findsOneWidget);
       expect(find.text(RelioStrings.chapter1CardTitle), findsOneWidget);
       expect(
-        find.text(RelioStrings.chapterLessonsValidated(2, 3)),
+        find.text(RelioStrings.chapterLessonsValidated(0, 3)),
         findsOneWidget,
       );
 
@@ -356,7 +359,7 @@ void main() {
       expect(find.byType(ChapterAccessPage), findsOneWidget);
     });
 
-    testWidgets('le chapitre 1 affiche sa progression factice',
+    testWidgets('le chapitre 1 affiche sa progression réelle, vide au départ',
         (tester) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
@@ -364,7 +367,7 @@ void main() {
       // La progression est un trait, jamais un pourcentage ni un compteur de
       // chapitres terminés.
       expect(find.byType(RelioProgressBar), findsOneWidget);
-      expect(find.text(RelioStrings.chapterLessonsValidated(2, 3)), findsOneWidget);
+      expect(find.text(RelioStrings.chapterLessonsValidated(0, 3)), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsNothing);
       expect(find.textContaining('%'), findsNothing);
       expect(find.textContaining('terminés'), findsNothing);

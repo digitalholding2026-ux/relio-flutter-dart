@@ -4,9 +4,9 @@
 /// carte « Reprendre »). Elle montre les trois leçons du chapitre avec leur
 /// état et leur avancement, puis ouvre l'exercice choisi.
 ///
-/// DONNÉES FACTICES : les états viennent de [LearnState.mockChapter1]. Aucun
-/// fait d'apprentissage n'est lu en base ; les types sont ceux que le moteur
-/// remplira.
+/// DONNÉES RÉELLES : l'état des leçons vient de la coquille, calculé depuis
+/// les événements d'apprentissage. Le défaut est l'état vide : aucune leçon
+/// n'est présentée comme commencée sans fait correspondant.
 library;
 
 import 'package:flutter/material.dart';
@@ -27,6 +27,7 @@ import '../widgets/relio_progress_bar.dart';
 /// libellé de [LessonStatusPill] la double toujours.
 Color lessonStatusColor(RelioPalette palette, LessonStatus status) {
   return switch (status) {
+    LessonStatus.notStarted => palette.textMuted,
     LessonStatus.inProgress => palette.brand,
     LessonStatus.toReview => palette.textSecondary,
     LessonStatus.mastered => palette.successText,
@@ -132,7 +133,7 @@ class ChapterAccessPage extends StatelessWidget {
   /// Appelé avec l'identifiant de la leçon sélectionnée.
   final void Function(String lessonId) onOpenLesson;
 
-  /// Chapitre affiché. `null` : chapitre 1 de démonstration.
+  /// Chapitre affiché. `null` : chapitre 1 à l'état vide.
   final ChapterProgress? chapter;
 
   /// Désactive les effets d'appui.
@@ -141,7 +142,7 @@ class ChapterAccessPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = RelioPaletteScope.of(context);
-    final shown = chapter ?? LearnState.mockChapter1();
+    final shown = chapter ?? LearnState.empty().activeChapter;
 
     return Scaffold(
       backgroundColor: palette.homeBackground,
@@ -197,7 +198,7 @@ class ChapterAccessPage extends StatelessWidget {
               LessonCard(
                 lesson: lesson,
                 progress:
-                    shown.lessonById(lesson.id) ?? _fallbackProgress(lesson),
+                    shown?.lessonById(lesson.id) ?? _fallbackProgress(lesson),
                 onTap: () => onOpenLesson(lesson.id),
                 reduceAnimations: reduceAnimations,
               ),
@@ -214,7 +215,7 @@ class ChapterAccessPage extends StatelessWidget {
     return LessonProgress(
       lessonId: lesson.id,
       title: lesson.title,
-      status: LessonStatus.toReview,
+      status: LessonStatus.notStarted,
       fill: 0,
     );
   }

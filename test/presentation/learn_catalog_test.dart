@@ -73,7 +73,7 @@ void main() {
 
       expect(find.text(RelioStrings.chapter1CardTitle), findsOneWidget);
       expect(
-        find.text(RelioStrings.chapterLessonsValidated(2, 3)),
+        find.text(RelioStrings.chapterLessonsValidated(0, 3)),
         findsOneWidget,
       );
 
@@ -83,7 +83,8 @@ void main() {
       final bar = tester.widget<RelioProgressBar>(
         find.byType(RelioProgressBar),
       );
-      expect(bar.ratio, closeTo(2 / 3, 0.001));
+      // Nouvel élève : aucune leçon validée, donc une barre vide.
+      expect(bar.ratio, 0);
       expect(bar.color.toARGB32(), 0xFFF56207);
     });
 
@@ -152,9 +153,12 @@ void main() {
       await openChapter(tester);
 
       expect(find.byType(LessonCard), findsNWidgets(3));
-      expect(find.text(RelioStrings.statusInProgress), findsOneWidget);
-      expect(find.text(RelioStrings.statusToReview), findsOneWidget);
-      expect(find.text(RelioStrings.statusMastered), findsOneWidget);
+      // Aucun fait : les trois leçons sont « À commencer », aucune n'est
+      // présentée comme entamée ou maîtrisée.
+      expect(find.text(RelioStrings.statusNotStarted), findsNWidgets(3));
+      expect(find.text(RelioStrings.statusInProgress), findsNothing);
+      expect(find.text(RelioStrings.statusToReview), findsNothing);
+      expect(find.text(RelioStrings.statusMastered), findsNothing);
 
       // Une barre par leçon.
       expect(find.byType(RelioProgressBar), findsNWidgets(3));
@@ -165,9 +169,9 @@ void main() {
       await openChapter(tester);
 
       // Les totaux viennent de la banque validée : 4, 3 et 4 exercices.
-      expect(find.text(RelioStrings.lessonExerciseProgress(2, 4)), findsOneWidget);
-      expect(find.text(RelioStrings.lessonExerciseProgress(1, 3)), findsOneWidget);
-      expect(find.text(RelioStrings.lessonExerciseProgress(4, 4)), findsOneWidget);
+      // Aucun n'est terminé : les décomptes partent de zéro.
+      expect(find.text(RelioStrings.lessonExerciseProgress(0, 4)), findsNWidgets(2));
+      expect(find.text(RelioStrings.lessonExerciseProgress(0, 3)), findsOneWidget);
       expect(find.textContaining('%'), findsNothing);
     });
 

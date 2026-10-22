@@ -30,6 +30,7 @@ import '../widgets/answer_field.dart';
 import '../widgets/feedback_panel.dart';
 import '../widgets/hint_area.dart';
 import '../widgets/math_text.dart';
+import '../widgets/relio_tutor_sheet.dart';
 import '../widgets/rich_hint_sheet.dart';
 
 /// Brouillon d'une tentative en cours.
@@ -629,6 +630,11 @@ class _ExercisePageState extends State<ExercisePage> {
             const SizedBox(height: 4),
             _hintButton()!,
           ],
+          // Sous l'aide : la conversation. Elle ne consomme aucun indice, ne
+          // touche ni au budget ni à l'historique — c'est un espace
+          // d'explication, pas une aide comptée.
+          const SizedBox(height: 4),
+          _askRelioButton(),
           const SizedBox(height: 8),
           FilledButton(
             // Neutralise pendant l'envoi, ET une fois le panneau affiche :
@@ -702,6 +708,20 @@ Widget? _hintButton() {
           Flexible(child: Text(label, textAlign: TextAlign.center)),
         ],
       ),
+    );
+  }
+
+  /// Bouton secondaire « Demander à Relio ».
+  ///
+  /// TOUJOURS DISPONIBLE, y compris après validation : discuter de l'exercice
+  /// n'écrit rien dans l'historique et ne consomme aucun indice. Ce n'est donc
+  /// pas une aide comptée, et la règle « plus d'aide après validation » ne
+  /// s'y applique pas.
+  Widget _askRelioButton() {
+    return TextButton.icon(
+      onPressed: () => showRelioTutorSheet(context),
+      icon: const Icon(Icons.chat_bubble_outline, size: 18),
+      label: const Text(RelioStrings.askRelio),
     );
   }
 
