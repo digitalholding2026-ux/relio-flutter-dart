@@ -85,8 +85,10 @@ void main() {
   testWidgets('le message de Relio situe l’élève dans l’année', (tester) async {
     await _pumpAccueil(tester);
 
-    // Historique vide : le message d'accueil reste l'invitation de premier
-    // démarrage. Le repère temporel prend le relais dès la première tentative.
-    expect(find.text(RelioStrings.relioMessageFirstSteps), findsOneWidget);
+    // Même sans historique, la bulle donne le mois et la séquence du jour.
+    expect(
+      find.textContaining('tu prépares la Séquence'),
+      findsOneWidget,
+    );
   });
 }

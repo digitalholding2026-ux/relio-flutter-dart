@@ -131,10 +131,12 @@ void main() {
 
   group('HomeState.fromProgress', () {
     test('un historique vide donne l’état de premier démarrage', () {
-      final state = HomeState.fromProgress(LearnerProgress.empty);
+      final DateTime now = DateTime(2026, 9, 10);
+      final state = HomeState.fromProgress(LearnerProgress.empty, now: now);
 
       expect(state.started, isFalse);
-      expect(state.message, RelioStrings.relioMessageFirstSteps);
+      expect(state.message, RelioStrings.relioSeasonMessage(now, 1));
+      expect(state.objective.sequence, 1);
       expect(state.resume.positionLabel, isNull);
       expect(state.resume.chapterTitle, RelioStrings.chapter1CardTitle);
       expect(state.objective.validated, 0);

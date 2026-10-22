@@ -270,13 +270,6 @@ abstract final class RelioStrings {
   static const String relioMessage =
       'Prêt à avancer en maths aujourd’hui\u00A0?';
 
-  /// Message de Relio quand l'élève n'a encore rien commencé.
-  ///
-  /// État VIDE : on ne parle ni de reprise, ni d'avancement, puisqu'il n'y en
-  /// a aucun.
-  static const String relioMessageFirstSteps =
-      'Prêt à faire tes premiers pas en maths\u00A0?';
-
   /// Message de Relio quand l'élève vient de réussir son premier exercice.
   ///
   /// Fait mesuré, pas jugement : un seul exercice terminé. Au-delà, le message

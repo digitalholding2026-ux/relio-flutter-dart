@@ -83,7 +83,10 @@ void main() {
         (tester) async {
       await pumpApp(tester);
 
-      expect(find.text(RelioStrings.relioMessageFirstSteps), findsOneWidget);
+      expect(
+        find.textContaining('tu prépares la Séquence'),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
     });
   });
@@ -195,7 +198,10 @@ void main() {
       useTallScreen(tester);
       await pumpApp(tester);
 
-      expect(find.text(RelioStrings.relioMessageFirstSteps), findsOneWidget);
+      expect(
+        find.textContaining('tu prépares la Séquence'),
+        findsOneWidget,
+      );
       expect(
         find.text(
           RelioStrings.sequenceObjective(

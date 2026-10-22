@@ -205,7 +205,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text(RelioStrings.relioMessageFirstSteps), findsOneWidget);
+      expect(
+        find.text(
+          RelioStrings.relioSeasonMessage(DateTime(2026, 9, 10), 1),
+        ),
+        findsOneWidget,
+      );
       expect(find.text(RelioStrings.relioMessage), findsNothing);
       expect(
         find.text(RelioStrings.sequenceObjective(1, 0, 3)),

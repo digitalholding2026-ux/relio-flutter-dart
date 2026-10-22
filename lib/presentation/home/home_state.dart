@@ -254,20 +254,20 @@ class HomeState {
 
   /// Message de Relio, choisi sur un fait observable et la période de l'année.
   ///
-  /// Trois cas seulement, dans cet ordre :
-  ///  - rien n'a été tenté → invitation à commencer ;
+  /// Deux cas seulement :
   ///  - exactement un exercice réussi → félicitation et proposition de
-  ///    continuer ;
+  ///    continuer, une seule fois ;
   ///  - tout le reste → repère temporel : mois et séquence en cours.
   ///
-  /// Le nombre d'exercices vient de l'historique (réussites comprises) : ce
-  /// n'est ni un score ni une interprétation de la réponse.
+  /// Le repère temporel est le message PAR DÉFAUT : un nouvel élève comme un
+  /// élève avancé sait ainsi où il se situe dans l'année. Le nombre
+  /// d'exercices vient de l'historique (réussites comprises) : ce n'est ni un
+  /// score ni une interprétation de la réponse.
   static String _messageFor(
     LearnerProgress progress,
     DateTime date,
     int sequence,
   ) {
-    if (!progress.hasStarted) return RelioStrings.relioMessageFirstSteps;
     if (progress.completedExercises == 1) {
       return RelioStrings.relioMessageFirstExerciseDone;
     }
