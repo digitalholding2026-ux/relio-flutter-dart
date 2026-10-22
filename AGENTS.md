@@ -516,7 +516,7 @@ L'APK n'est plus dans le dépôt : il est publié en **Release**.
 
 <https://github.com/digitalholding2026-ux/relio-flutter-dart/releases>
 
-Release courante : [`apk-v0.4.2-25`](https://github.com/digitalholding2026-ux/relio-flutter-dart/releases/tag/apk-v0.4.2-25)
+Release courante : [`apk-v0.4.2-27`](https://github.com/digitalholding2026-ux/relio-flutter-dart/releases/tag/apk-v0.4.2-27)
 
 Détail complet dans `docs/ARCHITECTURE.md` et `docs/BUILD.md`.
 
