@@ -161,6 +161,10 @@ class Chapter1Bank {
       // La tache cible se trouve dans la section verificationTasks plus bas :
       // meme nature, et sa correction ne compare QUE la valeur finale.
       followUpTask: ExerciseIds.verifyPgcd16And12,
+      // Correspondances fournies par la specification de correction. Elles
+      // ne creent aucun contenu : chaque identifiant renvoie a un cas deja
+      // valide dans `diagnosticCases`.
+      errorCases: <String, String>{'5': 'D1', '0': 'D2', '3': 'D3'},
     ),
     Exercise(
       id: ExerciseIds.ex2,
@@ -214,6 +218,9 @@ class Chapter1Bank {
       // Suivi prévu par la banque : PGCD(16, 12) par soustractions (cas D1).
       followUpTask: ExerciseIds.ex4,
       diagnosticCaseIds: <String>['D1', 'D2'],
+      // Memes faits que le collecteur, mais explicitement rattaches a la
+      // reponse : la carte reste la source de verite de la correction.
+      errorCases: <String, String>{'0': 'D2', '-5': 'D1'},
     ),
     Exercise(
       id: ExerciseIds.ex3,
@@ -466,6 +473,9 @@ class Chapter1Bank {
         ),
       ],
       diagnosticCaseIds: <String>['D3', 'D4'],
+      // Le reste intermediaire de la premiere division est un arret
+      // observable : il correspond au cas D4 valide.
+      errorCases: <String, String>{'12': 'D4'},
     ),
     Exercise(
       id: ExerciseIds.ex7,
@@ -557,6 +567,9 @@ class Chapter1Bank {
         ),
       ],
       diagnosticCaseIds: <String>['D5', 'D6'],
+      // Zero n'est pas le PGCD donne : c'est une erreur de calcul, sans
+      // confusion observable entre PGCD et PPCM. Le cas D5 est donc seul.
+      errorCases: <String, String>{'0': 'D5'},
     ),
     Exercise(
       id: ExerciseIds.ex9,

@@ -34,10 +34,9 @@ abstract final class V1ScreenRules {
   const V1ScreenRules._();
 
   /// Les 11 exercices, dans l'ordre du document valide.
-  static List<Exercise> get exercises =>
-      Chapter1Bank.exercises
-          .where((e) => e.kind == BankElementKind.exercise)
-          .toList();
+  static List<Exercise> get exercises => Chapter1Bank.exercises
+      .where((e) => e.kind == BankElementKind.exercise)
+      .toList();
 
   /// Index (base 1) d'un exercice dans la banque, ou `null`.
   static int? positionOf(String exerciseId) {
@@ -45,9 +44,15 @@ abstract final class V1ScreenRules {
     return index >= 0 ? index + 1 : null;
   }
 
-  /// Exercice suivant dans la leçon, ou `null` si c'est le dernier.
+  /// Exercice suivant DANS LA LEÇON, ou `null` si c'est le dernier.
+  ///
+  /// « Exercice suivant » ne fait pas changer de leçon : après le dernier
+  /// exercice, l'élève revient à S1. C'est une règle de navigation, pas une
+  /// règle pédagogique : le moteur n'est pas consulté.
   static Exercise? nextAfter(Exercise exercise) {
-    final list = exercises;
+    final list = exercises
+        .where((candidate) => candidate.lesson == exercise.lesson)
+        .toList();
     final index = list.indexWhere((e) => e.id == exercise.id);
     if (index < 0 || index + 1 >= list.length) return null;
     return list[index + 1];

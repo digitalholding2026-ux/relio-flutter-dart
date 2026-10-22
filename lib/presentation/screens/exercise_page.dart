@@ -98,6 +98,7 @@ class ExercisePage extends StatefulWidget {
     this.onBackFromReview,
     this.returnLabel,
     this.reviewOrigin,
+    this.revision = false,
   });
 
   final Chapter1Service service;
@@ -165,6 +166,13 @@ class ExercisePage extends StatefulWidget {
   /// Sert au bandeau (« Voici les explications de l'exercice N ») et a savoir
   /// que cet ecran est une consultation, non une progression.
   final Exercise? reviewOrigin;
+
+  /// La leçon est entièrement terminée : l'écran est ouvert en révision.
+  ///
+  /// Le titre affiche alors « Révision » plutôt que l'intitulé de la leçon.
+  /// Aucune règle pédagogique n'est modifiée : la correction et la
+  /// progression restent celles du moteur.
+  final bool revision;
 
   @override
   State<ExercisePage> createState() => _ExercisePageState();
@@ -493,12 +501,25 @@ class _ExercisePageState extends State<ExercisePage> {
     }
   }
 
-  /// Diagnostic eventuel produit par les faits de la tentative.
+  /// Diagnostic eventuel produit par la tentative.
   ///
-  /// L'interface ne fabrique aucun fait : elle demande au collecteur ce que
-  /// la reponse et la structure de l'exercice rendent strictement lisibles,
-  /// puis transmet ces faits au moteur. Un ensemble vide reste le panneau E.
+  /// PRIORITE A LA CARTE DE LA BANQUE : si la réponse saisie figure dans
+  /// [Exercise.errorCases], le moteur produit directement l'intervention du
+  /// cas (panneau C). Ce chemin est volontairement placé avant les
+  /// observations : une correspondance explicite de la banque ne se discute
+  /// pas.
+  ///
+  /// Sans correspondance, l'interface ne fabrique aucun fait : elle demande
+  /// au collecteur ce que la réponse et la structure de l'exercice rendent
+  /// strictement lisibles, puis transmet ces faits au moteur. Un ensemble
+  /// vide reste le panneau E.
   DiagnosisOutcome? _diagnosisFor(AttemptRecord record) {
+    final mapped = widget.service.diagnoseAnswer(
+      exercise: widget.exercise,
+      rawAnswer: record.rawAnswer,
+    );
+    if (mapped != null) return mapped;
+
     final report = collectObservations(
       record: record,
       exercise: widget.exercise,
@@ -643,7 +664,7 @@ class _ExercisePageState extends State<ExercisePage> {
         ),
         // Titre tronque : le titre de la lecon 3 est long.
         title: Text(
-          exercise.lesson.title,
+          widget.revision ? RelioStrings.revision : exercise.lesson.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(

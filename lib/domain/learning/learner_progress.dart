@@ -92,6 +92,40 @@ class LearnerProgress {
   /// Total officiel d'exercices de [lessonId], ou 0 si inconnu.
   int totalFor(String lessonId) => lessonExerciseTotals[lessonId] ?? 0;
 
+  /// La leçon [lessonId] est-elle entièrement terminée ?
+  ///
+  /// Vrai seulement si la banque connaît au moins un exercice pour cette
+  /// leçon : une leçon inconnue n'est jamais déclarée maîtrisée.
+  bool isLessonMastered(String lessonId) {
+    final total = totalFor(lessonId);
+    return total > 0 && completedIn(lessonId) >= total;
+  }
+
+  /// Exercice de reprise de [lessonId] : le premier non terminé.
+  ///
+  /// Si tous les exercices officiels de la leçon sont terminés, renvoie le
+  /// premier exercice : S1 l'ouvre alors en révision, sans inventer un
+  /// exercice supplémentaire. `null` seulement si la leçon n'existe pas dans
+  /// la banque validée.
+  Exercise? resumeExerciseForLesson(String lessonId) {
+    final exercises = Chapter1Bank.exercises
+        .where(
+          (exercise) =>
+              exercise.kind == BankElementKind.exercise &&
+              exercise.lesson.id == lessonId,
+        )
+        .toList();
+    if (exercises.isEmpty) return null;
+
+    final done = completedExerciseIdsByLesson[lessonId] ?? const <String>{};
+    for (final exercise in exercises) {
+      if (!done.contains(exercise.id)) return exercise;
+    }
+
+    // Leçon maîtrisée : révision à partir du premier exercice.
+    return exercises.first;
+  }
+
   /// Construit la projection à partir des événements lus.
   ///
   /// [lessonExerciseTotals] vient de la banque validée : sans lui, aucune

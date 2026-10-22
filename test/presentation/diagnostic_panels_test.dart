@@ -77,6 +77,24 @@ FeedbackSelection _selection(WidgetTester tester) {
 
 void main() {
   group('Panneau C — intervention', () {
+    testWidgets('une reponse mappee de l’exercice 1 ouvre C', (tester) async {
+      await _pumpExercise(tester, ExerciseIds.ex1);
+      await _submit(tester, '5');
+
+      final selection = _selection(tester);
+      expect(selection.panel, FeedbackPanel.intervention);
+      expect(selection.showRetry, isTrue);
+      expect(find.text(RelioStrings.retry), findsOneWidget);
+
+      // L'intervention est celle de D1, jamais le panneau generique E.
+      final question = Chapter1Bank.diagnosticCases
+          .firstWhere((c) => c.id == 'D1')
+          .intervention
+          .question;
+      expect(find.text(question), findsOneWidget);
+      expect(find.textContaining('D1'), findsNothing);
+    });
+
     testWidgets('un PPCM faux apres PGCD donne quitte E pour C', (
       tester,
     ) async {

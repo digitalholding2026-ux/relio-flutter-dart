@@ -544,11 +544,30 @@ class _RelioShellState extends State<_RelioShell> {
     await _refreshProgress();
   }
 
-  /// Ouvre S2 sur le premier exercice de la leçon.
+  /// Ouvre S2 sur l'exercice de reprise de la leçon.
+  ///
+  /// L'exercice choisi vient de l'historique : premier exercice non terminé.
+  /// Si la leçon est entièrement terminée, S1 rouvre son premier exercice en
+  /// révision. La lecture est refaite AVANT d'ouvrir : le cache de la coquille
+  /// peut être en retard après un retour de S2.
   Future<void> _openLesson(String lessonId) async {
-    final exercise = V1ScreenRules.firstOfLesson(lessonId);
+    var progress = _progress.value;
+    try {
+      progress = await _progressRepository.load();
+      if (!mounted) return;
+      _progress.value = progress;
+    } catch (_) {
+      // Historique illisible : on garde la dernière projection connue. Si
+      // elle est vide, l'exercice 1 reste le choix sûr.
+    }
+
+    final exercise =
+        progress.resumeExerciseForLesson(lessonId) ??
+        V1ScreenRules.firstOfLesson(lessonId);
     // Leçon inconnue : ne rien ouvrir plutôt qu'afficher un écran vide.
     if (exercise == null) return;
+
+    final revision = progress.isLessonMastered(lessonId);
 
     // Même règle que [_openChapter1] : une page poussée dans la pile d'un
     // onglet qui n'est pas affiché resterait invisible. L'accueil ouvre donc
@@ -568,11 +587,12 @@ class _RelioShellState extends State<_RelioShell> {
           tutor: _tutor,
           // S1 est désormais empilé : son retour ramène à l'écran précédent.
           onExit: () => navigator.pop(),
-          onGoToNext: () => _goToNext(exercise),
+          onGoToNext: () => _goToNext(exercise, revision: revision),
           onFullscreenChanged: _setFullscreen,
           // Chaque tentative enregistrée est relue tout de suite : l'accueil,
           // S1 et l'onglet Apprendre n'attendent pas la fermeture de S2.
           onAttemptRecorded: _refreshProgress,
+          revision: revision,
         ),
       ),
     );
@@ -582,14 +602,15 @@ class _RelioShellState extends State<_RelioShell> {
     await _refreshProgress();
   }
 
-  /// Passe à l'exercice suivant, ou revient à S1 après le dernier.
-  Future<void> _goToNext(Exercise exercise) async {
+  /// Passe à l'exercice suivant DE LA LEÇON, ou revient à S1 après le dernier.
+  Future<void> _goToNext(Exercise exercise, {bool revision = false}) async {
     final navigator = _learnNavigator;
     if (navigator == null || !navigator.mounted) return;
 
     final next = V1ScreenRules.nextAfter(exercise);
     if (next == null) {
-      // Dernier exercice du chapitre : retour à S1.
+      // Dernier exercice de la leçon : retour à S1. On ne bascule pas
+      // silencieusement sur la leçon suivante.
       navigator.pop();
       return;
     }
@@ -604,12 +625,13 @@ class _RelioShellState extends State<_RelioShell> {
           drafts: _drafts,
           tutor: _tutor,
           onExit: () => navigator.pop(),
-          onGoToNext: () => _goToNext(next),
+          onGoToNext: () => _goToNext(next, revision: revision),
           onFullscreenChanged: _setFullscreen,
           onAttemptRecorded: _refreshProgress,
           // L'élève enchaîne : le champ doit être prêt à écrire sans qu'il
           // ait à le toucher.
           requestFocusOnOpen: true,
+          revision: revision,
         ),
       ),
     );

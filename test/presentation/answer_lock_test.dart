@@ -211,8 +211,14 @@ void main() {
     testWidgets('le panneau, la valeur et le verrouillage reviennent',
         (tester) async {
       await ouvrirParcours(tester);
-      await repondre(tester, '6');
-      expect(find.text(RelioStrings.successTitle), findsOneWidget);
+      // Réponse fausse mappée : l'exercice reste le premier non terminé, donc
+      // S1 le rouvre. C'est le cas où le brouillon doit être restauré.
+      await repondre(tester, '5');
+      final intervention = Chapter1Bank.diagnosticCases
+          .firstWhere((c) => c.id == 'D1')
+          .intervention
+          .question;
+      expect(find.text(intervention), findsOneWidget);
 
       // L'eleve quitte S2 par la fleche de l'AppBar...
       await tester.tap(find.byTooltip(RelioStrings.back));
@@ -223,15 +229,15 @@ void main() {
       await tester.tap(find.byType(LessonCard).at(0));
       await tester.pumpAndSettle();
 
-      expect(find.text(RelioStrings.successTitle), findsOneWidget,
+      expect(find.text(intervention), findsOneWidget,
           reason: 'le retour pedagogique ne doit pas disparaitre');
-      expect(champ(tester).controller!.text, '6');
+      expect(champ(tester).controller!.text, '5');
       expect(champ(tester).readOnly, isTrue);
     });
 
     testWidgets('rouvrir n\'impose aucune nouvelle tentative', (tester) async {
       final db = await ouvrirParcours(tester);
-      await repondre(tester, '6');
+      await repondre(tester, '5');
       expect(
         await LearningEventRepository(db).findByType(kAttemptEventType),
         hasLength(1),

@@ -323,6 +323,7 @@ class Exercise {
     this.comprehension,
     this.followUpTask,
     this.diagnosticCaseIds = const <String>[],
+    this.errorCases = const <String, String>{},
     this.givenPgcd,
   });
 
@@ -384,6 +385,24 @@ class Exercise {
 
   /// Cas de diagnostic éventuellement associés à cet exercice.
   final List<String> diagnosticCaseIds;
+
+  /// Réponses saisies associées explicitement à un cas de diagnostic.
+  ///
+  /// La clé est la réponse normalisée (voir [normalizeAnswer]), la valeur un
+  /// identifiant de [Chapter1Bank.diagnosticCases]. Une correspondance ici est
+  /// une décision de la banque : elle ouvre le panneau C avec l'intervention
+  /// du cas, avant toute observation déduite de la réponse.
+  ///
+  /// Vide par défaut : une réponse non mappée suit le chemin habituel
+  /// (observations, puis panneau E si rien n'est lisible).
+  final Map<String, String> errorCases;
+
+  /// Cas de diagnostic associé à [rawAnswer], ou `null`.
+  ///
+  /// La comparaison est normalisée : « 5 », « 5 » entouré d'espaces et une
+  /// variante typographique de la même écriture désignent la même réponse.
+  String? errorCaseFor(String rawAnswer) =>
+      errorCases[normalizeAnswer(rawAnswer)];
 
   /// PGCD fourni par l'énoncé, quand la tâche ne demande QUE le PPCM.
   ///

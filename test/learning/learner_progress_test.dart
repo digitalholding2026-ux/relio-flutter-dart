@@ -168,4 +168,47 @@ void main() {
       expect(progress.completedExercises, 0);
     });
   });
+
+  group('LearnerProgress — reprise d’une leçon', () {
+    final lesson = ArithmeticLesson.lesson1Subtractions;
+
+    test('un nouvel élève reprend au premier exercice', () {
+      final progress = LearnerProgress.fromEvents(const <LearningEvent>[]);
+      final ids = _exerciseIdsOf(lesson);
+
+      expect(progress.isLessonMastered(lesson.id), isFalse);
+      expect(progress.resumeExerciseForLesson(lesson.id)?.id, ids.first);
+    });
+
+    test('le premier exercice terminé est sauté', () {
+      final ids = _exerciseIdsOf(lesson);
+      final progress = LearnerProgress.fromEvents(<LearningEvent>[
+        _attempt(
+          'a1',
+          lesson: lesson,
+          exerciseId: ids.first,
+          outcome: AnswerOutcome.correct,
+        ),
+      ]);
+
+      expect(progress.isLessonMastered(lesson.id), isFalse);
+      expect(progress.resumeExerciseForLesson(lesson.id)?.id, ids[1]);
+    });
+
+    test('une leçon maîtrisée reprend au premier exercice, en révision', () {
+      final ids = _exerciseIdsOf(lesson);
+      final progress = LearnerProgress.fromEvents(<LearningEvent>[
+        for (final (index, id) in ids.indexed)
+          _attempt(
+            'a$index',
+            lesson: lesson,
+            exerciseId: id,
+            outcome: AnswerOutcome.correct,
+          ),
+      ]);
+
+      expect(progress.isLessonMastered(lesson.id), isTrue);
+      expect(progress.resumeExerciseForLesson(lesson.id)?.id, ids.first);
+    });
+  });
 }

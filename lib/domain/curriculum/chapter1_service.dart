@@ -586,6 +586,19 @@ class Chapter1Service {
     );
   }
 
+  /// Diagnostic PRIORITAIRE à partir de la réponse saisie.
+  ///
+  /// Consulte d'abord [Exercise.errorCases] : une réponse mappée produit
+  /// directement l'intervention du cas (panneau C). Retourne `null` si la
+  /// réponse n'est pas mappée, ce qui laisse l'appelant appliquer le chemin
+  /// habituel fondé sur les observations.
+  DiagnosisOutcome? diagnoseAnswer({
+    required Exercise exercise,
+    required String rawAnswer,
+  }) {
+    return _engine.diagnoseAnswer(exercise: exercise, rawAnswer: rawAnswer);
+  }
+
   /// Envoie au moteur la réponse à une question de clarification.
   ///
   /// Le moteur ne fabrique aucune cause supplémentaire : il constate que la

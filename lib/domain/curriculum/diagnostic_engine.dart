@@ -20,6 +20,7 @@ library;
 
 import 'chapter1_bank.dart';
 import 'diagnostic_case.dart';
+import 'exercise.dart';
 
 /// Observation constatée sur une tentative.
 ///
@@ -133,6 +134,45 @@ class DiagnosticEngine {
       staysOpen: staysOpen,
       clarificationQuestion: clarification,
     );
+  }
+
+  /// Diagnostic explicite à partir de la carte [Exercise.errorCases].
+  ///
+  /// C'est le chemin PRIORITAIRE de la correction : une réponse mappée par la
+  /// banque ouvre directement l'intervention du cas (panneau C), sans passer
+  /// par les observations déduites de la réponse.
+  ///
+  /// Retourne `null` si la réponse n'est pas mappée, ou si l'identifiant de
+  /// cas est inconnu. L'appelant garde alors le chemin habituel.
+  DiagnosisOutcome? diagnoseAnswer({
+    required Exercise exercise,
+    required String rawAnswer,
+  }) {
+    final caseId = exercise.errorCaseFor(rawAnswer);
+    if (caseId == null) return null;
+
+    for (final diagnostic in _cases) {
+      if (diagnostic.id != caseId) continue;
+
+      // Même garde-fou que [diagnose] : la tâche de vérification ne doit
+      // jamais être l'exercice qui vient d'échouer.
+      final followUp = diagnostic.followUp.exerciseId == exercise.id
+          ? null
+          : diagnostic.followUp;
+
+      return DiagnosisOutcome(
+        observedFacts: List<String>.of(diagnostic.observations),
+        caseIds: <String>[diagnostic.id],
+        hypotheses: diagnostic.hypothesis,
+        intervention: diagnostic.intervention,
+        followUp: followUp,
+        // Une correspondance explicite ne demande pas de clarification :
+        // la banque a déjà tranché le cas.
+        staysOpen: false,
+      );
+    }
+
+    return null;
   }
 
   /// Ferme la clarification après la réponse de l'élève.

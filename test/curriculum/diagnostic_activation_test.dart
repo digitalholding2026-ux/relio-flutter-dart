@@ -87,11 +87,48 @@ void main() {
       expect(report.facts, contains(ObservedFacts.soustractionFausse));
     });
 
-    test('ex1 sans diagnostic lie ne produit aucun fait, meme faux', () async {
-      final record = await attempt(ExerciseIds.ex1, '9');
-      final report = observe(record, ExerciseIds.ex1);
+    test(
+      'ex1 : une erreur non mappee ne produit aucun fait observable',
+      () async {
+        final record = await attempt(ExerciseIds.ex1, '9');
+        final report = observe(record, ExerciseIds.ex1);
 
-      expect(report.facts, isEmpty);
+        expect(report.facts, isEmpty);
+      },
+    );
+  });
+
+  group('Correspondances explicites errorCases', () {
+    test('exercice 1 : les reponses sont associees aux cas prevus', () {
+      final ex1 = Chapter1Bank.findExercise(ExerciseIds.ex1)!;
+
+      expect(ex1.errorCases, <String, String>{'5': 'D1', '0': 'D2', '3': 'D3'});
+      // La comparaison est normalisee : les espaces ne changent pas le cas.
+      expect(ex1.errorCaseFor(' 5 '), 'D1');
+    });
+
+    test('le service consulte la carte avant les observations', () {
+      final ex1 = Chapter1Bank.findExercise(ExerciseIds.ex1)!;
+
+      for (final MapEntry<String, String> entry in ex1.errorCases.entries) {
+        final outcome = service.diagnoseAnswer(
+          exercise: ex1,
+          rawAnswer: entry.key,
+        );
+
+        expect(outcome, isNotNull, reason: 'réponse ${entry.key}');
+        expect(outcome!.caseIds, <String>[entry.value]);
+        expect(outcome.hypotheses, isNotEmpty);
+        expect(outcome.intervention.question, isNotEmpty);
+        // Une correspondance explicite ouvre C, pas D.
+        expect(outcome.clarificationQuestion, isNull);
+      }
+    });
+
+    test('une reponse non mappee laisse le chemin habituel', () {
+      final ex1 = Chapter1Bank.findExercise(ExerciseIds.ex1)!;
+
+      expect(service.diagnoseAnswer(exercise: ex1, rawAnswer: '9'), isNull);
     });
   });
 

@@ -34,6 +34,9 @@ abstract final class RelioStrings {
   static const String continueLabel = 'Continuer';
   static const String back = 'Retour';
 
+  /// Titre de S2 quand la leçon est entièrement terminée.
+  static const String revision = 'Révision';
+
   /// Prefixe d'un indice : « Indice 1 », « Indice 2 »…
   static String hintLabel(int order) => 'Indice $order';
 
