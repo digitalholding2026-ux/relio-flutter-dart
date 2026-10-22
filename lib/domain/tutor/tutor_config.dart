@@ -1,7 +1,11 @@
 /// Configuration du tuteur, lue à la compilation.
 ///
 /// Aucun secret n'est écrit dans le dépôt : la clé vient d'un `dart-define`
-/// (voir `docs/TUTEUR_LLM.md`). Sans clé, le tuteur répond en mode repli.
+/// (voir `docs/TUTEUR_LLM.md`). Sans clé, le tuteur répond en mode simulé.
+///
+/// Les valeurs par défaut visent **OpenRouter** et son routage automatique
+/// (`openrouter/auto`) : le fournisseur choisit lui-même le meilleur modèle
+/// accessible avec la clé, sans liste de secours à maintenir côté client.
 library;
 
 import 'package:flutter/foundation.dart';
@@ -23,16 +27,19 @@ class TutorConfig {
   /// Racine de l'API compatible OpenAI.
   static const String _envBaseUrl = String.fromEnvironment(
     'TUTOR_API_BASE_URL',
-    defaultValue: 'https://api.openai.com/v1',
+    defaultValue: 'https://openrouter.ai/api/v1',
   );
 
   /// Clé du fournisseur. Vide par défaut : aucune clé dans le dépôt.
   static const String _envApiKey = String.fromEnvironment('TUTOR_API_KEY');
 
   /// Identifiant du modèle.
+  ///
+  /// `openrouter/auto` délègue le choix du modèle à OpenRouter : si un modèle
+  /// est indisponible ou refusé pour cette clé, le routage en essaie un autre.
   static const String _envModel = String.fromEnvironment(
     'TUTOR_MODEL',
-    defaultValue: 'gpt-4o-mini',
+    defaultValue: 'openrouter/auto',
   );
 
   /// Lit la configuration compilée dans l'application.
@@ -44,7 +51,7 @@ class TutorConfig {
     );
   }
 
-  /// Racine de l'API, par exemple `https://api.openai.com/v1`.
+  /// Racine de l'API, par exemple `https://openrouter.ai/api/v1`.
   final String baseUrl;
 
   /// Clé d'authentification.

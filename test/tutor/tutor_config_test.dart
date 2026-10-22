@@ -11,8 +11,8 @@ void main() {
       final config = TutorConfig.fromEnvironment();
 
       expect(config.isConfigured, isFalse);
-      expect(config.baseUrl, 'https://api.openai.com/v1');
-      expect(config.model, 'gpt-4o-mini');
+      expect(config.baseUrl, 'https://openrouter.ai/api/v1');
+      expect(config.model, 'openrouter/auto');
     });
 
     test('une clé, même entourée d’espaces, active le tuteur', () {

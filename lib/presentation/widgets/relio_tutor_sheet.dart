@@ -7,8 +7,12 @@
 /// Le cerveau du tuteur est le prompt système officiel
 /// ([kTutorSystemPrompt]) ; l'énoncé et la réponse attendue de l'exercice en
 /// cours lui sont transmis, avec interdiction de révéler la réponse. Si
-/// l'appel échoue, l'élève reçoit [RelioStrings.tutorUnavailableReply] : aucun
-/// message d'erreur technique n'est affiché.
+/// l'appel échoue, l'élève reçoit [RelioStrings.tutorBusyReply] et un bouton
+/// « Réessayer » : aucun message d'erreur technique n'est affiché, et sa
+/// question n'est pas perdue.
+///
+/// Sans clé compilée, le client est un `MockTutorClient` : le fil fonctionne
+/// à l'identique, sans appel réseau (voir `docs/TUTEUR_LLM.md`).
 ///
 /// Le panneau occupe 75 % de la hauteur : l'énoncé de l'exercice reste
 /// partiellement visible derrière, et la conversation ne donne pas
@@ -89,6 +93,12 @@ class _RelioTutorSheetState extends State<RelioTutorSheet> {
   /// Un appel est en cours : l'envoi est verrouillé et le fil l'annonce.
   bool _sending = false;
 
+  /// Le dernier appel a échoué : le fil propose de réessayer.
+  ///
+  /// L'échec n'est jamais un cul-de-sac : la question de l'élève reste dans le
+  /// fil, telle qu'il l'a écrite, et le bouton relance exactement cet appel.
+  bool _failed = false;
+
   @override
   void dispose() {
     _controller.dispose();
@@ -100,39 +110,62 @@ class _RelioTutorSheetState extends State<RelioTutorSheet> {
   ///
   /// Le message de l'élève apparaît immédiatement ; l'indicateur
   /// [RelioStrings.tutorThinking] reste affiché le temps de l'appel. En cas
-  /// d'échec, la réponse de repli prend la place — la conversation continue.
+  /// d'échec, une bulle [RelioStrings.tutorBusyReply] propose de réessayer.
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _sending) return;
 
-    final studentMessage = TutorMessage(text: text, fromRelio: false);
-    final history = <TutorMessage>[..._messages, studentMessage];
-
     setState(() {
-      _messages.add(studentMessage);
+      _messages.add(TutorMessage(text: text, fromRelio: false));
       _sending = true;
+      _failed = false;
     });
     _controller.clear();
     _scrollToBottom();
 
-    String reply;
+    await _requestReply();
+  }
+
+  /// Relance le dernier appel échoué, sans réécrire la question.
+  Future<void> _retry() async {
+    if (_sending || !_failed) return;
+
+    setState(() {
+      _sending = true;
+      _failed = false;
+    });
+    _scrollToBottom();
+
+    await _requestReply();
+  }
+
+  /// Appelle le tuteur sur le fil courant et range le résultat.
+  ///
+  /// Un échec (réseau, HTTP, réponse illisible) n'ajoute aucune réponse
+  /// inventée : il bascule le fil en état « à réessayer ».
+  Future<void> _requestReply() async {
+    final history = List<TutorMessage>.unmodifiable(_messages);
+
+    String? reply;
     try {
       reply = await widget.client.reply(
         exercise: widget.exercise,
         history: history,
       );
-    } on TutorException {
-      reply = RelioStrings.tutorUnavailableReply;
     } on Object {
-      // Un client de test (ou une évolution du contrat) ne doit jamais
-      // laisser l'élève sans réponse.
-      reply = RelioStrings.tutorUnavailableReply;
+      // Le client de test, le mode simulé et le client réel passent tous par
+      // ici : quel que soit l'incident, l'élève garde la main.
+      reply = null;
     }
 
     if (!mounted) return;
     setState(() {
-      _messages.add(TutorMessage(text: reply, fromRelio: true));
       _sending = false;
+      if (reply == null) {
+        _failed = true;
+      } else {
+        _messages.add(TutorMessage(text: reply, fromRelio: true));
+      }
     });
     _scrollToBottom();
   }
@@ -183,10 +216,13 @@ class _RelioTutorSheetState extends State<RelioTutorSheet> {
                 child: ListView.builder(
                   controller: _scroll,
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-                  itemCount: _messages.length + (_sending ? 1 : 0),
+                  itemCount: _messages.length + (_sending || _failed ? 1 : 0),
                   itemBuilder: (BuildContext context, int index) {
                     if (index == _messages.length) {
-                      return _ThinkingBubble(palette: palette);
+                      if (_sending) {
+                        return _ThinkingBubble(palette: palette);
+                      }
+                      return _RetryBubble(palette: palette, onRetry: _retry);
                     }
                     final message = _messages[index];
                     return _MessageBubble(
@@ -399,6 +435,83 @@ class _ThinkingBubble extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bulle d'échec : le tuteur n'a pas répondu, l'élève peut relancer.
+///
+/// Elle porte le texte de repli ET le bouton [RelioStrings.tutorRetry] :
+/// relancer ne demande pas de retaper la question, qui est déjà dans le fil.
+class _RetryBubble extends StatelessWidget {
+  const _RetryBubble({required this.palette, required this.onRetry});
+
+  final RelioPalette palette;
+
+  /// Relance le dernier appel échoué.
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Semantics(
+          liveRegion: true,
+          label: RelioStrings.tutorBusyReply,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.sizeOf(context).width * 0.82,
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: RelioSpacing.md,
+                vertical: RelioSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                color: palette.primaryContainer,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(4),
+                  topRight: Radius.circular(16),
+                  bottomLeft: Radius.circular(16),
+                  bottomRight: Radius.circular(16),
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    RelioStrings.tutorBusyReply,
+                    style: RelioType.body(palette).copyWith(
+                      height: 1.45,
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: RelioSpacing.xs),
+                  TextButton.icon(
+                    onPressed: onRetry,
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text(RelioStrings.tutorRetry),
+                    style: TextButton.styleFrom(
+                      foregroundColor: palette.primary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: RelioSpacing.sm,
+                      ),
+                      minimumSize: const Size(
+                        0,
+                        RelioSizes.minTouchTarget,
+                      ),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

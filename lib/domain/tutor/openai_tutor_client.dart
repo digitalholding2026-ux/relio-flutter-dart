@@ -5,6 +5,10 @@
 /// donc avec OpenAI, OpenRouter, Groq ou un serveur local (vLLM, Ollama en
 /// mode compatible) — seule l'adresse de base change.
 ///
+/// Par défaut, l'application vise OpenRouter avec `openrouter/auto` (voir
+/// [TutorConfig]) : le fournisseur choisit le modèle disponible, ce qui évite
+/// de maintenir une liste de secours côté client.
+///
 /// Rien n'est journalisé : ni la conversation, ni la clé. Une panne se traduit
 /// par une [TutorException] que l'interface convertit en phrase de repli.
 library;
@@ -38,6 +42,12 @@ class OpenAiTutorClient implements TutorClient {
   /// Garde-fou : une réponse de chat ne doit pas dépasser quelques phrases.
   static const int _maxReplyCharacters = 1200;
 
+  /// Origine déclarée à OpenRouter (en-tête d'attribution, facultatif).
+  static const String _appUrl = 'https://github.com/digitalholding2026-ux/relio-flutter-dart';
+
+  /// Nom déclaré à OpenRouter (en-tête d'attribution, facultatif).
+  static const String _appTitle = 'Relio';
+
   @override
   Future<String> reply({
     required TutorExerciseContext exercise,
@@ -62,6 +72,10 @@ class OpenAiTutorClient implements TutorClient {
               'Authorization': 'Bearer ${config.apiKey}',
               'Content-Type': 'application/json',
               'Accept': 'application/json',
+              // En-têtes d'attribution lus par OpenRouter (ignorés par les
+              // autres fournisseurs compatibles OpenAI).
+              'HTTP-Referer': _appUrl,
+              'X-Title': _appTitle,
             },
             body: jsonEncode(<String, Object>{
               'model': config.model,

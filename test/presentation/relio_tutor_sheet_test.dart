@@ -6,7 +6,7 @@
 ///  - la marque, le titre et le message d'accueil sont VISIBLES (pas seulement
 ///    présents dans l'arbre) ;
 ///  - l'envoi affiche la question de l'élève puis la réponse du tuteur
-///    (phrase de repli quand aucune clé n'est compilée) ;
+///    (mode simulé quand aucune clé n'est compilée) ;
 ///  - un envoi vide ne produit rien.
 library;
 
@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:relio/app.dart';
 import 'package:relio/data/db/app_database.dart';
+import 'package:relio/domain/tutor/mock_tutor_client.dart';
 import 'package:relio/presentation/branding/relio_mark.dart';
 import 'package:relio/presentation/screens/app_shell_nav.dart';
 import 'package:relio/presentation/screens/chapter_access_page.dart';
@@ -129,7 +130,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Je bloque sur le PGCD.'), findsOneWidget);
-      expect(find.text(RelioStrings.tutorUnavailableReply), findsOneWidget);
+      expect(find.text(kMockTutorReply), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -140,7 +141,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pumpAndSettle();
 
-      expect(find.text(RelioStrings.tutorUnavailableReply), findsNothing);
+      expect(find.text(kMockTutorReply), findsNothing);
       expect(find.text(RelioStrings.tutorGreeting), findsOneWidget);
     });
 

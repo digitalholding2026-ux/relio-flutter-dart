@@ -57,13 +57,23 @@ abstract final class RelioStrings {
       'Salut ! Je suis là pour t’aider à comprendre l’exercice. '
       'Où est-ce que tu bloques ?';
 
-  /// Réponse de repli : aucune clé, réseau absent, appel en échec.
+  /// Réponse de repli : réseau absent ou appel en échec.
   ///
   /// C'est aussi le texte qu'affichait le tuteur avant le branchement du
   /// modèle ; il reste le comportement de secours, pas une réponse simulée.
   static const String tutorUnavailableReply =
       'Je ne peux pas te répondre pour le moment, mais as-tu essayé de '
       'relire la règle ?';
+
+  /// Phrase affichée quand l'appel au modèle a échoué.
+  ///
+  /// Elle est suivie du bouton [tutorRetry] : l'élève n'a jamais à retaper sa
+  /// question, et il sait que l'incident est passager.
+  static const String tutorBusyReply =
+      'Relio est un peu occupé, réessaie dans un instant.';
+
+  /// Bouton qui relance le dernier appel échoué.
+  static const String tutorRetry = 'Réessayer';
 
   /// Indicateur affiché pendant l'appel au modèle.
   static const String tutorThinking = 'Relio réfléchit…';

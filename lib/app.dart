@@ -458,8 +458,8 @@ class _RelioShellState extends State<_RelioShell> {
 
   /// Tuteur partagé par tous les exercices.
   ///
-  /// Construit une fois : sans clé compilee, c'est un client indisponible et
-  /// la conversation affiche la phrase de repli, sans appel reseau.
+  /// Construit une fois : sans clé compilée, c'est le mode simulé
+  /// (`MockTutorClient`) — même fil, même attente, aucun appel réseau.
   late final TutorClient _tutor = buildTutorClient();
 
   /// Avancement affiché. Démarre à l'état VIDE : avant la première lecture,

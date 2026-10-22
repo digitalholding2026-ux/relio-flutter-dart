@@ -26,3 +26,6 @@ tool/*.new.svg
 tool/*_new.dart.txt
 tool/brand_preview.png
 tool/brand_wordmark_preview.png
+
+# Secret local : clé du tuteur, jamais commitée (voir docs/TUTEUR_LLM.md)
+tool/tutor.env

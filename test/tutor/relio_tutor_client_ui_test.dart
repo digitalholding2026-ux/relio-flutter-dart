@@ -1,4 +1,4 @@
-/// Conversation branchée sur le modèle : réponse, attente, repli.
+/// Conversation branchée sur le modèle : réponse, attente, échec, reprise.
 ///
 /// Les clients sont des faux : aucun appel réseau.
 library;
@@ -7,6 +7,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:relio/domain/tutor/mock_tutor_client.dart';
 import 'package:relio/domain/tutor/tutor_client.dart';
 import 'package:relio/domain/tutor/tutor_exercise_context.dart';
 import 'package:relio/domain/tutor/tutor_message.dart';
@@ -53,6 +54,29 @@ class _DelayedTutorClient implements TutorClient {
     required List<TutorMessage> history,
   }) {
     return completer.future;
+  }
+
+  @override
+  void close() {}
+}
+
+/// Client qui échoue au premier appel, puis répond.
+///
+/// Reproduit une panne passagère (réseau instable) : le bouton « Réessayer »
+/// doit ramener une réponse sans que l'élève réécrive sa question.
+class _FlakyTutorClient implements TutorClient {
+  int calls = 0;
+
+  @override
+  Future<String> reply({
+    required TutorExerciseContext exercise,
+    required List<TutorMessage> history,
+  }) async {
+    calls++;
+    if (calls == 1) {
+      throw const TutorException(TutorFailure.network);
+    }
+    return 'Reprenons : quel est le diviseur commun ?';
   }
 
   @override
@@ -138,19 +162,57 @@ void main() {
     });
   });
 
-  group('Tuteur — repli', () {
-    testWidgets('un échec du modèle affiche la phrase de repli', (
-      tester,
-    ) async {
+  group('Tuteur — échec et reprise', () {
+    testWidgets('un échec du modèle propose de réessayer', (tester) async {
       await _pumpSheet(tester, const UnavailableTutorClient());
 
       await _send(tester, 'Je bloque.');
       await tester.pumpAndSettle();
 
       expect(find.text('Je bloque.'), findsOneWidget);
-      expect(find.text(RelioStrings.tutorUnavailableReply), findsOneWidget);
+      expect(find.text(RelioStrings.tutorBusyReply), findsOneWidget);
+      expect(find.text(RelioStrings.tutorRetry), findsOneWidget);
       expect(find.text(RelioStrings.tutorThinking), findsNothing);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('« Réessayer » relance l’appel sans réécrire la question', (
+      tester,
+    ) async {
+      final client = _FlakyTutorClient();
+      await _pumpSheet(tester, client);
+
+      await _send(tester, 'Je bloque.');
+      await tester.pumpAndSettle();
+      expect(find.text(RelioStrings.tutorBusyReply), findsOneWidget);
+
+      await tester.tap(find.text(RelioStrings.tutorRetry));
+      await tester.pumpAndSettle();
+
+      expect(client.calls, 2);
+      // La question n'est pas dupliquée : elle était déjà dans le fil.
+      expect(find.text('Je bloque.'), findsOneWidget);
+      expect(find.text('Reprenons : quel est le diviseur commun ?'),
+          findsOneWidget);
+      expect(find.text(RelioStrings.tutorBusyReply), findsNothing);
+    });
+  });
+
+  group('Tuteur — mode simulé', () {
+    testWidgets('sans clé, le tuteur simulé répond sans réseau', (tester) async {
+      await _pumpSheet(tester, const MockTutorClient());
+
+      await _send(tester, 'Je bloque sur le PGCD.');
+      await tester.pump();
+
+      // L'attente est réelle : elle est visible pendant la latence simulée.
+      expect(find.text(RelioStrings.tutorThinking), findsOneWidget);
+
+      await tester.pumpAndSettle();
+
+      expect(find.text(kMockTutorReply), findsOneWidget);
+      expect(find.text(RelioStrings.tutorThinking), findsNothing);
+      expect(find.text(RelioStrings.tutorRetry), findsNothing);
     });
   });
 }

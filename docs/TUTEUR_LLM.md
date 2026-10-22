@@ -52,25 +52,56 @@ Les valeurs sont lues au moment de la compilation (`dart-define`) :
 
 | Variable | Défaut | Rôle |
 |---|---|---|
-| `TUTOR_API_KEY` | *(vide)* | Clé du fournisseur. **Vide : le tuteur répond en mode repli.** |
-| `TUTOR_API_BASE_URL` | `https://api.openai.com/v1` | Racine de l'API (OpenAI, OpenRouter, Groq, vLLM local…). |
-| `TUTOR_MODEL` | `gpt-4o-mini` | Identifiant du modèle chez le fournisseur. |
+| `TUTOR_API_KEY` | *(vide)* | Clé du fournisseur. **Vide : mode simulé**, voir plus bas. |
+| `TUTOR_API_BASE_URL` | `https://openrouter.ai/api/v1` | Racine de l'API (OpenRouter, OpenAI, Groq, vLLM local…). |
+| `TUTOR_MODEL` | `openrouter/auto` | `openrouter/auto` laisse OpenRouter choisir le modèle accessible avec la clé. |
 
 Exemple :
 
 ```bash
 flutter build apk --release --target-platform android-arm64 \
-  --dart-define=TUTOR_API_BASE_URL=https://api.openai.com/v1 \
-  --dart-define=TUTOR_MODEL=gpt-4o-mini \
-  --dart-define=TUTOR_API_KEY=sk-...
+  --dart-define=TUTOR_API_KEY=sk-or-v1-...
 ```
 
-## Mode repli
+### Script de build
 
-Sans clé — ou si l'appel échoue (réseau, HTTP, réponse illisible) — l'élève
-reçoit la phrase de repli (`RelioStrings.tutorUnavailableReply`). La
-conversation reste utilisable : l'interface ne se bloque jamais et aucun
-message d'erreur technique n'est affiché.
+`tool/build_apk.ps1` construit l'APK en injectant la clé sans l'écrire dans le
+dépôt : il lit `$env:TUTOR_API_KEY`, sinon `tool/tutor.env` (gitignoré). Sans
+clé, il produit quand même un APK en mode simulé et l'annonce.
+
+```powershell
+powershell -File tool/build_apk.ps1
+```
+
+`TUTOR_MODEL` n'a pas besoin d'être fourni : `openrouter/auto` évite de
+maintenir une liste de secours côté client. Si un modèle est indisponible ou
+refusé pour cette clé, OpenRouter en essaie un autre.
+
+Deux en-têtes d'attribution facultatifs sont ajoutés (`HTTP-Referer`,
+`X-Title`) : ils identifient l'application dans le classement OpenRouter et
+sont ignorés par les autres fournisseurs compatibles OpenAI.
+
+## Mode simulé (sans clé)
+
+Sans `TUTOR_API_KEY`, la fabrique renvoie `MockTutorClient`
+(`lib/domain/tutor/mock_tutor_client.dart`) :
+
+- aucune requête réseau, l'exercice n'est pas transmis ;
+- même attente affichée (`Relio réfléchit…`) et même fil que le mode réel ;
+- réponse fixe : `kMockTutorReply` — « Je ne peux pas encore te répondre,
+  as-tu essayé de relire la règle ? ».
+
+Ce mode sert à tester l'interface avant l'injection de la clé. Il ne produit
+aucun contenu pédagogique : inventer une correction reviendrait à écrire du
+cours sans validation (règle 8).
+
+## Panne en cours de conversation
+
+Si l'appel échoue (réseau, HTTP, réponse illisible), l'élève reçoit une bulle
+`RelioStrings.tutorBusyReply` — « Relio est un peu occupé, réessaie dans un
+instant. » — **suivie d'un bouton « Réessayer »**. Le bouton relance le même
+appel : la question de l'élève est déjà dans le fil, rien n'est à retaper.
+Aucun détail technique n'est affiché, et l'interface ne se bloque jamais.
 
 ## Sécurité
 
