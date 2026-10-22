@@ -3,19 +3,22 @@
 /// Regle centrale : le panneau est deduit des FAITS renvoyes par le moteur,
 /// jamais d'une intention pedagogique.
 ///
-/// En V1, seuls quatre panneaux sont declenchables :
+/// Panneaux declenchables :
 ///   A — reussite autonome
 ///   B — reussite assistee
+///   C — intervention : le moteur a une hypothese, il pose une question
+///   D — clarification : le moteur doit distinguer deux hypotheses
 ///   E — erreur sans information exploitable
 ///   non evaluable — format non reconnu
 ///   plus le cas special « evaluation non concluante » de l'exercice 11.
 ///
-/// Les panneaux C et D sont VOLONTAIREMENT NON DECLENCHABLES : le moteur ne
-/// produit ni observation, ni traitement de clarification. Leur invocation
-/// est interdite en V1.
+/// C et D ne s'affichent que si le moteur a reellement produit des
+/// hypotheses. Aucun code D1…D8 n'est transmis a la vue : seuls les textes
+/// valides de la banque le sont.
 library;
 
 import '../../domain/curriculum/chapter1_service.dart';
+import '../../domain/curriculum/diagnostic_case.dart';
 import '../../domain/curriculum/hint_trajectory.dart';
 import '../../domain/learning/exercise_attempt.dart';
 import '../strings/relio_strings.dart';
@@ -28,13 +31,19 @@ const String _noInformation = RelioStrings.noInformation;
 const String _notRecognised = RelioStrings.notRecognised;
 const String _inconclusive = RelioStrings.inconclusive;
 
-/// Panneau de retour affichable en V1.
+/// Panneau de retour affichable.
 enum FeedbackPanel {
   /// A — reussite sans aide.
   successAutonomous,
 
   /// B — reussite apres au moins un indice.
   successAssisted,
+
+  /// C — intervention pedagogique, avec une question du moteur.
+  intervention,
+
+  /// D — question de clarification, avec des options a choisir.
+  clarification,
 
   /// E — echec sans information exploitable.
   noInformation,
@@ -56,6 +65,7 @@ class FeedbackSelection {
     this.showRetry = false,
     this.showNext = false,
     this.showContinue = false,
+    this.clarificationOptions = const <String>[],
   });
 
   /// Panneau retenu.
@@ -76,6 +86,12 @@ class FeedbackSelection {
   /// Afficher le bouton « Continuer ».
   final bool showContinue;
 
+  /// Options proposees pour une clarification (panneau D).
+  ///
+  /// Vide hors clarification. Les options sont des libelles d'interface,
+  /// pas du contenu pedagogique.
+  final List<String> clarificationOptions;
+
   @override
   String toString() => 'FeedbackSelection(${panel.name})';
 }
@@ -85,11 +101,13 @@ class FeedbackSelection {
 /// Parametres :
 ///  - [record] : tentative enregistree par le moteur ;
 ///  - [exerciseId] : exercice tente ;
-///  - [rawAnswer] : saisie non vide au moment de la validation.
+///  - [rawAnswer] : saisie non vide au moment de la validation ;
+///  - [diagnosis] : hypothese eventuellement produite par le moteur.
 FeedbackSelection selectFeedback({
   required AttemptRecord record,
   required String exerciseId,
   required String rawAnswer,
+  DiagnosisOutcome? diagnosis,
 }) {
   // Une saisie vide ne produit aucun panneau : le message inline suffit.
   if (rawAnswer.trim().isEmpty) {
@@ -104,8 +122,8 @@ FeedbackSelection selectFeedback({
 
   // --- Reussite : A ou B selon l'usage d'indices -----------------------
   if (isCorrect) {
-    final assisted = record.classification !=
-        AttemptClassification.autonomousSuccess;
+    final assisted =
+        record.classification != AttemptClassification.autonomousSuccess;
     return FeedbackSelection(
       panel: assisted
           ? FeedbackPanel.successAssisted
@@ -143,10 +161,53 @@ FeedbackSelection selectFeedback({
     );
   }
 
+  // --- C ou D : le moteur a produit une hypothese ----------------------
+  //
+  // On ne remplace le panneau E que si le moteur a effectivement quelque
+  // chose a dire. Une liste d'hypotheses vide ne doit jamais fabriquer une
+  // intervention.
+  if (diagnosis != null && diagnosis.hypotheses.isNotEmpty) {
+    return selectDiagnosisFeedback(diagnosis);
+  }
+
   // --- Cas E : echec sans information exploitable ----------------------
   //
-  // Cas par defaut : aucun diagnostic n'est produit en conditions
-  // reelles, faute d'observations.
+  // Cas par defaut : aucune observation n'a pu etre derivee de la tentative.
+  return const FeedbackSelection(
+    panel: FeedbackPanel.noInformation,
+    title: '',
+    message: _noInformation,
+    showRetry: true,
+  );
+}
+
+/// Construit le panneau C ou D a partir d'un resultat de diagnostic.
+///
+/// Utilise aussi par le tuteur : une erreur signalee dans la conversation
+/// suit exactement la meme regle qu'une erreur detectee a la soumission.
+FeedbackSelection selectDiagnosisFeedback(DiagnosisOutcome diagnosis) {
+  final question = diagnosis.clarificationQuestion?.trim() ?? '';
+  if (question.isNotEmpty) {
+    return FeedbackSelection(
+      panel: FeedbackPanel.clarification,
+      title: RelioStrings.clarificationTitle,
+      message: question,
+      clarificationOptions: RelioStrings.clarificationOptions,
+    );
+  }
+
+  final intervention = diagnosis.intervention.question.trim();
+  if (intervention.isNotEmpty) {
+    return FeedbackSelection(
+      panel: FeedbackPanel.intervention,
+      title: '',
+      message: intervention,
+      showRetry: true,
+    );
+  }
+
+  // Le moteur n'a pas de texte affichable : on retombe sur E plutot que
+  // d'inventer une intervention.
   return const FeedbackSelection(
     panel: FeedbackPanel.noInformation,
     title: '',

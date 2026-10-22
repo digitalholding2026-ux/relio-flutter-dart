@@ -59,9 +59,34 @@ class TutorExerciseContext {
         'Énoncé : $statement\n'
         'Réponse attendue (à ne jamais révéler) : $expectedAnswer';
   }
+
+  /// Protocole technique de signalement d'une erreur.
+  ///
+  /// Ce bloc ne fait pas partie du cerveau pédagogique validé : il décrit
+  /// seulement un canal machine. Le modèle reste libre de ne rien signaler ;
+  /// s'il le fait, il choisit un code dans la liste fermée, et
+  /// [parseTutorErrorSignal] ignore tout le reste.
+  static const String errorSignalBlock =
+      '## Signalement technique\n'
+      'Si l’élève écrit explicitement une erreur que tu identifies avec '
+      'certitude, termine ta réponse par un seul marqueur, seul sur la '
+      'dernière ligne : [[relio-erreur:CODE]].\n'
+      'Codes autorisés :\n'
+      '- soustraction_fausse : une soustraction est fausse ;\n'
+      '- poursuit_apres_valeurs_egales : l’élève continue alors que les '
+      'deux nombres sont égaux ;\n'
+      '- mauvais_couple_repris : le mauvais couple est réutilisé dans '
+      'l’algorithme d’Euclide ;\n'
+      '- arret_avec_reste_non_nul : l’élève s’arrête sur un reste non nul ;\n'
+      '- pgcd_correct_ppcm_faux : le PGCD est juste mais le PPCM est faux ;\n'
+      '- confusion_pgcd_ppcm : l’élève confond le PGCD et le PPCM.\n'
+      'N’utilise aucun autre code. Ne commente jamais ce marqueur et ne '
+      'l’explique pas à l’élève. Sans erreur clairement identifiée, ne '
+      'mets aucun marqueur.';
 }
 
 /// Prompt système complet : cerveau officiel + exercice courant.
 String systemPromptFor(TutorExerciseContext exercise) {
-  return '$kTutorSystemPrompt\n\n${exercise.promptBlock}';
+  return '$kTutorSystemPrompt\n\n${exercise.promptBlock}'
+      '\n\n${TutorExerciseContext.errorSignalBlock}';
 }

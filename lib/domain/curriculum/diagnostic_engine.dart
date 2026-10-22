@@ -120,8 +120,9 @@ class DiagnosticEngine {
     final followUp = _resolveFollowUp(primary, context);
 
     final staysOpen = ambiguous || !context.canClarify;
-    final clarification =
-        ambiguous && context.canClarify ? primary.clarificationQuestion : null;
+    final clarification = ambiguous && context.canClarify
+        ? primary.clarificationQuestion
+        : null;
 
     return DiagnosisOutcome(
       observedFacts: List<String>.of(facts),
@@ -134,14 +135,32 @@ class DiagnosticEngine {
     );
   }
 
+  /// Ferme la clarification après la réponse de l'élève.
+  ///
+  /// Aucune hypothèse n'est ajoutée ni confirmée : une réponse à une question
+  /// ne prouve pas une cause. Le moteur cesse simplement de demander, comme
+  /// l'exige la règle « une seule clarification, jamais une série ».
+  DiagnosisOutcome submitClarification(
+    DiagnosisOutcome diagnosis,
+    String answer,
+  ) {
+    if (diagnosis.clarificationQuestion == null) return diagnosis;
+    if (answer.trim().isEmpty) return diagnosis;
+    return DiagnosisOutcome(
+      observedFacts: diagnosis.observedFacts,
+      caseIds: diagnosis.caseIds,
+      hypotheses: diagnosis.hypotheses,
+      intervention: diagnosis.intervention,
+      followUp: diagnosis.followUp,
+      staysOpen: false,
+    );
+  }
+
   /// Deux cas sont-ils en concurrence sur les mêmes faits ?
   ///
   /// C'est le cas de D5 et D6 : tous deux s'appliquent à la leçon 3, et une
   /// réponse peut déclencher l'un ou l'autre sans permettre de trancher.
-  bool _hasAmbiguousMatch(
-    List<DiagnosticCase> matched,
-    Set<String> facts,
-  ) {
+  bool _hasAmbiguousMatch(List<DiagnosticCase> matched, Set<String> facts) {
     final ids = matched.map((c) => c.id).toSet();
     // D5 + D6 simultanément : la distinction est le point délicat de la
     // mission, elle ne doit JAMAIS être tranchée automatiquement.

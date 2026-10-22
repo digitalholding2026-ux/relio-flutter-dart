@@ -19,9 +19,13 @@ import 'package:flutter/material.dart';
 
 import '../../core/id.dart';
 import '../../domain/curriculum/chapter1_service.dart';
+import '../../domain/curriculum/diagnostic_case.dart';
+import '../../domain/curriculum/diagnostic_engine.dart';
 import '../../domain/curriculum/exercise.dart';
+import '../../domain/curriculum/observation_collector.dart';
 import '../../domain/curriculum/rich_hint.dart';
 import '../../domain/curriculum/rich_hint_adapter.dart';
+import '../../domain/learning/exercise_attempt.dart';
 import '../../domain/tutor/tutor_client.dart';
 import '../../domain/tutor/tutor_exercise_context.dart';
 import '../rules/feedback_selection.dart';
@@ -60,6 +64,21 @@ class ExerciseDraft {
   /// d'apprentissage. « Exercice suivant » et « Ressayer » remplacent le
   /// brouillon, donc le panneau disparait avec eux.
   FeedbackSelection? feedback;
+
+  /// Dernier diagnostic produit, pour envoyer la clarification au moteur.
+  ///
+  /// Conserve avec le brouillon : sans lui, revenir sur S2 avec un panneau D
+  /// afficherait des options que « Valider ma réponse » ne saurait plus
+  /// transmettre.
+  DiagnosisOutcome? diagnosis;
+
+  /// Nombre de clarifications deja posees sur ce brouillon.
+  ///
+  /// Le moteur s'en sert pour ne jamais enchaîner les questions.
+  int clarificationsAsked = 0;
+
+  /// Option choisie dans le panneau D, conservee avec le brouillon.
+  String? clarificationChoice;
 }
 
 /// Ecran d'exercice.
@@ -74,6 +93,7 @@ class ExercisePage extends StatefulWidget {
     this.tutor,
     this.requestFocusOnOpen = false,
     this.onFullscreenChanged,
+    this.onAttemptRecorded,
     this.reviewConsumedHints = false,
     this.onBackFromReview,
     this.returnLabel,
@@ -118,6 +138,14 @@ class ExercisePage extends StatefulWidget {
   /// ce qui permet de le tester isolément.
   final ValueChanged<bool>? onFullscreenChanged;
 
+  /// Appelé après CHAQUE tentative enregistrée par le moteur.
+  ///
+  /// L'écran ne calcule rien : il signale simplement qu'un fait nouveau existe.
+  /// La coquille relit alors l'historique, ce qui met à jour l'accueil, S1 et
+  /// l'onglet Apprendre sans attendre la fermeture de S2 — notamment lorsque
+  /// l'élève enchaîne les exercices par « Exercice suivant ».
+  final Future<void> Function()? onAttemptRecorded;
+
   /// Ouvrir immediatement, au montage, la fiche EMPILANT tous les indices
   /// deja consommes sur cet exercice.
   ///
@@ -151,6 +179,7 @@ class _ExercisePageState extends State<ExercisePage> {
   late ExerciseDraft _draft;
 
   FeedbackSelection? _feedback;
+  String? _clarificationChoice;
   bool _showEmptyMessage = false;
   bool _showSubmitError = false;
   bool _submitting = false;
@@ -190,6 +219,7 @@ class _ExercisePageState extends State<ExercisePage> {
     // Retour par la fleche de l'AppBar : le panneau retrouve est restaure
     // tel quel, et le champ reste verrouille.
     _feedback = _draft.feedback;
+    _clarificationChoice = _draft.clarificationChoice;
 
     if (widget.requestFocusOnOpen && !_locked) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -376,6 +406,7 @@ class _ExercisePageState extends State<ExercisePage> {
           // valider l'exercice precedent et perdre sa place dans le parcours.
           onGoToNext: () => Navigator.of(context).pop(),
           onFullscreenChanged: widget.onFullscreenChanged,
+          onAttemptRecorded: widget.onAttemptRecorded,
           // Ouverture immediate de la fiche, en mode EMPILAGE.
           reviewConsumedHints: true,
           onBackFromReview: () => Navigator.of(context).pop(),
@@ -417,21 +448,41 @@ class _ExercisePageState extends State<ExercisePage> {
       );
 
       if (!mounted) return;
+      final diagnosis = record.outcome == AnswerOutcome.incorrect
+          ? _diagnosisFor(record)
+          : null;
+      final selection = selectFeedback(
+        record: record,
+        exerciseId: widget.exercise.id,
+        rawAnswer: raw,
+        diagnosis: diagnosis,
+      );
       setState(() {
-        _feedback = selectFeedback(
-          record: record,
-          exerciseId: widget.exercise.id,
-          rawAnswer: raw,
-        );
+        _feedback = selection;
+        _clarificationChoice = null;
         // Le panneau fait partie du brouillon de session : il survit au
         // retour par la fleche de l'AppBar.
-        _draft.feedback = _feedback;
+        _draft.feedback = selection;
+        _draft.diagnosis = diagnosis;
+        _draft.clarificationChoice = null;
+        if (selection.panel == FeedbackPanel.clarification) {
+          _draft.clarificationsAsked++;
+        }
         _showSubmitError = false;
         _submitting = false;
       });
       // Clavier ferme DES L'APPARITION du panneau : aucun etat intermediaire
       // ne doit montrer un clavier au-dessus d'un champ desormais verrouille.
       if (_locked) _focusNode.unfocus();
+
+      // La tentative est écrite : la coquille relit les faits immédiatement.
+      // Une relecture impossible ne change rien au panneau affiché — le fait,
+      // lui, est déjà dans l'historique.
+      try {
+        await widget.onAttemptRecorded?.call();
+      } catch (_) {
+        // Rien à signaler à l'élève : sa réponse est enregistrée.
+      }
     } catch (_) {
       // La saisie n'est JAMAIS effacee en cas d'erreur d'envoi.
       if (!mounted) return;
@@ -442,18 +493,103 @@ class _ExercisePageState extends State<ExercisePage> {
     }
   }
 
+  /// Diagnostic eventuel produit par les faits de la tentative.
+  ///
+  /// L'interface ne fabrique aucun fait : elle demande au collecteur ce que
+  /// la reponse et la structure de l'exercice rendent strictement lisibles,
+  /// puis transmet ces faits au moteur. Un ensemble vide reste le panneau E.
+  DiagnosisOutcome? _diagnosisFor(AttemptRecord record) {
+    final report = collectObservations(
+      record: record,
+      exercise: widget.exercise,
+    );
+    if (report.facts.isEmpty) return null;
+
+    final outcome = widget.service.diagnose(
+      observation: AttemptObservation(facts: report.facts),
+      failedExerciseId: widget.exercise.id,
+      clarificationAlreadyAsked: _draft.clarificationsAsked,
+    );
+    return outcome.hypotheses.isEmpty ? null : outcome;
+  }
+
+  /// Envoie la reponse choisie au moteur, puis affiche le panneau adapte.
+  ///
+  /// Le resultat mis a jour ne peut plus contenir de question : le moteur
+  /// ferme la clarification. L'interface affiche alors l'intervention (C),
+  /// ou E si le moteur n'a aucun texte affichable.
+  void _submitClarification() {
+    final choice = _clarificationChoice;
+    final diagnosis = _draft.diagnosis;
+    if (choice == null || diagnosis == null) return;
+
+    final updated = widget.service.submitClarification(
+      diagnosis: diagnosis,
+      answer: choice,
+    );
+    final selection = selectDiagnosisFeedback(updated);
+
+    setState(() {
+      _feedback = selection;
+      _draft.feedback = selection;
+      _draft.diagnosis = updated;
+      _draft.clarificationChoice = null;
+      _clarificationChoice = null;
+    });
+  }
+
+  /// Applique une erreur signalee par le tuteur dans la conversation.
+  ///
+  /// Meme moteur, meme selection de panneau : le tuteur ne dispose d'aucun
+  /// privilege, il fournit seulement des faits de la liste fermee.
+  void _applyTutorDiagnosis(Set<String> facts) {
+    if (!mounted || facts.isEmpty) return;
+
+    // Un panneau de reussite ne doit pas etre remplace par une intervention
+    // sur un echange qui peut porter sur un exercice deja reussi.
+    final panel = _feedback?.panel;
+    if (panel == FeedbackPanel.successAutonomous ||
+        panel == FeedbackPanel.successAssisted) {
+      return;
+    }
+
+    final outcome = widget.service.diagnose(
+      observation: AttemptObservation(facts: facts),
+      failedExerciseId: widget.exercise.id,
+      clarificationAlreadyAsked: _draft.clarificationsAsked,
+    );
+    if (outcome.hypotheses.isEmpty) return;
+
+    final selection = selectDiagnosisFeedback(outcome);
+    setState(() {
+      _feedback = selection;
+      _draft.feedback = selection;
+      _draft.diagnosis = outcome;
+      _draft.clarificationChoice = null;
+      _clarificationChoice = null;
+      if (selection.panel == FeedbackPanel.clarification) {
+        _draft.clarificationsAsked++;
+      }
+    });
+    _focusNode.unfocus();
+  }
+
   /// « Réessayer » : meme exercice, panneau masque, champ vide.
   void _retry() {
     setState(() {
       _feedback = null;
+      _clarificationChoice = null;
       _showSubmitError = false;
       _showEmptyMessage = false;
       _draft.consumedHintOrders.clear();
       _draft.shownHints.clear();
-      // Une nouvelle tentative necessite une nouvelle cle.
+      // Une nouvelle tentative necessite une nouvelle cle. Le compteur de
+      // clarifications est conserve : le moteur ne doit jamais enchainer
+      // indefiniment les questions sur le meme exercice.
+      final asked = _draft.clarificationsAsked;
       widget.drafts[widget.exercise.id] = _draft = ExerciseDraft(
         answerKey: 'tentative-${newId()}',
-      );
+      )..clarificationsAsked = asked;
       _controller.clear();
     });
     _focusNode.requestFocus();
@@ -551,6 +687,14 @@ class _ExercisePageState extends State<ExercisePage> {
                       // donc PAS desactivee, puisque S1 EST une destination.
                       // Voir docs/INTERFACE.md, limites.
                       onContinue: widget.onExit,
+                      selectedClarification: _clarificationChoice,
+                      onClarificationSelected: (option) {
+                        setState(() {
+                          _clarificationChoice = option;
+                          _draft.clarificationChoice = option;
+                        });
+                      },
+                      onClarificationSubmit: _submitClarification,
                     ),
                   ],
                 ],
@@ -734,6 +878,7 @@ class _ExercisePageState extends State<ExercisePage> {
         context,
         client: widget.tutor ?? const UnavailableTutorClient(),
         exercise: TutorExerciseContext.fromExercise(widget.exercise),
+        onErrorDetected: _applyTutorDiagnosis,
       ),
       icon: const Icon(Icons.chat_bubble_outline, size: 18),
       label: const Text(RelioStrings.askRelio),

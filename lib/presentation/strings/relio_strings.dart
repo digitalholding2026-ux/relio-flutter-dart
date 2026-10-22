@@ -162,6 +162,25 @@ abstract final class RelioStrings {
       'Pas encore. Je n’arrive pas à voir où ça bloque. '
       'Essaie encore, je regarde.';
 
+  /// Panneau D — question de clarification.
+  ///
+  /// Le titre est un libelle d'interface : la question elle-meme vient
+  /// exclusivement du moteur (banque validee).
+  static const String clarificationTitle = 'Une précision pour t’aider';
+
+  /// Reponses proposees a la clarification de la banque.
+  ///
+  /// La seule question de clarification transcrite (D5) est fermee :
+  /// « Peux-tu calculer le PGCD seul, puis le PPCM seul ? ». Ces deux
+  /// libelles y repondent sans ajouter de contenu pedagogique.
+  static const List<String> clarificationOptions = <String>[
+    'Oui',
+    'Pas encore',
+  ];
+
+  /// Bouton du panneau D.
+  static const String clarificationSubmit = 'Valider ma réponse';
+
   // ---------------------------------------------------------------------
   // Transparence — uniquement sur les exercices 3, 7 et 11
   // ---------------------------------------------------------------------

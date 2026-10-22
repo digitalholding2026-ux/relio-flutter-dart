@@ -42,7 +42,33 @@ Le prompt système est suivi d'un bloc interne, construit par
 
 - l'énoncé de l'exercice en cours ;
 - la réponse attendue, marquée **à ne jamais révéler** ;
+- le protocole technique de signalement d'une erreur (voir ci-dessous) ;
 - rien d'autre : ni historique d'autres exercices, ni données personnelles.
+
+## Signalement d'erreur par le tuteur
+
+Le tuteur peut signaler au moteur une erreur qu'il a **clairement identifiée**
+dans ce que l'élève écrit. Il termine alors sa réponse par un marqueur, sur la
+dernière ligne :
+
+```
+[[relio-erreur:CODE]]
+```
+
+Codes autorisés, tous issus de la banque validée :
+
+| Code | Erreur observée |
+|---|---|
+| `soustraction_fausse` | une soustraction est fausse |
+| `poursuit_apres_valeurs_egales` | l'élève continue alors que les deux nombres sont égaux |
+| `mauvais_couple_repris` | le mauvais couple est réutilisé dans l'algorithme d'Euclide |
+| `arret_avec_reste_non_nul` | l'élève s'arrête sur un reste non nul |
+| `pgcd_correct_ppcm_faux` | le PGCD est juste mais le PPCM est faux |
+| `confusion_pgcd_ppcm` | l'élève confond le PGCD et le PPCM |
+
+`parseTutorErrorSignal` retire le marqueur de l'affichage. Un code inconnu est
+ignoré : le modèle ne peut pas inventer un diagnostic. Sans erreur clairement
+identifiée, aucun marqueur n'est ajouté.
 
 La conversation (messages élève / tuteur) est ensuite envoyée dans l'ordre,
 tronquée aux derniers `TUTOR_MAX_HISTORY` messages (12 par défaut).

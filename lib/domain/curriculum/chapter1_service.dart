@@ -50,6 +50,7 @@ class AttemptRecord {
     required this.outcome,
     required this.attemptKey,
     this.submittedAt,
+    this.rawAnswer = '',
   });
 
   /// Identifiant de l'Ã©vÃ©nement d'apprentissage.
@@ -76,10 +77,18 @@ class AttemptRecord {
   /// Date de soumission.
   final DateTime? submittedAt;
 
+  /// Saisie brute de l'élève, telle qu'enregistrée.
+  ///
+  /// Sert à dériver des observations STRICTEMENT lisibles dans la réponse
+  /// (par exemple « le PPCM fourni est faux alors que le PGCD était donné »).
+  /// Aucun raisonnement n'est reconstitué à partir d'elle.
+  final String rawAnswer;
+
   /// La rÃ©ussite est-elle autonome (aucun indice consultÃ©) ?
   ///
   /// Une rÃ©ussite aprÃ¨s indice n'est JAMAIS autonome.
-  bool get isAutonomous => classification == AttemptClassification.autonomousSuccess;
+  bool get isAutonomous =>
+      classification == AttemptClassification.autonomousSuccess;
 
   @override
   String toString() =>
@@ -218,8 +227,8 @@ CorrectionResult _correcterParRelation(PpcmRelation relation, String raw) {
     );
   }
 
-  final correcte = evaluation.equalityHolds &&
-      evaluation.value!.round() == relation.result;
+  final correcte =
+      evaluation.equalityHolds && evaluation.value!.round() == relation.result;
   return CorrectionResult(
     isCorrect: correcte,
     isEvaluated: true,
@@ -231,7 +240,6 @@ CorrectionResult _correcterParRelation(PpcmRelation relation, String raw) {
 // `answer_normalization.dart`, shared with the exercise model so that the
 // keyboard contract and the correction contract cannot diverge.
 
-
 /// Service d'intÃ©gration de la banque du chapitre 1.
 class Chapter1Service {
   Chapter1Service(
@@ -239,9 +247,9 @@ class Chapter1Service {
     Clock clock = systemClockUtc,
     DiagnosticEngine engine = const DiagnosticEngine(),
     String Function()? idGenerator,
-  })  : _clock = clock,
-        _engine = engine,
-        _newId = idGenerator ?? newId;
+  }) : _clock = clock,
+       _engine = engine,
+       _newId = idGenerator ?? newId;
 
   final LearningEventRepository _repository;
   final Clock _clock;
@@ -256,8 +264,9 @@ class Chapter1Service {
   // ---------------------------------------------------------------------
 
   /// Les 11 exercices validÃ©s.
-  List<Exercise> get exercises =>
-      Chapter1Bank.exercises.where((e) => e.kind == BankElementKind.exercise).toList();
+  List<Exercise> get exercises => Chapter1Bank.exercises
+      .where((e) => e.kind == BankElementKind.exercise)
+      .toList();
 
   /// Les tÃ¢ches de vÃ©rification post-rÃ©mediation.
   List<Exercise> get verificationTasks =>
@@ -293,12 +302,11 @@ class Chapter1Service {
     Exercise exercise,
     Set<int> consumedOrders, {
     String? previousExerciseId,
-  }) =>
-      HintBudget(
-        maxHintsAllowed: maxHintsFor(exercise),
-        hintsConsumed: consumedOrders.length,
-        previousExerciseId: previousExerciseId,
-      );
+  }) => HintBudget(
+    maxHintsAllowed: maxHintsFor(exercise),
+    hintsConsumed: consumedOrders.length,
+    previousExerciseId: previousExerciseId,
+  );
 
   /// Combien d'indices la REGLE DE BUDGET accorde a cet exercice.
   ///
@@ -364,9 +372,7 @@ class Chapter1Service {
         .where((c) => c.order == hintOrder)
         .firstOrNull;
     if (card == null) {
-      throw ArgumentError(
-        'Indice #$hintOrder inexistant pour ${exercise.id}',
-      );
+      throw ArgumentError('Indice #$hintOrder inexistant pour ${exercise.id}');
     }
 
     // Nature et texte d'origine lorsqu'ils existent encore : ce sont les
@@ -419,7 +425,11 @@ class Chapter1Service {
 
     final trajectory = HintTrajectory(<ConsumedHint>[
       for (final order in hintOrders)
-        ConsumedHint(order: order, consumedAt: now, hintId: _hintId(exercise, order)),
+        ConsumedHint(
+          order: order,
+          consumedAt: now,
+          hintId: _hintId(exercise, order),
+        ),
     ]);
 
     final classification = trajectory.classify(
@@ -434,7 +444,9 @@ class Chapter1Service {
       submittedAt: now,
       outcome: correction.isCorrect
           ? AnswerOutcome.correct
-          : (correction.isEvaluated ? AnswerOutcome.incorrect : AnswerOutcome.notEvaluated),
+          : (correction.isEvaluated
+                ? AnswerOutcome.incorrect
+                : AnswerOutcome.notEvaluated),
       answer: StudentAnswer(
         answerId: 'a-${exercise.id}',
         rawText: rawAnswer,
@@ -492,6 +504,7 @@ class Chapter1Service {
       classification: classification,
       outcome: attempt.outcome,
       submittedAt: now,
+      rawAnswer: rawAnswer,
     );
   }
 
@@ -537,6 +550,7 @@ class Chapter1Service {
       ),
       outcome: outcome,
       submittedAt: event.attempt?.submittedAt,
+      rawAnswer: event.attempt?.answer?.rawText ?? '',
     );
   }
 
@@ -572,6 +586,19 @@ class Chapter1Service {
     );
   }
 
+  /// Envoie au moteur la réponse à une question de clarification.
+  ///
+  /// Le moteur ne fabrique aucune cause supplémentaire : il constate que la
+  /// clarification a été fournie, ferme la question et laisse l'intervention
+  /// prévue. L'élève voit donc le panneau adapté, sans seconde série de
+  /// mini-questions.
+  DiagnosisOutcome submitClarification({
+    required DiagnosisOutcome diagnosis,
+    required String answer,
+  }) {
+    return _engine.submitClarification(diagnosis, answer);
+  }
+
   // ---------------------------------------------------------------------
   // Interne
   // ---------------------------------------------------------------------
@@ -594,6 +621,7 @@ class Chapter1Service {
   ///
   /// Aucun contenu pÃ©dagogique n'est inventÃ© : les identifiants sont
   /// dÃ©rivÃ©s de la leÃ§on, ce sont des clÃ©s structurelles.
-  List<String> _notionsFor(Exercise exercise) => <String>['lecon-${exercise.lesson.id}'];
+  List<String> _notionsFor(Exercise exercise) => <String>[
+    'lecon-${exercise.lesson.id}',
+  ];
 }
-

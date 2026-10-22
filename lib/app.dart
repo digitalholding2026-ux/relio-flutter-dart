@@ -464,7 +464,13 @@ class _RelioShellState extends State<_RelioShell> {
 
   /// Avancement affiché. Démarre à l'état VIDE : avant la première lecture,
   /// l'écran ne prétend rien savoir de l'élève.
-  LearnerProgress _progress = LearnerProgress.empty;
+  ///
+  /// C'est un NOTIFIANT, et non un champ simple : S1 est une page empilée, dont
+  /// le contenu était figé à l'ouverture. En notifiant, S1 et les trois onglets
+  /// se remettent à jour dès qu'une tentative est enregistrée, sans attendre
+  /// que l'élève referme la pile.
+  final ValueNotifier<LearnerProgress> _progress =
+      ValueNotifier<LearnerProgress>(LearnerProgress.empty);
 
   @override
   void initState() {
@@ -480,7 +486,7 @@ class _RelioShellState extends State<_RelioShell> {
     try {
       final progress = await _progressRepository.load();
       if (!mounted) return;
-      setState(() => _progress = progress);
+      _progress.value = progress;
     } catch (_) {
       // Historique illisible : l'écran garde l'état vide plutôt que d'afficher
       // une progression inventée.
@@ -502,6 +508,7 @@ class _RelioShellState extends State<_RelioShell> {
   void dispose() {
     _tutor.close();
     _hideBottomBar.dispose();
+    _progress.dispose();
     super.dispose();
   }
 
@@ -525,8 +532,10 @@ class _RelioShellState extends State<_RelioShell> {
         builder: (_) => ChapterAccessPage(
           onOpenLesson: _openLesson,
           // Les leçons affichées sont celles que les faits décrivent : une
-          // leçon jamais tentée reste « À commencer ».
-          chapter: LearnState.fromProgress(_progress).activeChapter,
+          // leçon jamais tentée reste « À commencer ». S1 écoute le notifiant,
+          // donc un exercice réussi met sa carte à jour même s'il est encore
+          // empilé au-dessus.
+          progressListenable: _progress,
           reduceAnimations: widget.settings.reduceAnimations,
         ),
       ),
@@ -561,6 +570,9 @@ class _RelioShellState extends State<_RelioShell> {
           onExit: () => navigator.pop(),
           onGoToNext: () => _goToNext(exercise),
           onFullscreenChanged: _setFullscreen,
+          // Chaque tentative enregistrée est relue tout de suite : l'accueil,
+          // S1 et l'onglet Apprendre n'attendent pas la fermeture de S2.
+          onAttemptRecorded: _refreshProgress,
         ),
       ),
     );
@@ -594,6 +606,7 @@ class _RelioShellState extends State<_RelioShell> {
           onExit: () => navigator.pop(),
           onGoToNext: () => _goToNext(next),
           onFullscreenChanged: _setFullscreen,
+          onAttemptRecorded: _refreshProgress,
           // L'élève enchaîne : le champ doit être prêt à écrire sans qu'il
           // ait à le toucher.
           requestFocusOnOpen: true,
@@ -604,39 +617,45 @@ class _RelioShellState extends State<_RelioShell> {
 
   @override
   Widget build(BuildContext context) {
-    return AppShell(
-      key: _shellKey,
-      hideBottomBar: _hideBottomBar,
-      navigatorKeys: <GlobalKey<NavigatorState>>[
-        _homeKey,
-        _learnKey,
-        _profileKey,
-      ],
-      tabs: <Widget Function(BuildContext, GlobalKey<NavigatorState>)>[
-        (context, _) => HomePage(
-          name: widget.settings.name,
-          reduceAnimations: widget.settings.reduceAnimations,
-          // État calculé depuis les faits : « COMMENCER » pour un nouvel
-          // élève, « REPRENDRE » dès la première tentative.
-          homeState: HomeState.fromProgress(_progress),
-          // La carte principale et les deux actions rapides ouvrent le
-          // même chapitre : c'est le seul parcours disponible en V1.
-          onContinue: _openChapter1,
-          onFiveMinutes: _openChapter1,
-          onWarmup: _openChapter1,
-          onOpenLesson: _openLesson,
-        ),
-        (context, _) => LearnPage(
-          learnState: LearnState.fromProgress(_progress),
-          onOpenChapter1: _openChapter1,
-          reduceAnimations: widget.settings.reduceAnimations,
-        ),
-        (context, _) => ProfilePage(
-          settings: widget.settings,
-          progress: _progress,
-          onChanged: _onSettingsChanged,
-        ),
-      ],
+    // Les trois onglets sont reconstruits à chaque lecture de l'historique.
+    // `AppShell` garde son état (même clé) : les piles de navigation et la
+    // barre basse ne sont pas recréées, seuls les contenus sont rafraîchis.
+    return ValueListenableBuilder<LearnerProgress>(
+      valueListenable: _progress,
+      builder: (context, progress, _) => AppShell(
+        key: _shellKey,
+        hideBottomBar: _hideBottomBar,
+        navigatorKeys: <GlobalKey<NavigatorState>>[
+          _homeKey,
+          _learnKey,
+          _profileKey,
+        ],
+        tabs: <Widget Function(BuildContext, GlobalKey<NavigatorState>)>[
+          (context, _) => HomePage(
+            name: widget.settings.name,
+            reduceAnimations: widget.settings.reduceAnimations,
+            // État calculé depuis les faits : « COMMENCER » pour un nouvel
+            // élève, « REPRENDRE » dès la première tentative.
+            homeState: HomeState.fromProgress(progress),
+            // La carte principale et les deux actions rapides ouvrent le
+            // même chapitre : c'est le seul parcours disponible en V1.
+            onContinue: _openChapter1,
+            onFiveMinutes: _openChapter1,
+            onWarmup: _openChapter1,
+            onOpenLesson: _openLesson,
+          ),
+          (context, _) => LearnPage(
+            learnState: LearnState.fromProgress(progress),
+            onOpenChapter1: _openChapter1,
+            reduceAnimations: widget.settings.reduceAnimations,
+          ),
+          (context, _) => ProfilePage(
+            settings: widget.settings,
+            progress: progress,
+            onChanged: _onSettingsChanged,
+          ),
+        ],
+      ),
     );
   }
 

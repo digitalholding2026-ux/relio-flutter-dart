@@ -22,6 +22,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../domain/tutor/tutor_client.dart';
+import '../../domain/tutor/tutor_error_signal.dart';
 import '../../domain/tutor/tutor_exercise_context.dart';
 import '../../domain/tutor/tutor_message.dart';
 import '../branding/relio_mark.dart';
@@ -40,6 +41,7 @@ Future<void> showRelioTutorSheet(
   BuildContext context, {
   required TutorClient client,
   required TutorExerciseContext exercise,
+  ValueChanged<Set<String>>? onErrorDetected,
 }) {
   final palette = RelioPaletteScope.of(context);
 
@@ -57,8 +59,11 @@ Future<void> showRelioTutorSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
-    builder: (BuildContext context) =>
-        RelioTutorSheet(client: client, exercise: exercise),
+    builder: (BuildContext context) => RelioTutorSheet(
+      client: client,
+      exercise: exercise,
+      onErrorDetected: onErrorDetected,
+    ),
   );
 }
 
@@ -69,6 +74,7 @@ class RelioTutorSheet extends StatefulWidget {
     super.key,
     required this.client,
     required this.exercise,
+    this.onErrorDetected,
   });
 
   /// Tuteur chargé de répondre.
@@ -76,6 +82,9 @@ class RelioTutorSheet extends StatefulWidget {
 
   /// Exercice en cours, transmis au modèle à chaque appel.
   final TutorExerciseContext exercise;
+
+  /// Reçoit les faits d'erreur qu'un marqueur valide a signalés.
+  final ValueChanged<Set<String>>? onErrorDetected;
 
   @override
   State<RelioTutorSheet> createState() => _RelioTutorSheetState();
@@ -148,11 +157,15 @@ class _RelioTutorSheetState extends State<RelioTutorSheet> {
     final history = List<TutorMessage>.unmodifiable(_messages);
 
     String? reply;
+    var facts = <String>{};
     try {
       reply = await widget.client.reply(
         exercise: widget.exercise,
         history: history,
       );
+      final signal = parseTutorErrorSignal(reply);
+      reply = signal.text;
+      facts = signal.facts;
     } on Object {
       // Le client de test, le mode simulé et le client réel passent tous par
       // ici : quel que soit l'incident, l'élève garde la main.
@@ -164,10 +177,22 @@ class _RelioTutorSheetState extends State<RelioTutorSheet> {
       _sending = false;
       if (reply == null) {
         _failed = true;
-      } else {
+      } else if (reply.trim().isNotEmpty) {
         _messages.add(TutorMessage(text: reply, fromRelio: true));
       }
     });
+
+    // Le signal est appliqué APRÈS l'affichage du texte : le panneau de
+    // l'exercice peut ainsi apparaître derrière la conversation, sans
+    // interrompre la lecture de la réponse.
+    if (facts.isNotEmpty) {
+      try {
+        widget.onErrorDetected?.call(facts);
+      } on Object {
+        // Un diagnostic ne doit jamais faire échouer la conversation.
+      }
+    }
+
     _scrollToBottom();
   }
 
@@ -377,17 +402,13 @@ class _MessageBubble extends StatelessWidget {
               child: fromRelio
                   ? MathText(
                       text: normalizeTutorText(message.text),
-                      style: RelioType.body(palette).copyWith(
-                        height: 1.45,
-                        color: palette.textPrimary,
-                      ),
+                      style: RelioType.body(palette)
+                          .copyWith(height: 1.45, color: palette.textPrimary),
                     )
                   : Text(
                       message.text,
-                      style: RelioType.body(palette).copyWith(
-                        height: 1.45,
-                        color: palette.onPrimary,
-                      ),
+                      style: RelioType.body(palette)
+                          .copyWith(height: 1.45, color: palette.onPrimary),
                     ),
             ),
           ),
@@ -500,10 +521,8 @@ class _RetryBubble extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     RelioStrings.tutorBusyReply,
-                    style: RelioType.body(palette).copyWith(
-                      height: 1.45,
-                      color: palette.textPrimary,
-                    ),
+                    style: RelioType.body(palette)
+                        .copyWith(height: 1.45, color: palette.textPrimary),
                   ),
                   const SizedBox(height: RelioSpacing.xs),
                   TextButton.icon(
@@ -515,10 +534,7 @@ class _RetryBubble extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                         horizontal: RelioSpacing.sm,
                       ),
-                      minimumSize: const Size(
-                        0,
-                        RelioSizes.minTouchTarget,
-                      ),
+                      minimumSize: const Size(0, RelioSizes.minTouchTarget),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),

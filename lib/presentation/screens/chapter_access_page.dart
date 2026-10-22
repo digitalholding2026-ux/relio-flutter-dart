@@ -9,6 +9,7 @@
 /// n'est présentée comme commencée sans fait correspondant.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../domain/curriculum/exercise.dart';
@@ -150,6 +151,7 @@ class ChapterAccessPage extends StatelessWidget {
     super.key,
     required this.onOpenLesson,
     this.chapter,
+    this.progressListenable,
     this.reduceAnimations = false,
   });
 
@@ -157,13 +159,35 @@ class ChapterAccessPage extends StatelessWidget {
   final void Function(String lessonId) onOpenLesson;
 
   /// Chapitre affiché. `null` : chapitre 1 à l'état vide.
+  ///
+  /// Instantané utilisé par les tests et les aperçus. En production, c'est
+  /// [progressListenable] qui est fourni : un instantané figé laisserait la
+  /// page afficher « 0/4 » après un exercice réussi.
   final ChapterProgress? chapter;
+
+  /// Avancement observé, écouté en direct.
+  ///
+  /// S1 reste empilé sous S2 : sans écoute, sa carte de leçon garderait l'état
+  /// du jour de l'ouverture. Le moteur reste la seule source : la page ne
+  /// recalcule rien, elle relit la projection à chaque fait nouveau.
+  final ValueListenable<LearnerProgress>? progressListenable;
 
   /// Désactive les effets d'appui.
   final bool reduceAnimations;
 
   @override
   Widget build(BuildContext context) {
+    final listenable = progressListenable;
+    if (listenable == null) return _build(context, chapter);
+
+    return ValueListenableBuilder<LearnerProgress>(
+      valueListenable: listenable,
+      builder: (BuildContext context, LearnerProgress progress, Widget? _) =>
+          _build(context, LearnState.fromProgress(progress).activeChapter),
+    );
+  }
+
+  Widget _build(BuildContext context, ChapterProgress? chapter) {
     final palette = RelioPaletteScope.of(context);
     final shown = chapter ?? LearnState.empty().activeChapter;
 

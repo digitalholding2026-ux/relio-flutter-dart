@@ -156,7 +156,7 @@ class Chapter1Bank {
         expectedAnswer:
             'Lorsque les deux nombres sont égaux ; cette valeur est le PGCD.',
       ),
-    // Association de transfert VALIDEE par le fondateur : verifier le
+      // Association de transfert VALIDEE par le fondateur : verifier le
       // calcul du PGCD sur un couple different (18,12) -> (16,12).
       // La tache cible se trouve dans la section verificationTasks plus bas :
       // meme nature, et sa correction ne compare QUE la valeur finale.
@@ -165,8 +165,7 @@ class Chapter1Bank {
     Exercise(
       id: ExerciseIds.ex2,
       lesson: ArithmeticLesson.lesson1Subtractions,
-      statement:
-          'Calcule le PGCD de 15 et 10 par soustractions successives.',
+      statement: 'Calcule le PGCD de 15 et 10 par soustractions successives.',
       correction: CorrectionCriterion(
         acceptedValues: <int>[5],
         acceptedExpressions: <String>['5'],
@@ -206,7 +205,9 @@ class Chapter1Bank {
             TextBlock('Voici les étapes :'),
             MathBlock('15 − 10 = 5'),
             MathBlock('10 − 5 = 5'),
-            HighlightBlock('Les deux nombres sont égaux à 5. Le PGCD est donc 5.'),
+            HighlightBlock(
+              'Les deux nombres sont égaux à 5. Le PGCD est donc 5.',
+            ),
           ],
         ),
       ],
@@ -244,7 +245,9 @@ class Chapter1Bank {
           order: 1,
           title: '💡 Indice final : Résolution',
           blocks: <HintBlock>[
-            TextBlock('Tu dois appliquer exactement la même méthode qu\'avant.'),
+            TextBlock(
+              'Tu dois appliquer exactement la même méthode qu\'avant.',
+            ),
             MathBlock('21 − 14 = 7'),
             MathBlock('14 − 7 = 7'),
             TextBlock(
@@ -406,8 +409,7 @@ class Chapter1Bank {
     Exercise(
       id: ExerciseIds.ex6,
       lesson: ArithmeticLesson.lesson2Euclid,
-      statement:
-          'Calcule le PGCD de 42 et 30 avec l’algorithme d’Euclide.',
+      statement: 'Calcule le PGCD de 42 et 30 avec l’algorithme d’Euclide.',
       correction: CorrectionCriterion(
         acceptedValues: <int>[6],
         acceptedExpressions: <String>['6'],
@@ -541,6 +543,8 @@ class Chapter1Bank {
         acceptedExpressions: <String>['36'],
         explanation: '12 × 18 = 6 × PPCM(12,18) ; PPCM = 216 ÷ 6 = 36.',
       ),
+      // PGCD donné par l'énoncé : seule la valeur du PPCM est calculée.
+      givenPgcd: 6,
       expectedSteps: <SolutionStep>[
         SolutionStep(
           kind: SolutionStepKind.operation,
@@ -565,6 +569,8 @@ class Chapter1Bank {
         acceptedExpressions: <String>['24', '(8*12)/4', '96/4'],
         explanation: 'PPCM = (8 × 12) ÷ 4 = 24.',
       ),
+      // PGCD donné par l'énoncé : seule la valeur du PPCM est calculée.
+      givenPgcd: 4,
       expectedSteps: <SolutionStep>[
         SolutionStep(
           kind: SolutionStepKind.finalResult,
@@ -690,7 +696,8 @@ class Chapter1Bank {
       ),
     ),
     Exercise(
-      id: ExerciseIds.verifyPpcm10And15,      kind: BankElementKind.verificationTask,
+      id: ExerciseIds.verifyPpcm10And15,
+      kind: BankElementKind.verificationTask,
       lesson: ArithmeticLesson.lesson3PpcmPgcdRelation,
       statement: 'PPCM de 10 et 15, avec PGCD 5.',
       correction: CorrectionCriterion(
@@ -808,14 +815,13 @@ class Chapter1Bank {
           evidence: <String>{'arret_avec_reste_non_nul'},
         ),
       ],
-      intervention: Intervention(
-        question: 'Le reste est-il nul ?',
-      ),
+      intervention: Intervention(question: 'Le reste est-il nul ?'),
       followUp: FollowUpTask(
         label: 'PGCD(35, 20)',
         exerciseId: ExerciseIds.verifyPgcd35And20,
       ),
-    ),    DiagnosticCase(
+    ),
+    DiagnosticCase(
       id: 'D5',
       title: 'PGCD correct, PPCM faux par division inversée',
       observations: <String>{'pgcd_correct_ppcm_faux'},
@@ -879,10 +885,7 @@ class Chapter1Bank {
           evidence: <String>{'reussite_apres_indice'},
         ),
       ],
-      intervention: Intervention(
-        question: '',
-        reassuresProgress: true,
-      ),
+      intervention: Intervention(question: '', reassuresProgress: true),
       // Vérification par un nouvel exercice SANS indice.
       followUp: FollowUpTask(
         label: 'Nouvel exercice sans indice',
@@ -901,9 +904,7 @@ class Chapter1Bank {
           evidence: <String>{'reponse_correcte_sans_demarche'},
         ),
       ],
-      intervention: Intervention(
-        question: 'Montre une étape de ton calcul.',
-      ),
+      intervention: Intervention(question: 'Montre une étape de ton calcul.'),
       // Couplet différent, sans aide.
       followUp: FollowUpTask(
         label: 'Couple différent, sans aide',

@@ -212,8 +212,9 @@ class CorrectionCriterion {
   /// `answer_type_test.dart` verrouille ce résultat.
   AnswerType get answerType {
     if (acceptedValues.isEmpty) return AnswerType.text;
-    final hasTextualForm = acceptedExpressions
-        .any((expression) => !looksNumeric(expression));
+    final hasTextualForm = acceptedExpressions.any(
+      (expression) => !looksNumeric(expression),
+    );
     return hasTextualForm ? AnswerType.text : AnswerType.integer;
   }
 
@@ -248,11 +249,7 @@ enum AnswerType {
 /// L'ORDRE est significatif : l'indice 1 est proposé avant l'indice 2, et
 /// la banque interdit d'afficher d'emblée toute la solution.
 class ExerciseHint {
-  const ExerciseHint({
-    required this.order,
-    required this.text,
-    this.kind,
-  });
+  const ExerciseHint({required this.order, required this.text, this.kind});
 
   /// Rang de l'indice, à partir de 1.
   ///
@@ -326,6 +323,7 @@ class Exercise {
     this.comprehension,
     this.followUpTask,
     this.diagnosticCaseIds = const <String>[],
+    this.givenPgcd,
   });
 
   /// Identifiant stable et unique. Jamais régénéré.
@@ -386,6 +384,16 @@ class Exercise {
 
   /// Cas de diagnostic éventuellement associés à cet exercice.
   final List<String> diagnosticCaseIds;
+
+  /// PGCD fourni par l'énoncé, quand la tâche ne demande QUE le PPCM.
+  ///
+  /// Ce n'est pas une réponse attendue : c'est une donnée LUE dans l'énoncé
+  /// validé. Elle permet un fait strictement observable : si la réponse est
+  /// fausse, le PGCD était juste (il était donné), donc le PPCM est faux.
+  ///
+  /// `null` partout ailleurs : aucun exercice ne reçoit cette donnée par
+  /// déduction.
+  final int? givenPgcd;
 
   /// Indices triés par ordre croissant.
   ///
