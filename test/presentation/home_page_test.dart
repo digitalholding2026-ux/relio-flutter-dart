@@ -47,8 +47,9 @@ Widget _accueil({
 
 void main() {
   group('Objectif de séquence', () {
-    testWidgets('affiche « Séquence 1 • 2 notions sur 5 validées »',
-        (tester) async {
+    testWidgets('affiche « Séquence 1 • 2 notions sur 5 validées »', (
+      tester,
+    ) async {
       await tester.pumpWidget(_accueil(state: HomeState.mock()));
       await tester.pumpAndSettle();
 
@@ -63,19 +64,23 @@ void main() {
       await tester.pumpWidget(_accueil(state: HomeState.mock()));
       await tester.pumpAndSettle();
 
-      final double barre =
-          tester.getTopLeft(find.byType(SequenceObjectiveBar)).dy;
+      final double barre = tester
+          .getTopLeft(find.byType(SequenceObjectiveBar))
+          .dy;
       final double prenom = tester.getTopLeft(find.byType(GreetingHeader)).dy;
 
       expect(barre, lessThan(prenom));
     });
 
-    testWidgets('le trait reflète la part validée, sans chiffre', (tester) async {
+    testWidgets('le trait reflète la part validée, sans chiffre', (
+      tester,
+    ) async {
       await tester.pumpWidget(_accueil(state: HomeState.mock()));
       await tester.pumpAndSettle();
 
-      final double largeur =
-          tester.getSize(find.byType(SequenceObjectiveBar)).width;
+      final double largeur = tester
+          .getSize(find.byType(SequenceObjectiveBar))
+          .width;
       final Finder rempli = find
           .descendant(
             of: find.byType(SequenceObjectiveBar),
@@ -93,8 +98,9 @@ void main() {
   });
 
   group('Message contextuel', () {
-    testWidgets('sans blocage récent, le message par défaut s’affiche',
-        (tester) async {
+    testWidgets('sans blocage récent, le message par défaut s’affiche', (
+      tester,
+    ) async {
       await tester.pumpWidget(_accueil(state: HomeState.mock()));
       await tester.pumpAndSettle();
 
@@ -102,13 +108,12 @@ void main() {
       expect(find.text(RelioStrings.relioMessageSubtraction), findsNothing);
     });
 
-    testWidgets('un blocage récent change la phrase, et rien d’autre',
-        (tester) async {
+    testWidgets('un blocage récent change la phrase, et rien d’autre', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _accueil(
-          state: HomeState.mock(
-            recentBlock: RecentBlockCodes.subtractionWrong,
-          ),
+          state: HomeState.mock(recentBlock: RecentBlockCodes.subtractionWrong),
         ),
       );
       await tester.pumpAndSettle();
@@ -125,8 +130,9 @@ void main() {
       expect(find.text(RelioStrings.resumeProgress(2, 4)), findsOneWidget);
     });
 
-    testWidgets('le message affiché est bien celui de l’état fourni',
-        (tester) async {
+    testWidgets('le message affiché est bien celui de l’état fourni', (
+      tester,
+    ) async {
       const String phrase = 'Phrase fournie par le moteur.';
       final HomeState etat = HomeState(
         objective: const SequenceObjective(
@@ -178,9 +184,18 @@ void main() {
   });
 
   group('État vide — nouvel élève', () {
-    testWidgets('la carte invite à COMMENCER, en orange, sans position',
-        (tester) async {
-      await tester.pumpWidget(_accueil(state: HomeState.empty()));
+    testWidgets('la carte invite à COMMENCER, en orange, sans position', (
+      tester,
+    ) async {
+      // Date fixée en septembre : le chapitre courant est l'arithmétique.
+      await tester.pumpWidget(
+        _accueil(
+          state: HomeState.fromProgress(
+            LearnerProgress.empty,
+            now: DateTime(2026, 9, 10, 10),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       final label = tester.widget<Text>(find.text(RelioStrings.startLabel));
@@ -227,7 +242,14 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(_accueil(state: HomeState.empty()));
+      await tester.pumpWidget(
+        _accueil(
+          state: HomeState.fromProgress(
+            LearnerProgress.empty,
+            now: DateTime(2026, 9, 10, 10),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text(RelioStrings.statusNotStarted), findsNWidgets(3));
@@ -236,25 +258,60 @@ void main() {
     });
   });
 
+  group('Chapitre courant', () {
+    testWidgets('en octobre, la carte pointe le chapitre 2', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        _accueil(
+          state: HomeState.fromProgress(
+            LearnerProgress.empty,
+            now: DateTime(2026, 10, 22, 10),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // La séquence d'octobre ne propose aucun chapitre ouvert : l'accueil
+      // affiche le dernier chapitre enseigné, Thalès, et non l'arithmétique.
+      expect(find.text(RelioStrings.chapter2CardTitle), findsOneWidget);
+      expect(find.text(RelioStrings.chapter1CardTitle), findsNothing);
+      expect(find.text(RelioStrings.startLabel), findsOneWidget);
+      expect(
+        find.text(RelioStrings.sequenceObjective(2, 0, 2)),
+        findsOneWidget,
+      );
+      expect(find.text(RelioStrings.statusNotStarted), findsNWidgets(2));
+    });
+  });
+
   group('Mise à jour de l’état', () {
     /// État d'un élève qui vient de réussir l'exercice 1.
     final HomeState premierExerciceReussi = HomeState(
-      objective: const SequenceObjective(
-        sequence: 1,
-        validated: 0,
-        notions: 3,
-      ),
+      objective: const SequenceObjective(sequence: 1, validated: 0, notions: 3),
       message: RelioStrings.relioMessageFirstExerciseDone,
       resume: ResumeTarget(
+        chapterNumber: 1,
         chapterTitle: RelioStrings.chapter1CardTitle,
         positionLabel: RelioStrings.resumeProgress(2, 4),
       ),
-      lessons: HomeState.empty().lessons,
+      lessons: HomeState.mock().lessons,
     );
 
-    testWidgets('un nouvel état remplace l’ancien : Commencer → Continuer',
-        (tester) async {
-      await tester.pumpWidget(_accueil(state: HomeState.empty()));
+    testWidgets('un nouvel état remplace l’ancien : Commencer → Continuer', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _accueil(
+          state: HomeState.fromProgress(
+            LearnerProgress.empty,
+            now: DateTime(2026, 9, 10, 10),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text(RelioStrings.startLabel), findsOneWidget);
@@ -285,10 +342,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(GreetingClock), findsOneWidget);
-      expect(
-        find.textContaining(RegExp(r'^\d{2}:\d{2}$')),
-        findsOneWidget,
-      );
+      expect(find.textContaining(RegExp(r'^\d{2}:\d{2}$')), findsOneWidget);
     });
 
     testWidgets('l’horloge se recale au changement de minute', (tester) async {
@@ -316,10 +370,7 @@ void main() {
       int ouvertures = 0;
 
       await tester.pumpWidget(
-        _accueil(
-          state: HomeState.mock(),
-          onRevision: () => ouvertures++,
-        ),
+        _accueil(state: HomeState.mock(), onRevision: () => ouvertures++),
       );
       await tester.pumpAndSettle();
 

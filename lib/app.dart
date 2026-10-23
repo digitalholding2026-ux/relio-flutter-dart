@@ -86,6 +86,7 @@ class RelioApp extends StatefulWidget {
     this.settingsController,
     this.showIntro = true,
     this.quickPracticePicker,
+    this.now,
   });
 
   final AppDatabase database;
@@ -110,6 +111,12 @@ class RelioApp extends StatefulWidget {
   /// catalogue fixe pour rendre la file déterministe, sans toucher au hasard
   /// de production.
   final QuickPracticePicker? quickPracticePicker;
+
+  /// Date de référence, ou `null` pour l'horloge de l'appareil.
+  ///
+  /// Les tests fixent une date pour que le chapitre courant — choisi par la
+  /// séquence du mois — ne dépende pas du jour où la suite est exécutée.
+  final DateTime? now;
 
   @override
   State<RelioApp> createState() => _RelioAppState();
@@ -355,6 +362,7 @@ class _RelioAppState extends State<RelioApp> {
                     settings: settings,
                     controller: _controller,
                     quickPracticePicker: widget.quickPracticePicker,
+                    now: widget.now,
                   ),
 
                   // Jamais un fond blanc sans issue : on dit ce qu'il se passe
@@ -447,11 +455,15 @@ class _RelioShell extends StatefulWidget {
     required this.settings,
     required this.controller,
     this.quickPracticePicker,
+    this.now,
   });
 
   final AppDatabase database;
   final LearnerSettings settings;
   final SettingsController controller;
+
+  /// Date de référence de l'accueil, ou `null` pour l'horloge de l'appareil.
+  final DateTime? now;
 
   /// Pioche des séances courtes, ou `null` pour le tirage réel.
   final QuickPracticePicker? quickPracticePicker;
@@ -856,42 +868,48 @@ class _RelioShellState extends State<_RelioShell> {
     // barre basse ne sont pas recréées, seuls les contenus sont rafraîchis.
     return ValueListenableBuilder<LearnerProgress>(
       valueListenable: _progress,
-      builder: (context, progress, _) => AppShell(
-        key: _shellKey,
-        hideBottomBar: _hideBottomBar,
-        navigatorKeys: <GlobalKey<NavigatorState>>[
-          _homeKey,
-          _learnKey,
-          _profileKey,
-        ],
-        tabs: <Widget Function(BuildContext, GlobalKey<NavigatorState>)>[
-          (context, _) => HomePage(
-            name: widget.settings.name,
-            reduceAnimations: widget.settings.reduceAnimations,
-            // État calculé depuis les faits : « COMMENCER » pour un nouvel
-            // élève, « REPRENDRE » dès la première tentative.
-            homeState: HomeState.fromProgress(progress),
-            // La carte principale ouvre le chapitre ; les deux actions rapides
-            // ouvrent directement un exercice, sans passer par S1.
-            onContinue: _openChapter1,
-            onFiveMinutes: _startFiveMinutes,
-            onWarmup: _startWarmup,
-            onOpenLesson: _openLesson,
-            onRevision: _openRevision,
-          ),
-          (context, _) => LearnPage(
-            learnState: LearnState.fromProgress(progress),
-            onOpenChapter1: _openChapter1,
-            onOpenChapter2: _openChapter2,
-            reduceAnimations: widget.settings.reduceAnimations,
-          ),
-          (context, _) => ProfilePage(
-            settings: widget.settings,
-            progress: progress,
-            onChanged: _onSettingsChanged,
-          ),
-        ],
-      ),
+      builder: (context, progress, _) {
+        final HomeState homeState = HomeState.fromProgress(
+          progress,
+          now: widget.now,
+        );
+        return AppShell(
+          key: _shellKey,
+          hideBottomBar: _hideBottomBar,
+          navigatorKeys: <GlobalKey<NavigatorState>>[
+            _homeKey,
+            _learnKey,
+            _profileKey,
+          ],
+          tabs: <Widget Function(BuildContext, GlobalKey<NavigatorState>)>[
+            (context, _) => HomePage(
+              name: widget.settings.name,
+              reduceAnimations: widget.settings.reduceAnimations,
+              // État calculé depuis les faits : « COMMENCER » pour un nouvel
+              // élève, « REPRENDRE » dès la première tentative.
+              homeState: homeState,
+              // La carte principale ouvre le chapitre que la date a désigné,
+              // pas systématiquement le chapitre 1.
+              onContinue: () => _openChapter(homeState.resume.chapterNumber),
+              onFiveMinutes: _startFiveMinutes,
+              onWarmup: _startWarmup,
+              onOpenLesson: _openLesson,
+              onRevision: _openRevision,
+            ),
+            (context, _) => LearnPage(
+              learnState: LearnState.fromProgress(progress),
+              onOpenChapter1: _openChapter1,
+              onOpenChapter2: _openChapter2,
+              reduceAnimations: widget.settings.reduceAnimations,
+            ),
+            (context, _) => ProfilePage(
+              settings: widget.settings,
+              progress: progress,
+              onChanged: _onSettingsChanged,
+            ),
+          ],
+        );
+      },
     );
   }
 

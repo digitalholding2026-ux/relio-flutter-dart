@@ -62,14 +62,20 @@ void main() {
     expect(progress.completedIn(lesson.id), 1);
     expect(shown.completedExercises, 1);
     expect(shown.totalExercises, 4);
-    expect(shown.exerciseProgressLabel, RelioStrings.lessonExerciseProgress(1, 4));
+    expect(
+      shown.exerciseProgressLabel,
+      RelioStrings.lessonExerciseProgress(1, 4),
+    );
     expect(shown.status, LessonStatus.inProgress);
     expect(shown.fill, closeTo(0.25, 1e-9));
 
     // L'accueil propose la suite immédiate, au bon rang.
-    final home = HomeState.fromProgress(progress);
+    final home = HomeState.fromProgress(
+      progress,
+      now: DateTime(2026, 9, 10, 10),
+    );
     expect(home.started, isTrue);
-    expect(home.resume.chapterTitle, RelioStrings.chapterArithmetic);
+    expect(home.resume.chapterTitle, RelioStrings.chapter1CardTitle);
     expect(home.resume.positionLabel, RelioStrings.resumeProgress(2, 4));
   });
 
@@ -86,10 +92,16 @@ void main() {
     expect(progress.startedLesson(lesson.id), isTrue);
     expect(progress.completedIn(lesson.id), 0);
     expect(shown.status, LessonStatus.inProgress);
-    expect(shown.exerciseProgressLabel, RelioStrings.lessonExerciseProgress(0, 4));
+    expect(
+      shown.exerciseProgressLabel,
+      RelioStrings.lessonExerciseProgress(0, 4),
+    );
     expect(shown.fill, 0);
 
-    final home = HomeState.fromProgress(progress);
+    final home = HomeState.fromProgress(
+      progress,
+      now: DateTime(2026, 9, 10, 10),
+    );
     expect(home.started, isTrue);
     expect(home.resume.positionLabel, RelioStrings.resumeProgress(1, 4));
   });
@@ -109,12 +121,21 @@ void main() {
     final LessonProgress shown = HomeState.lessonProgress(lesson, progress);
 
     expect(progress.completedIn(lesson.id), 4);
-    expect(shown.exerciseProgressLabel, RelioStrings.lessonExerciseProgress(4, 4));
+    expect(
+      shown.exerciseProgressLabel,
+      RelioStrings.lessonExerciseProgress(4, 4),
+    );
     expect(shown.fill, 1);
     expect(shown.status, LessonStatus.mastered);
     expect(shown.statusLabel, RelioStrings.statusMastered);
 
-    expect(HomeState.fromProgress(progress).objective.validated, 1);
+    expect(
+      HomeState.fromProgress(
+        progress,
+        now: DateTime(2026, 9, 10, 10),
+      ).objective.validated,
+      1,
+    );
   });
 
   test('rejouer une réussite ne double pas le décompte', () async {

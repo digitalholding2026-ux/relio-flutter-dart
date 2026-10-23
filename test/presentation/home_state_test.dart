@@ -7,6 +7,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:relio/domain/curriculum/chapter1_bank.dart';
+import 'package:relio/domain/curriculum/chapter2_bank.dart';
 import 'package:relio/domain/curriculum/exercise.dart';
 import 'package:relio/domain/learning/learner_progress.dart';
 import 'package:relio/presentation/home/home_state.dart';
@@ -71,14 +72,11 @@ void main() {
 
       // Le mock n'utilise pas l'état vide : « À commencer » appartient à
       // l'état réel, pas à la démonstration.
-      expect(
-        state.lessons.map((l) => l.status).toSet(),
-        <LessonStatus>{
-          LessonStatus.inProgress,
-          LessonStatus.toReview,
-          LessonStatus.mastered,
-        },
-      );
+      expect(state.lessons.map((l) => l.status).toSet(), <LessonStatus>{
+        LessonStatus.inProgress,
+        LessonStatus.toReview,
+        LessonStatus.mastered,
+      });
       expect(state.lessons[0].statusLabel, RelioStrings.statusInProgress);
       expect(state.lessons[1].statusLabel, RelioStrings.statusToReview);
       expect(state.lessons[2].statusLabel, RelioStrings.statusMastered);
@@ -102,26 +100,32 @@ void main() {
     });
   });
 
-  test('un état peut être construit sans le mock — le moteur pourra le remplir',
-      () {
-    const state = HomeState(
-      objective: SequenceObjective(sequence: 2, validated: 1, notions: 4),
-      message: 'Message',
-      resume: ResumeTarget(chapterTitle: 'Chapitre', positionLabel: 'Exercice 1 sur 2'),
-      lessons: <LessonProgress>[
-        LessonProgress(
-          lessonId: 'x',
-          title: 'Leçon',
-          status: LessonStatus.mastered,
-          fill: 1,
+  test(
+    'un état peut être construit sans le mock — le moteur pourra le remplir',
+    () {
+      const state = HomeState(
+        objective: SequenceObjective(sequence: 2, validated: 1, notions: 4),
+        message: 'Message',
+        resume: ResumeTarget(
+          chapterNumber: 1,
+          chapterTitle: 'Chapitre',
+          positionLabel: 'Exercice 1 sur 2',
         ),
-      ],
-    );
+        lessons: <LessonProgress>[
+          LessonProgress(
+            lessonId: 'x',
+            title: 'Leçon',
+            status: LessonStatus.mastered,
+            fill: 1,
+          ),
+        ],
+      );
 
-    expect(state.lessons, hasLength(1));
-    expect(state.lessons.single.statusLabel, RelioStrings.statusMastered);
-    expect(state.objective.label, 'Séquence 2 • 1 notion sur 4 validées');
-  });
+      expect(state.lessons, hasLength(1));
+      expect(state.lessons.single.statusLabel, RelioStrings.statusMastered);
+      expect(state.objective.label, 'Séquence 2 • 1 notion sur 4 validées');
+    },
+  );
 
   test('un objectif sans notion ne divise pas par zéro', () {
     const objective = SequenceObjective(sequence: 1, validated: 0, notions: 0);
@@ -145,42 +149,53 @@ void main() {
         state.lessons.map((lesson) => lesson.status),
         everyElement(LessonStatus.notStarted),
       );
-      expect(
-        state.lessons.map((lesson) => lesson.fill),
-        everyElement(0.0),
-      );
+      expect(state.lessons.map((lesson) => lesson.fill), everyElement(0.0));
     });
 
-    test('le soir, le message de Relio situe l’élève et propose une session', () {
-      final DateTime now = DateTime(2026, 11, 22, 21);
-      final state = HomeState.fromProgress(LearnerProgress.empty, now: now);
+    test(
+      'le soir, le message de Relio situe l’élève et propose une session',
+      () {
+        final DateTime now = DateTime(2026, 11, 22, 21);
+        final state = HomeState.fromProgress(LearnerProgress.empty, now: now);
 
-      expect(state.message, RelioStrings.relioSeasonMessage(now, 2));
-      expect(state.message, startsWith('Bonsoir'));
-      expect(state.message, contains('ce soir'));
-    });
+        expect(state.message, RelioStrings.relioSeasonMessage(now, 2));
+        expect(state.message, startsWith('Bonsoir'));
+        expect(state.message, contains('ce soir'));
+      },
+    );
 
-    test('une tentative suffit pour proposer de reprendre', () {
+    test('une tentative au chapitre 1 ne fait pas démarrer le chapitre 2', () {
       final lesson = ArithmeticLesson.lesson1Subtractions;
       final progress = LearnerProgress(
         startedLessonIds: <String>{lesson.id},
         lessonExerciseTotals: LearnerProgress.officialChapter1ExerciseTotals(),
       );
 
-      final state = HomeState.fromProgress(
-        progress,
-        now: DateTime(2026, 11, 10, 10),
-      );
+      final DateTime now = DateTime(2026, 11, 10, 10);
+      final state = HomeState.fromProgress(progress, now: now);
 
-      expect(state.started, isTrue);
-      expect(
-        state.message,
-        RelioStrings.relioSeasonMessage(DateTime(2026, 11, 10, 10), 2),
-      );
+      // En novembre, le chapitre courant est Thalès : la tentative faite sur
+      // l'arithmétique n'ouvre donc pas la carte du chapitre 2.
+      expect(state.started, isFalse);
+      expect(state.message, RelioStrings.relioSeasonMessage(now, 2));
       expect(state.objective.sequence, 2);
-      expect(state.resume.positionLabel, RelioStrings.resumeProgress(1, 4));
-      expect(state.lessons.first.status, LessonStatus.inProgress);
-      expect(state.lessons.first.fill, 0);
+      expect(state.resume.chapterNumber, 2);
+      expect(state.resume.chapterTitle, RelioStrings.chapter2CardTitle);
+      expect(state.resume.positionLabel, isNull);
+
+      // Les deux leçons de Thalès passent en tête, jamais commencées.
+      expect(
+        state.lessons.take(2).map((l) => l.lessonId),
+        ThalesLesson.values.map((l) => l.id),
+      );
+      expect(
+        state.lessons.take(2).map((l) => l.status),
+        everyElement(LessonStatus.notStarted),
+      );
+      // Puis la leçon d'arithmétique commencée, qui reste à revoir.
+      expect(state.lessons.last.lessonId, lesson.id);
+      expect(state.lessons.last.status, LessonStatus.inProgress);
+      expect(state.lessons.last.fill, 0);
     });
 
     test('un premier exercice réussi annonce la suite et la position', () {
@@ -200,7 +215,10 @@ void main() {
         lessonExerciseTotals: LearnerProgress.officialChapter1ExerciseTotals(),
       );
 
-      final state = HomeState.fromProgress(progress);
+      final state = HomeState.fromProgress(
+        progress,
+        now: DateTime(2026, 9, 10, 10),
+      );
 
       // L'accueil propose de CONTINUER, avec la position réelle.
       expect(state.started, isTrue);
@@ -229,13 +247,75 @@ void main() {
         lessonExerciseTotals: LearnerProgress.officialChapter1ExerciseTotals(),
       );
 
-      final state = HomeState.fromProgress(progress);
+      final state = HomeState.fromProgress(
+        progress,
+        now: DateTime(2026, 9, 10, 10),
+      );
 
       expect(state.objective.validated, 1);
       expect(state.lessons.first.status, LessonStatus.mastered);
       expect(state.lessons.first.fill, 1);
       // La reprise pointe le premier exercice de la leçon suivante.
       expect(state.resume.positionLabel, RelioStrings.resumeProgress(1, 3));
+    });
+
+    test('en octobre, le chapitre courant est Théorème de Thalès', () {
+      final DateTime now = DateTime(2026, 10, 22, 10);
+      final state = HomeState.fromProgress(LearnerProgress.empty, now: now);
+
+      // La séquence 2 ne contient aucun chapitre ouvert : l'accueil garde le
+      // dernier chapitre enseigné, Thalès, plutôt qu'une liste vide.
+      expect(state.objective.sequence, 2);
+      expect(state.currentChapterNumber, 2);
+      expect(state.resume.chapterNumber, 2);
+      expect(state.resume.chapterTitle, RelioStrings.chapter2CardTitle);
+      expect(state.resume.positionLabel, isNull);
+      expect(state.started, isFalse);
+      expect(state.objective.notions, ThalesLesson.values.length);
+      expect(
+        state.lessons.map((lesson) => lesson.lessonId),
+        ThalesLesson.values.map((lesson) => lesson.id),
+      );
+      expect(state.message, RelioStrings.relioSeasonMessage(now, 2));
+    });
+
+    test('en septembre, le chapitre courant est Arithmétique', () {
+      final state = HomeState.fromProgress(
+        LearnerProgress.empty,
+        now: DateTime(2026, 9, 10, 10),
+      );
+
+      expect(state.currentChapterNumber, 1);
+      expect(state.resume.chapterTitle, RelioStrings.chapter1CardTitle);
+      expect(state.objective.notions, ArithmeticLesson.values.length);
+    });
+
+    test('en décembre, aucun chapitre ouvert ne vide l’accueil', () {
+      final state = HomeState.fromProgress(
+        LearnerProgress.empty,
+        now: DateTime(2026, 12, 10, 10),
+      );
+
+      expect(state.objective.sequence, 3);
+      expect(state.currentChapterNumber, 2);
+      expect(state.lessons, isNotEmpty);
+    });
+
+    test('un chapitre 2 commencé propose de reprendre', () {
+      final lesson = ThalesLesson.lesson1Direct;
+      final progress = LearnerProgress(
+        startedLessonIds: <String>{lesson.id},
+        lessonExerciseTotals: LearnerProgress.officialExerciseTotals(),
+      );
+
+      final state = HomeState.fromProgress(
+        progress,
+        now: DateTime(2026, 10, 22, 10),
+      );
+
+      expect(state.started, isTrue);
+      expect(state.resume.chapterNumber, 2);
+      expect(state.resume.positionLabel, RelioStrings.resumeProgress(1, 1));
     });
   });
 }

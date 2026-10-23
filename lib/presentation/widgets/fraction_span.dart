@@ -28,6 +28,8 @@ class FractionSpan extends StatelessWidget {
     required this.numerator,
     required this.denominator,
     this.style,
+    this.numeratorStyle,
+    this.denominatorStyle,
   });
 
   /// Numérateur, écrit au-dessus de la barre.
@@ -38,6 +40,14 @@ class FractionSpan extends StatelessWidget {
 
   /// Style du texte environnant. `null` : hérite du [DefaultTextStyle].
   final TextStyle? style;
+
+  /// Style propre au numérateur (variable serif italique, par exemple).
+  ///
+  /// `null` : style du texte environnant, chiffres tabulaires.
+  final TextStyle? numeratorStyle;
+
+  /// Style propre au dénominateur.
+  final TextStyle? denominatorStyle;
 
   /// Épaisseur de la barre de fraction.
   static const double barThickness = 1.2;
@@ -52,19 +62,26 @@ class FractionSpan extends StatelessWidget {
     // La barre prend la couleur du texte. Si le style n'en porte pas, on
     // retombe sur la couleur ambiante, puis sur l'encre par défaut : la barre
     // ne doit jamais être invisible.
-    final Color encre = base.color ??
+    final Color encre =
+        base.color ??
         DefaultTextStyle.of(context).style.color ??
         const Color(0xFF000000);
 
     // Chiffres tabulaires : deux fractions voisines gardent la même largeur.
     // Hauteur de ligne resserrée : la pile reste compacte dans une phrase.
-    final TextStyle chiffres = base.copyWith(
-      height: 1.1,
-      fontFeatures: <FontFeature>[
-        ...?base.fontFeatures,
-        const FontFeature.tabularFigures(),
-      ],
-    );
+    TextStyle partie(TextStyle? propre) {
+      final TextStyle source = propre ?? base;
+      return source.copyWith(
+        height: 1.1,
+        fontFeatures: <FontFeature>[
+          ...?source.fontFeatures,
+          const FontFeature.tabularFigures(),
+        ],
+      );
+    }
+
+    final TextStyle numerateur = partie(numeratorStyle);
+    final TextStyle denominateur = partie(denominatorStyle);
 
     final Widget visuel = IntrinsicWidth(
       child: Column(
@@ -76,21 +93,17 @@ class FractionSpan extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 1,
             softWrap: false,
-            style: chiffres,
+            style: numerateur,
           ),
           // La barre occupe toute la largeur de la fraction : celle du plus
           // large des deux nombres, jamais celle de l'un seulement.
-          Container(
-            height: barThickness,
-            margin: barMargin,
-            color: encre,
-          ),
+          Container(height: barThickness, margin: barMargin, color: encre),
           Text(
             denominator,
             textAlign: TextAlign.center,
             maxLines: 1,
             softWrap: false,
-            style: chiffres,
+            style: denominateur,
           ),
         ],
       ),

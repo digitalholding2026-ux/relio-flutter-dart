@@ -16,7 +16,7 @@ library;
 import 'package:flutter/foundation.dart';
 
 import '../../domain/curriculum/academic_calendar.dart';
-import '../../domain/curriculum/chapter1_bank.dart';
+import '../../domain/curriculum/curriculum_bank.dart';
 import '../../domain/curriculum/curriculum_data.dart';
 import '../../domain/curriculum/exercise.dart';
 import '../../domain/learning/learner_progress.dart';
@@ -91,11 +91,38 @@ class LessonProgress {
   /// L'information n'est jamais portée par la seule couleur : chaque état est
   /// doublé de ce texte.
   String get statusLabel => switch (status) {
-        LessonStatus.notStarted => RelioStrings.statusNotStarted,
-        LessonStatus.toReview => RelioStrings.statusToReview,
-        LessonStatus.inProgress => RelioStrings.statusInProgress,
-        LessonStatus.mastered => RelioStrings.statusMastered,
-      };
+    LessonStatus.notStarted => RelioStrings.statusNotStarted,
+    LessonStatus.toReview => RelioStrings.statusToReview,
+    LessonStatus.inProgress => RelioStrings.statusInProgress,
+    LessonStatus.mastered => RelioStrings.statusMastered,
+  };
+}
+
+/// Un chapitre OUVERT, avec son numéro, son intitulé et ses leçons.
+///
+/// La liste des chapitres ouverts vient de [CurriculumBank] : l'accueil ne
+/// code jamais « chapitre 1 » en dur. Ajouter une banque suffit donc à la voir
+/// apparaître dans le programme et dans la carte de reprise.
+@immutable
+class HomeChapter {
+  /// Crée la description d'un chapitre ouvert.
+  const HomeChapter({
+    required this.number,
+    required this.title,
+    required this.lessons,
+  });
+
+  /// Numéro du chapitre dans le programme.
+  final int number;
+
+  /// Intitulé transcrit du programme officiel.
+  final String title;
+
+  /// Leçons du chapitre, dans l'ordre du programme.
+  final List<CurriculumLesson> lessons;
+
+  /// Titre complet affiché sur la carte : « Chapitre 2 : Théorème de Thalès ».
+  String get cardTitle => RelioStrings.chapterCardTitle(number, title);
 }
 
 /// Chapitre proposé en carte principale (reprise, ou premier démarrage).
@@ -103,9 +130,13 @@ class LessonProgress {
 class ResumeTarget {
   /// Crée la cible de reprise.
   const ResumeTarget({
+    required this.chapterNumber,
     required this.chapterTitle,
     this.positionLabel,
   });
+
+  /// Numéro du chapitre à ouvrir : c'est lui que « Continuer » doit viser.
+  final int chapterNumber;
 
   /// Titre du chapitre, repris du document validé.
   final String chapterTitle;
@@ -150,7 +181,8 @@ class SequenceObjective {
   }
 
   /// Libellé affiché au-dessus du prénom.
-  String get label => RelioStrings.sequenceObjective(sequence, validated, notions);
+  String get label =>
+      RelioStrings.sequenceObjective(sequence, validated, notions);
 }
 
 /// Codes de blocage récent que les mocks savent reconnaître.
@@ -173,6 +205,7 @@ class HomeState {
     required this.resume,
     required this.lessons,
     this.started = true,
+    this.currentChapterNumber = 1,
   });
 
   /// Objectif de séquence, affiché au-dessus du prénom.
@@ -184,10 +217,14 @@ class HomeState {
   /// Chapitre à reprendre, ou à commencer.
   final ResumeTarget resume;
 
-  /// Leçons du chapitre courant, dans l'ordre du programme.
+  /// Leçons affichées : le chapitre courant d'abord, puis les leçons
+  /// commencées et non terminées des chapitres précédents.
   final List<LessonProgress> lessons;
 
-  /// L'élève a-t-il déjà soumis au moins une tentative ?
+  /// Numéro du chapitre affiché comme « en cours ».
+  final int currentChapterNumber;
+
+  /// Le chapitre affiché a-t-il déjà été commencé ?
   ///
   /// `false` : la carte principale propose de COMMENCER, sans position ni
   /// progression inventée. `true` : elle propose de REPRENDRE.
@@ -203,25 +240,97 @@ class HomeState {
   /// [now] permet de fixer la date dans les tests. En production, la date
   /// locale de l'appareil choisit la séquence : c'est elle qui situe l'élève
   /// dans l'année scolaire.
+  ///
+  /// LE CHAPITRE SUIT LA SÉQUENCE. L'accueil ne montre plus systématiquement
+  /// l'arithmétique :
+  ///
+  ///  1. on lit la séquence du mois dans [officialProgram] ;
+  ///  2. on retient le premier chapitre OUVERT dont l'intitulé figure dans
+  ///     cette séquence (`Arithmétique` en septembre, par exemple) ;
+  ///  3. si la séquence ne contient aucun chapitre ouvert — octobre et
+  ///     novembre annoncent « Nombres réels (suite) » et « Trigonométrie »,
+  ///     dont les banques n'existent pas encore —, on retient le dernier
+  ///     chapitre ouvert, c'est-à-dire celui qui vient d'être enseigné :
+  ///     « Théorème de Thalès ». C'est le chapitre que l'élève doit
+  ///     travailler, pas un chapitre vide.
   factory HomeState.fromProgress(LearnerProgress progress, {DateTime? now}) {
     final DateTime date = now ?? DateTime.now();
     final AcademicSequence sequence = sequenceForDate(date);
+    final HomeChapter chapter = _currentChapterFor(sequence);
 
     return HomeState(
       objective: SequenceObjective(
         sequence: sequence.number,
-        validated: progress.masteredNotionsIn(ArithmeticLesson.values),
-        notions: ArithmeticLesson.values.length,
+        validated: progress.masteredNotionsIn(chapter.lessons),
+        notions: chapter.lessons.length,
       ),
       message: _messageFor(progress, date, sequence.number),
-      resume: _resumeTarget(progress),
+      resume: _resumeTarget(chapter, progress),
       lessons: <LessonProgress>[
-        for (final ArithmeticLesson lesson in ArithmeticLesson.values)
+        // Le chapitre en cours d'abord.
+        for (final CurriculumLesson lesson in chapter.lessons)
           lessonProgress(lesson, progress),
+        // Puis les leçons des chapitres précédents qui sont commencées et
+        // non terminées : c'est le « à revoir » de l'élève, sans rien
+        // inventer pour les leçons jamais ouvertes.
+        for (final HomeChapter previous in _chaptersBefore(chapter.number))
+          for (final CurriculumLesson lesson in previous.lessons)
+            if (progress.startedLesson(lesson.id) &&
+                !progress.isLessonMastered(lesson.id))
+              lessonProgress(lesson, progress),
       ],
-      started: progress.hasStarted,
+      started: chapter.lessons.any(
+        (CurriculumLesson lesson) => progress.startedLesson(lesson.id),
+      ),
+      currentChapterNumber: chapter.number,
     );
   }
+
+  /// Chapitres ouverts, dans l'ordre du programme.
+  ///
+  /// Aucun numéro n'est codé en dur : le registre [CurriculumBank] fait foi.
+  static List<HomeChapter> openChapters() {
+    final numbers = <int>{
+      for (final CurriculumLesson lesson in CurriculumBank.lessons)
+        lesson.chapterNumber,
+    }.toList()..sort();
+
+    return <HomeChapter>[
+      for (final int number in numbers)
+        HomeChapter(
+          number: number,
+          title: _chapterTitle(number),
+          lessons: CurriculumBank.lessonsForChapter(number),
+        ),
+    ];
+  }
+
+  /// Intitulé d'un chapitre ouvert.
+  ///
+  /// Seuls les chapitres dont la banque existe sont nommés ici : un chapitre
+  /// sans banque n'est jamais affiché comme courant.
+  static String _chapterTitle(int number) => switch (number) {
+    1 => RelioStrings.chapterArithmetic,
+    2 => RelioStrings.chapterThales,
+    _ => RelioStrings.chapterLabel(number),
+  };
+
+  /// Chapitre courant d'une séquence.
+  static HomeChapter _currentChapterFor(AcademicSequence sequence) {
+    final List<HomeChapter> chapters = openChapters();
+    for (final HomeChapter chapter in chapters) {
+      if (sequence.chapters.contains(chapter.title)) return chapter;
+    }
+    // La séquence ne contient aucun chapitre ouvert : on garde le dernier
+    // chapitre enseigné, plutôt que d'afficher une liste vide.
+    return chapters.last;
+  }
+
+  /// Chapitres ouverts strictement antérieurs à [number].
+  static List<HomeChapter> _chaptersBefore(int number) => <HomeChapter>[
+    for (final HomeChapter chapter in openChapters())
+      if (chapter.number < number) chapter,
+  ];
 
   /// État d'affichage d'une leçon, déduit des faits.
   ///
@@ -274,41 +383,56 @@ class HomeState {
     return RelioStrings.relioSeasonMessage(date, sequence);
   }
 
-  /// Cible de la carte principale : premier exercice non terminé.
-  static ResumeTarget _resumeTarget(LearnerProgress progress) {
-    if (!progress.hasStarted) {
-      // Premier démarrage : le titre porte le numéro du chapitre, puisqu'il
+  /// Cible de la carte principale : premier exercice non terminé du chapitre.
+  ///
+  /// Le parcours suit les leçons du chapitre, puis leurs exercices. Une leçon
+  /// entièrement réussie est sautée : la carte annonce le premier travail qui
+  /// reste réellement à faire.
+  static ResumeTarget _resumeTarget(
+    HomeChapter chapter,
+    LearnerProgress progress,
+  ) {
+    final bool started = chapter.lessons.any(
+      (CurriculumLesson lesson) => progress.startedLesson(lesson.id),
+    );
+
+    if (!started) {
+      // Premier démarrage du chapitre : le titre porte son numéro, puisqu'il
       // n'y a ni position ni leçon à rappeler.
-      return ResumeTarget(chapterTitle: RelioStrings.chapter1CardTitle);
+      return ResumeTarget(
+        chapterNumber: chapter.number,
+        chapterTitle: chapter.cardTitle,
+      );
     }
 
-    for (final ArithmeticLesson lesson in ArithmeticLesson.values) {
-      final exercises = Chapter1Bank.exercises
-          .where(
-            (exercise) =>
-                exercise.kind == BankElementKind.exercise &&
-                exercise.lesson == lesson,
-          )
-          .toList();
+    for (final CurriculumLesson lesson in chapter.lessons) {
+      final List<Exercise> exercises = CurriculumBank.exercisesOfLesson(
+        lesson.id,
+      );
       if (exercises.isEmpty) continue;
 
-      final done = progress.completedExerciseIdsByLesson[lesson.id] ??
-          const <String>{};
+      final done =
+          progress.completedExerciseIdsByLesson[lesson.id] ?? const <String>{};
       final int index = exercises.indexWhere((e) => !done.contains(e.id));
       if (index >= 0) {
         return ResumeTarget(
-          chapterTitle: RelioStrings.chapterArithmetic,
-          positionLabel: RelioStrings.resumeProgress(index + 1, exercises.length),
+          chapterNumber: chapter.number,
+          chapterTitle: chapter.cardTitle,
+          positionLabel: RelioStrings.resumeProgress(
+            index + 1,
+            exercises.length,
+          ),
         );
       }
     }
 
     // Tout est terminé : on annonce la dernière position connue plutôt qu'une
     // position inventée.
-    final firstLesson = ArithmeticLesson.values.first;
-    final int total = progress.totalFor(firstLesson.id);
+    final CurriculumLesson lastLesson = chapter.lessons.last;
+    final int total = progress.totalFor(lastLesson.id);
     return ResumeTarget(
-      chapterTitle: RelioStrings.chapterArithmetic,
+      chapterNumber: chapter.number,
+      chapterTitle: chapter.cardTitle,
       positionLabel: RelioStrings.resumeProgress(total, total),
     );
   }
@@ -334,10 +458,12 @@ class HomeState {
     return HomeState(
       objective: const SequenceObjective(sequence: 1, validated: 2, notions: 5),
       message: switch (recentBlock) {
-        RecentBlockCodes.subtractionWrong => RelioStrings.relioMessageSubtraction,
+        RecentBlockCodes.subtractionWrong =>
+          RelioStrings.relioMessageSubtraction,
         _ => RelioStrings.relioMessage,
       },
       resume: ResumeTarget(
+        chapterNumber: 1,
         chapterTitle: RelioStrings.chapterArithmetic,
         positionLabel: RelioStrings.resumeProgress(2, 4),
       ),

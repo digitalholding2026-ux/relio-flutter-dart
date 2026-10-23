@@ -35,10 +35,20 @@ import 'package:relio/presentation/widgets/relio_progress_bar.dart';
 import '../helpers/test_database.dart';
 
 /// Pompe l'application et aboutit sur l'accueil.
-Future<AppDatabase> pumpApp(WidgetTester tester) async {
+///
+/// La date est fixée en septembre par défaut : le chapitre courant ne dépend
+/// alors pas du jour où la suite est exécutée. Les tests qui portent sur un
+/// autre mois passent [now] explicitement.
+Future<AppDatabase> pumpApp(WidgetTester tester, {DateTime? now}) async {
   final db = await openTestDatabase();
   registerTestDatabase(db);
-  await tester.pumpWidget(RelioApp(database: db, showIntro: false));
+  await tester.pumpWidget(
+    RelioApp(
+      database: db,
+      showIntro: false,
+      now: now ?? DateTime(2026, 9, 10, 10),
+    ),
+  );
   await tester.pumpAndSettle();
   return db;
 }
@@ -69,8 +79,9 @@ Future<void> scrollProfileTo(WidgetTester tester, String label) async {
 
 void main() {
   group('Racine', () {
-    testWidgets('l’application ouvre sur l’accueil, pas sur S1',
-        (tester) async {
+    testWidgets('l’application ouvre sur l’accueil, pas sur S1', (
+      tester,
+    ) async {
       await pumpApp(tester);
 
       expect(find.byType(HomePage), findsOneWidget);
@@ -79,14 +90,10 @@ void main() {
       expect(find.byType(ExercisePage), findsNothing);
     });
 
-    testWidgets('aucun onboarding : pas de page de bienvenue',
-        (tester) async {
+    testWidgets('aucun onboarding : pas de page de bienvenue', (tester) async {
       await pumpApp(tester);
 
-      expect(
-        find.textContaining('tu prépares la Séquence'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('tu prépares la Séquence'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });
@@ -130,8 +137,7 @@ void main() {
   });
 
   group('Piles indépendantes', () {
-    testWidgets('changer d’onglet ne réinitialise pas la pile',
-        (tester) async {
+    testWidgets('changer d’onglet ne réinitialise pas la pile', (tester) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
       await tester.tap(find.text(RelioStrings.chapter1CardTitle));
@@ -193,19 +199,17 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
     }
 
-    testWidgets('affiche le message de Relio et la carte « Commencer »',
-        (tester) async {
+    testWidgets('affiche le message de Relio et la carte « Commencer »', (
+      tester,
+    ) async {
       useTallScreen(tester);
       await pumpApp(tester);
 
-      expect(
-        find.textContaining('tu prépares la Séquence'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('tu prépares la Séquence'), findsOneWidget);
       expect(
         find.text(
           RelioStrings.sequenceObjective(
-            sequenceForDate(DateTime.now()).number,
+            sequenceForDate(DateTime(2026, 9, 10)).number,
             0,
             ArithmeticLesson.values.length,
           ),
@@ -239,8 +243,27 @@ void main() {
       expect(find.byType(ChapterAccessPage), findsOneWidget);
     });
 
-    testWidgets('le tap sur une action rapide ouvre un exercice',
-        (tester) async {
+    testWidgets('en octobre, « Commencer » ouvre le chapitre 2', (
+      tester,
+    ) async {
+      // La carte suit la séquence du mois : le dernier chapitre enseigné est
+      // Thalès, et le bouton doit ouvrir CE chapitre, pas l'arithmétique.
+      await pumpApp(tester, now: DateTime(2026, 10, 22, 10));
+
+      expect(find.text(RelioStrings.chapter2CardTitle), findsOneWidget);
+
+      await tester.tap(find.text(RelioStrings.startFirstExercise));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ChapterAccessPage), findsOneWidget);
+      expect(find.text(RelioStrings.chapterLabel(2)), findsOneWidget);
+      expect(find.text(RelioStrings.chapterThales), findsOneWidget);
+      expect(find.text(RelioStrings.chapterTitle), findsNothing);
+    });
+
+    testWidgets('le tap sur une action rapide ouvre un exercice', (
+      tester,
+    ) async {
       await pumpApp(tester);
 
       await tester.tap(find.text(RelioStrings.quickFiveTitle));
@@ -250,10 +273,15 @@ void main() {
       expect(find.byType(ExercisePage), findsOneWidget);
       expect(find.byType(ChapterAccessPage), findsNothing);
       expect(find.text(RelioStrings.quickSessionTitle), findsOneWidget);
-      expect(find.text(RelioStrings.quickSessionProgress(1, 3)), findsOneWidget);
+      expect(
+        find.text(RelioStrings.quickSessionProgress(1, 3)),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('un appui rapproche la carte avant de naviguer', (tester) async {
+    testWidgets('un appui rapproche la carte avant de naviguer', (
+      tester,
+    ) async {
       useTallScreen(tester);
       await pumpApp(tester);
 
@@ -276,8 +304,9 @@ void main() {
       expect(find.byType(ExercisePage), findsOneWidget);
     });
 
-    testWidgets('« Ton programme » liste les leçons et leur statut',
-        (tester) async {
+    testWidgets('« Ton programme » liste les leçons et leur statut', (
+      tester,
+    ) async {
       useTallScreen(tester);
       await pumpApp(tester);
 
@@ -291,8 +320,9 @@ void main() {
       expect(find.text(RelioStrings.statusMastered), findsNothing);
     });
 
-    testWidgets('le tap sur une leçon du programme ouvre l’exercice',
-        (tester) async {
+    testWidgets('le tap sur une leçon du programme ouvre l’exercice', (
+      tester,
+    ) async {
       useTallScreen(tester);
       await pumpApp(tester);
 
@@ -311,8 +341,9 @@ void main() {
       expect(find.textContaining('Score'), findsNothing);
     });
 
-    testWidgets('sans prénom, l’en-tête dit seulement la salutation',
-        (tester) async {
+    testWidgets('sans prénom, l’en-tête dit seulement la salutation', (
+      tester,
+    ) async {
       await pumpApp(tester);
 
       expect(
@@ -325,12 +356,14 @@ void main() {
       final db = await openTestDatabase();
       registerTestDatabase(db);
       final controller = SettingsController(SettingsRepository(db));
-      await controller.apply(
-        controller.settings.copyWith(name: 'Camille'),
-      );
+      await controller.apply(controller.settings.copyWith(name: 'Camille'));
 
       await tester.pumpWidget(
-        RelioApp(database: db, settingsController: controller, showIntro: false),
+        RelioApp(
+          database: db,
+          settingsController: controller,
+          showIntro: false,
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -342,8 +375,9 @@ void main() {
   });
 
   group('Apprendre', () {
-    testWidgets('le chapitre 1 est actif, le chapitre 3 est indisponible',
-        (tester) async {
+    testWidgets('le chapitre 1 est actif, le chapitre 3 est indisponible', (
+      tester,
+    ) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
 
@@ -364,8 +398,7 @@ void main() {
       expect(find.text(RelioStrings.chapterComingSoon), findsOneWidget);
     });
 
-    testWidgets('un chapitre indisponible n’est pas cliquable',
-        (tester) async {
+    testWidgets('un chapitre indisponible n’est pas cliquable', (tester) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
 
@@ -377,8 +410,9 @@ void main() {
       expect(find.byType(ChapterAccessPage), findsNothing);
     });
 
-    testWidgets('le tap sur le chapitre 2 ouvre ses deux leçons',
-        (tester) async {
+    testWidgets('le tap sur le chapitre 2 ouvre ses deux leçons', (
+      tester,
+    ) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
 
@@ -400,15 +434,19 @@ void main() {
       expect(find.byType(ChapterAccessPage), findsOneWidget);
     });
 
-    testWidgets('le chapitre 1 affiche sa progression réelle, vide au départ',
-        (tester) async {
+    testWidgets('le chapitre 1 affiche sa progression réelle, vide au départ', (
+      tester,
+    ) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
 
       // La progression est un trait, jamais un pourcentage ni un compteur de
       // chapitres terminés. Deux chapitres ouverts portent chacun le leur.
       expect(find.byType(RelioProgressBar), findsNWidgets(2));
-      expect(find.text(RelioStrings.chapterLessonsValidated(0, 3)), findsOneWidget);
+      expect(
+        find.text(RelioStrings.chapterLessonsValidated(0, 3)),
+        findsOneWidget,
+      );
       expect(find.byType(LinearProgressIndicator), findsNothing);
       expect(find.textContaining('%'), findsNothing);
       expect(find.textContaining('terminés'), findsNothing);
@@ -416,8 +454,9 @@ void main() {
   });
 
   group('S1 — ajustements', () {
-    testWidgets('la flèche de retour ramène à l’écran Apprendre',
-        (tester) async {
+    testWidgets('la flèche de retour ramène à l’écran Apprendre', (
+      tester,
+    ) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
       await tester.tap(find.text(RelioStrings.chapter1CardTitle));
@@ -446,8 +485,9 @@ void main() {
   });
 
   group('S2 — ajustements', () {
-    testWidgets('la barre de navigation basse est masquée sur S2',
-        (tester) async {
+    testWidgets('la barre de navigation basse est masquée sur S2', (
+      tester,
+    ) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.learn);
       await tester.tap(find.text(RelioStrings.chapter1CardTitle));
@@ -485,46 +525,53 @@ void main() {
 
   group('Profil', () {
     testWidgets(
-        'présente l’en-tête, le parcours et les deux cartes de réglages',
-        (tester) async {
-      await pumpApp(tester);
-      await goToTab(tester, RelioTab.profile);
+      'présente l’en-tête, le parcours et les deux cartes de réglages',
+      (tester) async {
+        await pumpApp(tester);
+        await goToTab(tester, RelioTab.profile);
 
-      expect(find.text(RelioStrings.profileTitle), findsWidgets);
-      expect(find.text(RelioStrings.profileJourneyTitle), findsOneWidget);
-      expect(find.text(RelioStrings.sectionDisplay), findsOneWidget);
-      await scrollProfileTo(tester, RelioStrings.sectionAccessibility);
-      expect(find.text(RelioStrings.sectionAccessibility), findsOneWidget);
-    });
+        expect(find.text(RelioStrings.profileTitle), findsWidgets);
+        expect(find.text(RelioStrings.profileJourneyTitle), findsOneWidget);
+        expect(find.text(RelioStrings.sectionDisplay), findsOneWidget);
+        await scrollProfileTo(tester, RelioStrings.sectionAccessibility);
+        expect(find.text(RelioStrings.sectionAccessibility), findsOneWidget);
+      },
+    );
 
-    testWidgets('la classe est affichée en 3e et n’est pas modifiable',
-        (tester) async {
+    testWidgets('la classe est affichée en 3e et n’est pas modifiable', (
+      tester,
+    ) async {
       await pumpApp(tester);
       await goToTab(tester, RelioTab.profile);
 
       expect(find.text('Classe de 3e'), findsOneWidget);
     });
 
-    testWidgets('aucune progression chiffrée, aucun score, aucun avatar photo',
-        (tester) async {
-      await pumpApp(tester);
-      await goToTab(tester, RelioTab.profile);
+    testWidgets(
+      'aucune progression chiffrée, aucun score, aucun avatar photo',
+      (tester) async {
+        await pumpApp(tester);
+        await goToTab(tester, RelioTab.profile);
 
-      expect(find.text('Progression'), findsNothing);
-      expect(find.text('Score'), findsNothing);
-      expect(find.text('Statistiques'), findsNothing);
-      expect(find.byType(CircleAvatar), findsNothing);
-      expect(find.textContaining('%'), findsNothing);
-    });
+        expect(find.text('Progression'), findsNothing);
+        expect(find.text('Score'), findsNothing);
+        expect(find.text('Statistiques'), findsNothing);
+        expect(find.byType(CircleAvatar), findsNothing);
+        expect(find.textContaining('%'), findsNothing);
+      },
+    );
 
-    testWidgets('le prénom saisi est propagé à l’accueil',
-        (tester) async {
+    testWidgets('le prénom saisi est propagé à l’accueil', (tester) async {
       final db = await openTestDatabase();
       registerTestDatabase(db);
       final controller = SettingsController(SettingsRepository(db));
 
       await tester.pumpWidget(
-        RelioApp(database: db, settingsController: controller, showIntro: false),
+        RelioApp(
+          database: db,
+          settingsController: controller,
+          showIntro: false,
+        ),
       );
       await tester.pumpAndSettle();
       await goToTab(tester, RelioTab.profile);
@@ -552,7 +599,11 @@ void main() {
       final controller = SettingsController(repository);
 
       await tester.pumpWidget(
-        RelioApp(database: db, settingsController: controller, showIntro: false),
+        RelioApp(
+          database: db,
+          settingsController: controller,
+          showIntro: false,
+        ),
       );
       await tester.pumpAndSettle();
       await goToTab(tester, RelioTab.profile);
@@ -576,20 +627,26 @@ void main() {
         expect(find.text(option.label), findsOneWidget);
       }
       expect(TextScalePreference.values, hasLength(3));
-      expect(
-        TextScalePreference.values.map((v) => v.factor),
-        <double>[1.0, 1.15, 1.3],
-      );
+      expect(TextScalePreference.values.map((v) => v.factor), <double>[
+        1.0,
+        1.15,
+        1.3,
+      ]);
     });
 
-    testWidgets('le contraste renforcé change effectivement la palette',
-        (tester) async {
+    testWidgets('le contraste renforcé change effectivement la palette', (
+      tester,
+    ) async {
       final db = await openTestDatabase();
       registerTestDatabase(db);
       final controller = SettingsController(SettingsRepository(db));
 
       await tester.pumpWidget(
-        RelioApp(database: db, settingsController: controller, showIntro: false),
+        RelioApp(
+          database: db,
+          settingsController: controller,
+          showIntro: false,
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -599,19 +656,26 @@ void main() {
 
       // Le contraste renforcé renforce réellement la bordure.
       expect(contrast.outline.toARGB32(), isNot(standard.outline.toARGB32()));
-      expect(contrast.textSecondary.toARGB32(),
-          isNot(standard.textSecondary.toARGB32()));
+      expect(
+        contrast.textSecondary.toARGB32(),
+        isNot(standard.textSecondary.toARGB32()),
+      );
     });
 
-    testWidgets('la réduction des animations est une préférence persistée',
-        (tester) async {
+    testWidgets('la réduction des animations est une préférence persistée', (
+      tester,
+    ) async {
       final db = await openTestDatabase();
       registerTestDatabase(db);
       final repository = SettingsRepository(db);
       final controller = SettingsController(repository);
 
       await tester.pumpWidget(
-        RelioApp(database: db, settingsController: controller, showIntro: false),
+        RelioApp(
+          database: db,
+          settingsController: controller,
+          showIntro: false,
+        ),
       );
       await tester.pumpAndSettle();
       await goToTab(tester, RelioTab.profile);
@@ -630,17 +694,26 @@ void main() {
   });
 
   group('Absences imposées', () {
-    testWidgets('aucun code diagnostic interne visible',
-        (tester) async {
+    testWidgets('aucun code diagnostic interne visible', (tester) async {
       await pumpApp(tester);
 
-      for (final code in <String>['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8']) {
+      for (final code in <String>[
+        'D1',
+        'D2',
+        'D3',
+        'D4',
+        'D5',
+        'D6',
+        'D7',
+        'D8',
+      ]) {
         expect(find.textContaining(code), findsNothing);
       }
     });
 
-    testWidgets('aucune mécanique de jeu sur l’ensemble des onglets',
-        (tester) async {
+    testWidgets('aucune mécanique de jeu sur l’ensemble des onglets', (
+      tester,
+    ) async {
       await pumpApp(tester);
 
       for (final tab in RelioTab.values) {

@@ -22,7 +22,13 @@ void main() {
     final db = await openTestDatabase();
     registerTestDatabase(db);
 
-    await tester.pumpWidget(RelioApp(database: db, showIntro: false));
+    await tester.pumpWidget(
+      RelioApp(
+        database: db,
+        showIntro: false,
+        now: DateTime(2026, 9, 10, 10),
+      ),
+    );
     await tester.pumpAndSettle();
 
     // Départ : accueil d'un nouvel élève.
