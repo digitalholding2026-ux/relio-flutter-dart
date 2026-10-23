@@ -590,7 +590,7 @@ passer derrière un proxy serveur — décision d'architecture, pas de build.
 | NDK requis | 28.2.13676358 |
 | Persistance | Drift / SQLite, schéma v2 |
 | Marque | `assets/branding/` — spécification dans `docs/brand/`, voir [règle 9](#règle-9--la-marque-est-générée-pas-dessinée) |
-| Tests | 1030 (`test/`), plus 5 captures dans `tool/capture_etat_vide_test.dart` |
+| Tests | 1064 (`test/`), plus 5 captures dans `tool/capture_etat_vide_test.dart` |
 | Diagnostics | Panneaux C (intervention) et D (clarification) actifs ; le tuteur peut signaler une erreur par un marqueur fermé |
 | Révision | Séquence déduite de la date (6 séquences), points faibles issus des erreurs constatées — voir `curriculum_data.dart` et `revision_plan.dart` |
 | Écran d'entrée | 7 étapes, 1,8 s d'ouverture sans bouton, tap pour passer — voir règle 10 |
@@ -608,7 +608,7 @@ L'APK n'est plus dans le dépôt : il est publié en **Release**.
 
 <https://github.com/digitalholding2026-ux/relio-flutter-dart/releases>
 
-Release courante : [`apk-v0.4.6-37`](https://github.com/digitalholding2026-ux/relio-flutter-dart/releases/tag/apk-v0.4.6-37)
+Release courante : [`apk-v0.4.7-39`](https://github.com/digitalholding2026-ux/relio-flutter-dart/releases/tag/apk-v0.4.7-39)
 
 Détail complet dans `docs/ARCHITECTURE.md` et `docs/BUILD.md`.
 
