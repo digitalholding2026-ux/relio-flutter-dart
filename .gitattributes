@@ -1,0 +1,4 @@
+# Normalisation : le dépôt stocke en LF, quel que soit l'OS.
+# Sans cela, une édition sous Windows réécrit tout le fichier en CRLF et le
+# diff devient illisible (4 000 lignes changées pour 300 réelles).
+* text=auto eol=lf

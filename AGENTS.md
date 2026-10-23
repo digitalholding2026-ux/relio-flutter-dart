@@ -490,6 +490,96 @@ exactement ce qui a masqué le blocage de démarrage décrit dans
 
 ---
 
+## Règle 12 — Le jeton du tuteur est injecté à chaque build, jamais commité
+
+> **Aucun APK de release ne se publie sans le jeton OpenRouter réellement
+> embarqué.**
+
+Un APK sans jeton **compile parfaitement**, se lance, et affiche le message du
+tuteur simulé. Rien à l'écran ne le distingue d'une panne réseau. C'est
+exactement ce qui s'est produit avec l'APK `v0.4.6-38` : `libapp.so` contenait
+l'URL `openrouter.ai`, mais **aucune trace de `sk-or-v1-`**. Le tuteur ne
+répondait plus parce qu'il n'avait jamais eu de clé.
+
+### Où vit le jeton
+
+Un seul emplacement sur la machine :
+
+```
+tool/tutor.env        ← gitignoré, jamais dans l'historique
+TUTOR_API_KEY=sk-or-v1-...
+```
+
+**Le dépôt est PUBLIC.** Écrire le jeton dans un fichier suivi — `lib/`,
+`docs/`, `AGENTS.md`, un workflow CI, un test — le publie sur GitHub. C'est
+interdit, sans exception. Si `tool/tutor.env` est absent (clone neuf), le
+recréer localement ; ne jamais le remplacer par une valeur en dur ailleurs.
+
+### Comment il entre dans l'APK
+
+`tool/build_apk.ps1` lit `$env:TUTOR_API_KEY`, sinon `tool/tutor.env`, et le
+passe à la compilation :
+
+```
+--dart-define=TUTOR_API_KEY=<jeton>
+```
+
+`lib/domain/tutor/tutor_config.dart` le relit par
+`String.fromEnvironment('TUTOR_API_KEY')`. C'est le **seul** chemin admis : ni
+fichier d'assets, ni préférence locale, ni requête de configuration au
+démarrage.
+
+Dans l'APK, le jeton atterrit dans la photo AOT Dart :
+
+```
+lib/arm64-v8a/libapp.so
+```
+
+C'est **l'endroit exact** que tout contrôle doit inspecter.
+
+### Ce qu'il faut faire, sans exception
+
+1. Construire **uniquement** par le script, jamais `flutter build apk` nu
+   pour une livraison :
+
+   ```powershell
+   powershell -File tool/build_apk.ps1
+   ```
+
+2. Le script **refuse** de produire un APK si le jeton est absent. Pour un
+   diagnostic volontairement muet, `-AllowMock` existe — mais cet APK ne se
+   publie pas.
+3. Après le build, le script exécute automatiquement
+   `tool/verify_apk_key.ps1`, qui décompresse `lib/arm64-v8a/libapp.so` et
+   vérifie que le jeton exact **et** `openrouter.ai` y figurent. Échec de la
+   vérification = pas de Release.
+4. La vérification peut être rejouée seule, sur n'importe quel APK :
+
+   ```powershell
+   powershell -File tool/verify_apk_key.ps1 -Apk build\app\outputs\flutter-apk\app-release.apk
+   ```
+
+5. Si le jeton a expiré ou a été révoqué, le remplacer **dans
+   `tool/tutor.env`** puis reconstruire. Jamais dans le code.
+
+### Interdits
+
+| Action | Statut |
+|---|---|
+| Commiter `tool/tutor.env` ou le jeton en clair | ⛔ **Interdit** (dépôt public) |
+| `flutter build apk` sans `--dart-define=TUTOR_API_KEY` pour une livraison | ⛔ **Interdit** |
+| Publier une Release dont la vérification échoue | ⛔ **Interdit** |
+| Supprimer `tool/verify_apk_key.ps1` ou le rendre optionnel | ⛔ **Interdit** |
+
+### À savoir : un APK est extractible
+
+Le jeton est lisible par quiconque télécharge la Release : c'est le prix d'un
+appel direct à OpenRouter depuis le téléphone. Il doit donc rester **révocable**
+et **surveillé** (quota, usage). Pour un usage à grande échelle, la clé devra
+passer derrière un proxy serveur — décision d'architecture, pas de build.
+
+---
+
 ## État du dépôt
 
 | Élément | Valeur |

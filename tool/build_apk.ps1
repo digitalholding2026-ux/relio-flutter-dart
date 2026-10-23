@@ -49,7 +49,18 @@ tool\tutor.env, ou relancer avec -AllowMock pour un build de diagnostic.
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $apk = Join-Path (Get-Location) 'build\app\outputs\flutter-apk\app-release.apk'
-if (Test-Path $apk) {
-  $size = [math]::Round((Get-Item $apk).Length / 1MB, 1)
-  Write-Host "APK : $apk ($size Mo)" -ForegroundColor Green
+if (-not (Test-Path $apk)) {
+  Write-Error "Build terminé sans APK : $apk"
+  exit 1
 }
+
+# Contrôle OBJECTIF : le jeton doit être dans libapp.so, pas seulement dans
+# les arguments de compilation. Un APK muet compile sans la moindre erreur et
+# se confond avec une panne de l'IA (cf. v0.4.6-38).
+if ($key) {
+  & (Join-Path $PSScriptRoot 'verify_apk_key.ps1') -Apk $apk
+  if ($LASTEXITCODE -ne 0) { exit 1 }
+}
+
+$size = [math]::Round((Get-Item $apk).Length / 1MB, 1)
+Write-Host "APK : $apk ($size Mo)" -ForegroundColor Green

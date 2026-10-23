@@ -122,22 +122,27 @@ void main() {
   });
 
   group('S2 — Énoncé et structure', () {
-    testWidgets('affiche l’énoncé et le titre de la leçon', (tester) async {
+    testWidgets('affiche l’énoncé et le titre court de la leçon', (tester) async {
       final harness = await openExercise(tester, 0);
       final ex1 = Chapter1Bank.findExercise(ExerciseIds.ex1)!;
 
       expect(find.text(ex1.statement), findsOneWidget);
-      expect(find.text(ex1.lesson.title), findsOneWidget);
+      // L'AppBar porte le titre COURT ; le titre officiel reste la référence
+      // des donnees, mais il ne tient pas sur une ligne.
+      expect(find.text(ex1.lesson.shortTitle), findsOneWidget);
+      expect(find.text(ex1.lesson.title), findsNothing);
       expect(harness.service.findExercise(ex1.id), isNotNull);
     });
 
-    testWidgets('le titre de la leçon 3 est tronqué, pas débordé',
-        (tester) async {
+    testWidgets('le titre long de la leçon 3 ne déborde pas', (tester) async {
       await openExercise(tester, 2);
 
-      final longTitle = 'Relation entre le PPCM et le PGCD de deux entiers naturels';
-      // Présent dans l'énoncé ET tronqué dans la barre haute.
-      expect(find.text(longTitle), findsWidgets);
+      const longTitle =
+          'Relation entre le PPCM et le PGCD de deux entiers naturels';
+      // Le titre officiel reste dans les donnees, mais l'AppBar affiche sa
+      // forme courte : plus de troncature « (Calculer des... » a l'ecran.
+      expect(find.text('PPCM et PGCD'), findsOneWidget);
+      expect(find.text(longTitle), findsNothing);
       expect(tester.takeException(), isNull);
     });
 

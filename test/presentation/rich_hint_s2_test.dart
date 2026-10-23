@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:relio/data/db/app_database.dart';
 import 'package:relio/domain/curriculum/chapter1_service.dart';
+import 'package:relio/domain/curriculum/chapter2_bank.dart';
 import 'package:relio/domain/curriculum/exercise.dart';
 import 'package:relio/domain/learning/learning_event_repository.dart';
 import 'package:relio/presentation/rules/v1_screen_rules.dart';
@@ -45,8 +46,10 @@ Future<Harness> pumpApp(WidgetTester tester) async {
 Future<Harness> pumpExercise(
   WidgetTester tester,
   Exercise exercise,
-  Map<String, ExerciseDraft> drafts,
-) async {
+  Map<String, ExerciseDraft> drafts, {
+  bool modeEchauffement = false,
+  String? progressionSession,
+}) async {
   final harness = await pumpApp(tester);
 
   await tester.pumpWidget(
@@ -58,6 +61,8 @@ Future<Harness> pumpExercise(
         drafts: drafts,
         onExit: () {},
         onGoToNext: () {},
+        modeEchauffement: modeEchauffement,
+        progressionSession: progressionSession,
       ),
     ),
   );
@@ -67,27 +72,28 @@ Future<Harness> pumpExercise(
 
 /// Exercice du chapitre disposant d'indices.
 ///
-/// RÈGLE DE SÉLECTION, ET NON HASARD : seuls les exercices 1 et 5 portent des
-/// indices dans la banque validée. Prendre « le premier qui a 2 indices » ou
-/// « un exercice du milieu » produirait un écran sans bouton d'aide, et le
-/// test échouerait pour une raison qui n'a rien à voir avec ce qu'il vérifie.
+/// RÈGLE DE SÉLECTION, ET NON HASARD : on compte les indices RÉELLEMENT
+/// ouvrables ([Exercise.hintCount]), c'est-à-dire les fiches définitives
+/// quand la banque en fournit — c'est cette valeur que le budget consomme.
+/// Se fier aux seuls `orderedHints` hérités ne retenait que les exercices 1
+/// et 5, tous deux premiers de leur leçon, et aucun cas de relecture
+/// n'était alors atteignable.
 List<Exercise> get _exercisesWithHints =>
-    V1ScreenRules.exercises.where((e) => e.orderedHints.isNotEmpty).toList();
+    V1ScreenRules.exercises.where((e) => e.hintCount > 0).toList();
 
 /// Premier exercice disposant d'au moins deux indices.
-Exercise get _exWithTwoHints => _exercisesWithHints
-    .firstWhere((e) => e.orderedHints.length >= 2);
+Exercise get _exWithTwoHints =>
+    _exercisesWithHints.firstWhere((e) => e.hintCount >= 2);
 
 /// Exercice consultable par « Revoir l'exercice N », choisi CORRECTEMENT.
 ///
-/// CONTRAINTE REELLE, à ne pas contourner : l'exercice précédent doit
-/// porter des indices, sinon la fiche empilée est vide et il n'y a rien à
-/// relire. Or, dans la banque actuelle, l'exercice 5 est le premier à avoir
-/// des indices ET un précédent — et cet précédent (l'exercice 4) n'a AUCUN
-/// indice.
+/// CONTRAINTE RÉELLE, à ne pas contourner : l'exercice doit porter des
+/// indices ET avoir un précédent DANS SA LEÇON. Ce second point est la règle
+/// corrigée : ex1 et ex5 sont premiers de leur leçon et n'ouvrent donc plus
+/// la relecture ; ex2, ex3, ex4, ex6 et ex7 ont, eux, un précédent.
 ///
-/// On ajoute donc au brouillon de session un indice sur le précédent, ce que
-/// l'application fait d'elle-meme quand l'élève en a consulté un. Ce n'est pas
+/// On ajoute au brouillon de session un indice sur le précédent, ce que
+/// l'application fait d'elle-même quand l'élève en a consulté un. Ce n'est pas
 /// une fabrication de contenu : le texte vient de la banque, seul le fait
 /// qu'il l'ait consulté est simulé.
 Exercise get _exWithReviewablePrevious {
@@ -220,7 +226,7 @@ void main() {
 
       await _consumeWholeBudget(tester, exercise);
 
-      final previousNumber = V1ScreenRules.positionOf(previous.id);
+      final previousNumber = V1ScreenRules.chapterPositionOf(previous.id);
       expect(
         find.text('Revoir l’exercice $previousNumber'),
         findsOneWidget,
@@ -324,7 +330,7 @@ void main() {
       await pumpExercise(tester, exercise, drafts);
       await _consumeWholeBudget(tester, exercise);
 
-      final previousNumber = V1ScreenRules.positionOf(previous.id)!;
+      final previousNumber = V1ScreenRules.chapterPositionOf(previous.id)!;
       await tester.tap(find.text('Revoir l’exercice $previousNumber'));
       await tester.pumpAndSettle();
 
@@ -364,7 +370,7 @@ void main() {
       final harness = await pumpExercise(tester, exercise, drafts);
       await _consumeWholeBudget(tester, exercise);
 
-      final previousNumber = V1ScreenRules.positionOf(previous.id)!;
+      final previousNumber = V1ScreenRules.chapterPositionOf(previous.id)!;
       await tester.tap(find.text('Revoir l’exercice $previousNumber'));
       await tester.pumpAndSettle();
 
@@ -374,6 +380,62 @@ void main() {
       // compteur ne doit pas bouger, sinon le budget de l'exercice consulte
       // serait corrige sans que l'eleve l'ait demande.
       expect(events, hasLength(exercise.hintCount));
+    });
+
+    testWidgets('aucune relecture en session rapide', (tester) async {
+      // En session rapide, l'eleve ne suit pas une leçon : il n'y a pas
+      // d'exercice « precedent » a revoir. Le bouton doit disparaitre meme
+      // si un exercice anterieur existe dans la banque.
+      final exercise = _exWithReviewablePrevious;
+      expect(V1ScreenRules.previousBefore(exercise), isNotNull);
+
+      await pumpExercise(
+        tester,
+        exercise,
+        <String, ExerciseDraft>{},
+        progressionSession: RelioStrings.quickSessionProgress(1, 3),
+      );
+      await _consumeWholeBudget(tester, exercise);
+
+      expect(find.textContaining('Revoir l’exercice'), findsNothing);
+    });
+
+    testWidgets('aucune relecture en echauffement', (tester) async {
+      // Meme regle pour l'echauffement : un seul exercice tire hors leçon,
+      // donc aucune revision d'exercice anterieur.
+      final exercise = _exWithReviewablePrevious;
+      expect(V1ScreenRules.previousBefore(exercise), isNotNull);
+
+      await pumpExercise(
+        tester,
+        exercise,
+        <String, ExerciseDraft>{},
+        modeEchauffement: true,
+      );
+      await _consumeWholeBudget(tester, exercise);
+
+      expect(find.textContaining('Revoir l’exercice'), findsNothing);
+    });
+
+    testWidgets('le chapitre 2 ne renvoie jamais vers le chapitre 1',
+        (tester) async {
+      // Regression signalee : sur un exercice de Thales, le bouton proposait
+      // un exercice d'arithmetique (PPCM). Chaque leçon du chapitre 2 ne
+      // porte qu'un exercice : il n'y a donc aucun precedent a proposer.
+      for (final exercise in Chapter2Bank.exercises) {
+        expect(
+          V1ScreenRules.previousBefore(exercise),
+          isNull,
+          reason: '${exercise.id} ne doit pas avoir de precedent',
+        );
+      }
+
+      final ex1 = Chapter2Bank.findExercise(Chapter2ExerciseIds.ex1)!;
+      await pumpExercise(tester, ex1, <String, ExerciseDraft>{});
+      await _consumeWholeBudget(tester, ex1);
+
+      expect(find.textContaining('Revoir l’exercice'), findsNothing);
+      expect(find.textContaining('PPCM'), findsNothing);
     });
   });
 }

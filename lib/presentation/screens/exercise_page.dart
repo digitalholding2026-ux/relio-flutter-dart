@@ -296,7 +296,7 @@ class _ExercisePageState extends State<ExercisePage> {
     final origin = widget.reviewOrigin;
     final originNumber = origin == null
         ? null
-        : V1ScreenRules.positionOf(origin.id);
+        : V1ScreenRules.chapterPositionOf(origin.id);
 
     await showRichHintSheet(
       context,
@@ -419,7 +419,20 @@ class _ExercisePageState extends State<ExercisePage> {
   );
 
   /// Exercice de reference, propose une fois le budget epuise.
-  Exercise? get _previous => V1ScreenRules.previousBefore(widget.exercise);
+  ///
+  /// `null` quand la relecture n'a pas de sens :
+  ///  - premier exercice de la leçon (aucun precedent) ;
+  ///  - session rapide et echauffement, ou l'eleve ne suit pas une leçon et
+  ///    n'a donc pas d'exercice anterieur a revoir.
+  ///
+  /// Le chapitre est verifie par [V1ScreenRules.previousBefore] : la cible ne
+  /// peut jamais appartenir a un autre chapitre que l'exercice en cours.
+  Exercise? get _previous {
+    if (widget.modeEchauffement || widget.progressionSession != null) {
+      return null;
+    }
+    return V1ScreenRules.previousBefore(widget.exercise);
+  }
 
   /// « Revoir l'exercice N » : ouvre l'exercice precedent et y empile les
   /// fiches deja consommees.
@@ -692,7 +705,8 @@ class _ExercisePageState extends State<ExercisePage> {
             ),
           ),
         ),
-        // Titre tronque : le titre de la lecon 3 est long.
+        // Titre court : l'intitule officiel de la leçon 3 ne tient pas sur une
+        // ligne et se retrouvait tronque dans la barre haute.
         title: Text(
           widget.modeEchauffement
               ? RelioStrings.quickWarmupScreenTitle
@@ -700,7 +714,7 @@ class _ExercisePageState extends State<ExercisePage> {
               ? RelioStrings.quickSessionTitle
               : widget.revision
               ? RelioStrings.revision
-              : exercise.lesson.title,
+              : exercise.lesson.shortTitle,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
@@ -935,7 +949,7 @@ class _ExercisePageState extends State<ExercisePage> {
 
     final previousNumber = previous == null
         ? null
-        : V1ScreenRules.positionOf(previous.id);
+        : V1ScreenRules.chapterPositionOf(previous.id);
     final label = RelioStrings.hintCta(
       budget.cta,
       previousExerciseNumber: previousNumber,

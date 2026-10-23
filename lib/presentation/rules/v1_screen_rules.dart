@@ -43,6 +43,25 @@ abstract final class V1ScreenRules {
     return index >= 0 ? index + 1 : null;
   }
 
+  /// Numero (base 1) d'un exercice DANS SON CHAPITRE, ou `null`.
+  ///
+  /// C'est le numero que lit l'eleve : chaque chapitre recommence a 1. La
+  /// position globale de [positionOf] ne convient pas a l'affichage, ou le
+  /// premier exercice de Thales serait numerote « 12 » parce qu'il suit les
+  /// onze exercices d'arithmetique.
+  static int? chapterPositionOf(String exerciseId) {
+    final exercise = CurriculumBank.findExercise(exerciseId);
+    if (exercise == null) return null;
+    final list = exercises
+        .where(
+          (candidate) =>
+              candidate.lesson.chapterNumber == exercise.lesson.chapterNumber,
+        )
+        .toList();
+    final index = list.indexWhere((e) => e.id == exerciseId);
+    return index >= 0 ? index + 1 : null;
+  }
+
   /// Exercice suivant DANS LA LEÇON, ou `null` si c'est le dernier.
   ///
   /// « Exercice suivant » ne fait pas changer de leçon : après le dernier
@@ -57,16 +76,29 @@ abstract final class V1ScreenRules {
     return list[index + 1];
   }
 
-  /// Exercice precedent dans la leçon, ou `null` si c'est le premier.
+  /// Exercice precedent DANS LA LEÇON, ou `null` si c'est le premier.
   ///
   /// Symetrique de [nextAfter]. Utilise par « Revoir l'exercice N » : une fois
   /// le budget d'aide epuise, l'eleve peut relire les explications d'un
   /// exercice qu'il a deja vu.
+  ///
+  /// La recherche est restreinte a la leçon. Parcourir la banque globale
+  /// faisait remonter, pour le premier exercice d'un chapitre, le dernier
+  /// exercice du chapitre precedent : un eleve sur Thales se voyait proposer
+  /// une revision de PPCM. Le premier exercice d'une leçon n'a donc pas de
+  /// precedent — c'est la regle attendue par l'ecran.
   static Exercise? previousBefore(Exercise exercise) {
-    final list = exercises;
+    final list = exercises
+        .where((candidate) => candidate.lesson == exercise.lesson)
+        .toList();
     final index = list.indexWhere((e) => e.id == exercise.id);
     if (index <= 0) return null;
-    return list[index - 1];
+    final previous = list[index - 1];
+    // Garde explicite : meme une leçon mal rattachee ne peut pas faire
+    // sortir la revision de son chapitre.
+    return previous.lesson.chapterNumber == exercise.lesson.chapterNumber
+        ? previous
+        : null;
   }
 
   /// Premier exercice d'une lecon.

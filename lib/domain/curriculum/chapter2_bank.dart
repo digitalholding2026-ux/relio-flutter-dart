@@ -35,21 +35,31 @@ enum ThalesLesson implements CurriculumLesson {
   lesson1Direct(
     id: 'ch2-lecon-1',
     title: 'Propriété directe (Calculer des longueurs)',
+    shortTitle: 'Propriété directe',
   ),
 
   /// Leçon 2 — appliquer la réciproque pour justifier un parallélisme.
   lesson2Reciprocal(
     id: 'ch2-lecon-2',
     title: 'Propriété réciproque (Justifier le parallélisme)',
+    shortTitle: 'Propriété réciproque',
   );
 
-  const ThalesLesson({required this.id, required this.title});
+  const ThalesLesson({
+    required this.id,
+    required this.title,
+    required this.shortTitle,
+  });
 
   @override
   final String id;
 
   @override
   final String title;
+
+  /// Intitulé court pour la barre haute de S2.
+  @override
+  final String shortTitle;
 
   @override
   int get chapterNumber => 2;

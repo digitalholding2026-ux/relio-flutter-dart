@@ -6,6 +6,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:relio/domain/curriculum/chapter1_bank.dart';
 import 'package:relio/domain/curriculum/chapter2_bank.dart';
 import 'package:relio/domain/curriculum/chapter1_service.dart';
 import 'package:relio/domain/curriculum/curriculum_bank.dart';
@@ -48,6 +49,17 @@ void main() {
         'Propriété réciproque (Justifier le parallélisme)',
       );
       expect(ThalesLesson.values.every((l) => l.chapterNumber == 2), isTrue);
+    });
+
+    test('l’intitulé court tient dans l’AppBar', () {
+      // L'AppBar de S2 affiche le titre COURT : sans parenthèses, il ne se
+      // retrouve plus tronqué (« Propriété directe (Calculer des… »).
+      expect(ThalesLesson.lesson1Direct.shortTitle, 'Propriété directe');
+      expect(ThalesLesson.lesson2Reciprocal.shortTitle, 'Propriété réciproque');
+      for (final lesson in ThalesLesson.values) {
+        expect(lesson.shortTitle, isNot(contains('(')));
+        expect(lesson.shortTitle.length, lessThan(lesson.title.length));
+      }
     });
 
     test('les identifiants de leçon ne collisionnent pas avec le chapitre 1', () {
@@ -186,6 +198,36 @@ void main() {
       expect(
         V1ScreenRules.positionOf(Chapter2ExerciseIds.ex2),
         V1ScreenRules.exercises.length,
+      );
+    });
+
+    test('la révision ne sort jamais du chapitre courant', () {
+      // Regression signalee : le premier exercice de Thales proposait de
+      // reviser le dernier exercice d'arithmetique (PPCM). Un exercice ne
+      // peut avoir de precedent que DANS SA LEÇON, donc dans son chapitre.
+      for (final exercise in Chapter2Bank.exercises) {
+        final previous = V1ScreenRules.previousBefore(exercise);
+        expect(previous, isNull, reason: '${exercise.id} est seul dans sa leçon');
+      }
+
+      for (final exercise in CurriculumBank.exercises) {
+        final previous = V1ScreenRules.previousBefore(exercise);
+        if (previous != null) {
+          expect(previous.lesson.chapterNumber, exercise.lesson.chapterNumber);
+          expect(previous.lesson, exercise.lesson);
+        }
+      }
+    });
+
+    test('le numéro affiché redémarre à 1 dans chaque chapitre', () {
+      // « Revoir l'exercice 12 » n'aurait aucun sens pour un eleve de 3e :
+      // la numerotation visible est celle du chapitre, pas celle de la banque.
+      expect(V1ScreenRules.chapterPositionOf(Chapter2ExerciseIds.ex1), 1);
+      expect(V1ScreenRules.chapterPositionOf(Chapter2ExerciseIds.ex2), 2);
+      // Le chapitre 1 garde exactement sa numerotation historique.
+      expect(
+        V1ScreenRules.chapterPositionOf(ExerciseIds.ex1),
+        V1ScreenRules.positionOf(ExerciseIds.ex1),
       );
     });
   });

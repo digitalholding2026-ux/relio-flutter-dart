@@ -149,6 +149,19 @@ $txt = [Text.Encoding]::GetEncoding(28591).GetString([IO.File]::ReadAllBytes($so
 
 Une release correcte donne `clé compilée : True` et `mode simulé : False`.
 L'APK `apk-v0.4.4-32` donnait l'inverse : c'est la cause du repli constaté.
+La régression s'est reproduite avec `apk-v0.4.6-38` (URL OpenRouter présente,
+aucun `sk-or-v1-`) : le build avait été lancé sans `TUTOR_API_KEY`.
+
+Le contrôle est désormais **automatique et bloquant** (règle 12) :
+
+```powershell
+powershell -File tool/build_apk.ps1      # injecte puis vérifie, refuse si absent
+powershell -File tool/verify_apk_key.ps1 -Apk chemin\vers\app-release.apk
+```
+
+`tool/verify_apk_key.ps1` compare le jeton exact lu dans `tool/tutor.env` à
+celui de `lib/arm64-v8a/libapp.so` et exige `openrouter.ai`. Il sort en code 1
+si l'un des deux manque.
 
 ## Panne en cours de conversation
 

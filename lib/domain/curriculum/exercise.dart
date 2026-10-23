@@ -24,6 +24,14 @@ abstract interface class CurriculumLesson {
   /// Intitulé affiché, transcrit du document validé.
   String get title;
 
+  /// Intitulé COURT, pour la barre haute de S2.
+  ///
+  /// Le titre officiel reste la référence ([title]) : il est trop long pour
+  /// une AppBar d'une ligne et se retrouve tronqué. Cette variante ne
+  /// remplace aucun contenu pédagogique — elle raccourcit seulement
+  /// l'étiquette de navigation, sans parenthèses ni précisions.
+  String get shortTitle;
+
   /// Numéro du chapitre (1 pour l'arithmétique, 2 pour Thalès).
   int get chapterNumber;
 
@@ -41,6 +49,7 @@ enum ArithmeticLesson implements CurriculumLesson {
   lesson1Subtractions(
     id: 'lecon-1',
     title: 'PGCD : algorithme des soustractions',
+    shortTitle: 'PGCD : soustractions',
   ),
 
   /// Leçon 2 — « PGDC » : algorithme d'Euclide.
@@ -50,6 +59,7 @@ enum ArithmeticLesson implements CurriculumLesson {
   lesson2Euclid(
     id: 'lecon-2',
     title: '« PGDC » : algorithme d’Euclide',
+    shortTitle: '« PGDC » : Euclide',
     requiresEditorialConfirmation: true,
   ),
 
@@ -57,11 +67,13 @@ enum ArithmeticLesson implements CurriculumLesson {
   lesson3PpcmPgcdRelation(
     id: 'lecon-3',
     title: 'Relation entre le PPCM et le PGCD de deux entiers naturels',
+    shortTitle: 'PPCM et PGCD',
   );
 
   const ArithmeticLesson({
     required this.id,
     required this.title,
+    required this.shortTitle,
     this.requiresEditorialConfirmation = false,
   });
 
@@ -72,6 +84,10 @@ enum ArithmeticLesson implements CurriculumLesson {
   /// Intitulé officiel, reproduit du document validé.
   @override
   final String title;
+
+  /// Intitulé court pour la barre haute de S2.
+  @override
+  final String shortTitle;
 
   /// Vrai si l'intitulé attend une confirmation éditoriale.
   ///
