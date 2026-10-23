@@ -17,10 +17,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../services/audio/audio_service.dart';
 import '../home/home_state.dart';
 import '../home/home_widgets.dart';
 import '../strings/relio_strings.dart';
 import '../theme/relio_theme.dart';
+import '../widgets/voice_toggle_button.dart';
 
 /// En-tête d'accueil : « Bonjour » ou « Bonsoir », suivi du prénom s'il est
 /// renseigné.
@@ -187,10 +189,22 @@ class _HomePageState extends State<HomePage>
     } else {
       _entrance.forward();
     }
+
+    // Le NARRATEUR salue l'élève à l'ouverture de l'accueil — mais seulement
+    // si la voix est active. Le message lu est exactement celui de la carte
+    // (« Bonsoir ! Nous sommes en Novembre… ») : la voix ne double pas la
+    // salutation de l'en-tête.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final audio = AudioService.instance;
+      if (!audio.enabled) return;
+      unawaited(audio.speak(_state.message));
+    });
   }
 
   @override
   void dispose() {
+    unawaited(AudioService.instance.stop());
     _entrance.dispose();
     super.dispose();
   }
@@ -227,7 +241,17 @@ class _HomePageState extends State<HomePage>
             RelioSpacing.xxxl,
           ),
           children: <Widget>[
-            SequenceObjectiveBar(objective: _state.objective),
+            // Icône globale de la voix, en haut à droite : elle doit être
+            // atteignable depuis l'accueil comme depuis les autres onglets.
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                Expanded(
+                  child: SequenceObjectiveBar(objective: _state.objective),
+                ),
+                const VoiceToggleButton(),
+              ],
+            ),
             const SizedBox(height: RelioSpacing.md),
             GreetingHeader(name: widget.name),
             const SizedBox(height: RelioSpacing.sm),

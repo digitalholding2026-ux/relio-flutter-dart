@@ -2,6 +2,9 @@
     <!-- Tuteur Relio : appel HTTPS du modele. Obligatoire en release : le
          manifeste de debug ajoute cette permission tout seul, pas celui-ci. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Dictée du tuteur (speech_to_text). Demandée à l'élève au premier
+         appui sur le micro, jamais au démarrage. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="Relio"
         android:name="${applicationName}"
@@ -43,6 +46,15 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Synthèse vocale (Narrateur, Lecteur). Android 11+ masque les
+             moteurs TTS installés si l'intention n'est pas déclarée. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
+        </intent>
+        <!-- Reconnaissance vocale (Conversationaliste). -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
         </intent>
     </queries>
 </manifest>

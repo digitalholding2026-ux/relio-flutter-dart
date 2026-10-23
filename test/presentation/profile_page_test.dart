@@ -279,9 +279,15 @@ void main() {
   });
 
   group('Mise en page', () {
-    testWidgets('quatre cartes blanches, rayon 16, ombre douce', (
+    testWidgets('cinq cartes blanches, rayon 16, ombre douce', (
       tester,
     ) async {
+      // Écran assez haut pour que les cinq cartes soient construites : la
+      // liste est paresseuse, une carte hors cache n'existerait pas encore.
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await pumpProfile(tester);
 
       final cards = tester.widgetList<Container>(find.byType(Container)).where((
@@ -294,7 +300,7 @@ void main() {
             (decoration.boxShadow?.isNotEmpty ?? false);
       });
 
-      expect(cards, hasLength(4));
+      expect(cards, hasLength(5));
     });
 
     testWidgets('la carte d’identité porte la bordure orange 1.5', (

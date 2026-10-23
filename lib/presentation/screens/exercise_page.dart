@@ -15,6 +15,8 @@
 /// assumee et non masquee.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/id.dart';
@@ -28,6 +30,7 @@ import '../../domain/curriculum/rich_hint_adapter.dart';
 import '../../domain/learning/exercise_attempt.dart';
 import '../../domain/tutor/tutor_client.dart';
 import '../../domain/tutor/tutor_exercise_context.dart';
+import '../../services/audio/audio_service.dart';
 import '../rules/feedback_selection.dart';
 import '../rules/v1_screen_rules.dart';
 import '../strings/relio_strings.dart';
@@ -35,9 +38,11 @@ import '../theme/relio_theme.dart';
 import '../widgets/answer_field.dart';
 import '../widgets/feedback_panel.dart';
 import '../widgets/hint_area.dart';
+import '../widgets/listen_button.dart';
 import '../widgets/math_text.dart';
 import '../widgets/relio_progress_bar.dart';
 import '../widgets/relio_tutor_sheet.dart';
+import '../widgets/voice_toggle_button.dart';
 import '../widgets/rich_hint_sheet.dart';
 
 /// Brouillon d'une tentative en cours.
@@ -298,6 +303,10 @@ class _ExercisePageState extends State<ExercisePage> {
         ? null
         : V1ScreenRules.chapterPositionOf(origin.id);
 
+    // La fiche s'ouvre par-dessus l'énoncé : la lecture en cours n'a plus lieu
+    // d'être, et deux voix ne se superposent jamais.
+    unawaited(AudioService.instance.stop());
+
     await showRichHintSheet(
       context,
       hint: RichHint(
@@ -316,6 +325,10 @@ class _ExercisePageState extends State<ExercisePage> {
 
   @override
   void dispose() {
+    // Quitter l'exercice coupe la voix IMMÉDIATEMENT : une consigne ne doit
+    // jamais continuer à parler depuis un écran qu'on a quitté.
+    unawaited(AudioService.instance.stop());
+
     // Derniere sauvegarde : garantit la saisie meme si `onChanged` n'a pas
     // ete declenche (controle programme, restauration de session).
     _draft.answer = _controller.text;
@@ -364,6 +377,9 @@ class _ExercisePageState extends State<ExercisePage> {
     // Budget AVANT ouverture : sert a savoir si la fiche qu'on va ouvrir est
     // la derniere, et a pouvoir redemander le budget au moteur apres coup.
     final budgetBefore = _budget();
+
+    // Une fiche s'ouvre : la lecture de l'énoncé s'arrête.
+    unawaited(AudioService.instance.stop());
 
     await showRichHintSheet(
       context,
@@ -526,6 +542,10 @@ class _ExercisePageState extends State<ExercisePage> {
       // ne doit montrer un clavier au-dessus d'un champ desormais verrouille.
       if (_locked) _focusNode.unfocus();
 
+      // Le résultat est lu à voix haute : c'est le rôle du LECTEUR. Muet par
+      // défaut, le service ne dit rien tant que la voix n'est pas activée.
+      _readFeedback(selection);
+
       // La tentative est écrite : la coquille relit les faits immédiatement.
       // Une relecture impossible ne change rien au panneau affiché — le fait,
       // lui, est déjà dans l'historique.
@@ -600,6 +620,8 @@ class _ExercisePageState extends State<ExercisePage> {
       _draft.clarificationChoice = null;
       _clarificationChoice = null;
     });
+
+    _readFeedback(selection);
   }
 
   /// Applique une erreur signalee par le tuteur dans la conversation.
@@ -636,10 +658,13 @@ class _ExercisePageState extends State<ExercisePage> {
       }
     });
     _focusNode.unfocus();
+    _readFeedback(selection);
   }
 
   /// « Réessayer » : meme exercice, panneau masque, champ vide.
   void _retry() {
+    // Le panneau disparaît : sa lecture aussi.
+    unawaited(AudioService.instance.stop());
     setState(() {
       _feedback = null;
       _clarificationChoice = null;
@@ -673,6 +698,24 @@ class _ExercisePageState extends State<ExercisePage> {
   /// La navigation elle-meme est delegauee au parent, qui possede la pile :
   /// cet ecran ne decide pas de la suite du parcours.
   void _goToNext() => widget.onGoToNext();
+
+  /// Lit le panneau de retour à voix haute.
+  ///
+  /// Le texte prononcé est exactement celui affiché, titre et message : la
+  /// voix ne dit rien que l'élève ne puisse relire. Le service applique ensuite
+  /// le nettoyage (`<red>`, opérateurs) et le mode muet.
+  void _readFeedback(FeedbackSelection selection) {
+    final String title = selection.title.trim();
+    final String message = selection.message.trim();
+    final String text = switch ((title.isEmpty, message.isEmpty)) {
+      (true, true) => '',
+      (true, false) => message,
+      (false, true) => title,
+      (false, false) => '$title $message',
+    };
+    if (text.isEmpty) return;
+    unawaited(AudioService.instance.speak(text));
+  }
 
   // ---------------------------------------------------------------------
   // Construction
@@ -724,6 +767,10 @@ class _ExercisePageState extends State<ExercisePage> {
             color: palette.textPrimary,
           ),
         ),
+        // Icône globale de la voix : elle est présente sur CHAQUE écran
+        // principal, pour que l'élève puisse couper le son d'un geste, où
+        // qu'il soit.
+        actions: const <Widget>[VoiceToggleButton()],
       ),
       body: SafeArea(
         child: Column(
@@ -822,11 +869,25 @@ class _ExercisePageState extends State<ExercisePage> {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(RelioSpacing.cardInner),
-        child: MathText(
-          text: statement,
-          // Le formateur ne change que l'italique et les chiffres : la
-          // hauteur de ligne reste celle du corps de texte.
-          style: RelioType.body(palette).copyWith(height: 1.5),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(
+              child: MathText(
+                text: statement,
+                // Le formateur ne change que l'italique et les chiffres : la
+                // hauteur de ligne reste celle du corps de texte.
+                style: RelioType.body(palette).copyWith(height: 1.5),
+              ),
+            ),
+            // Écoute discrète, À CÔTÉ de l'énoncé : le texte affiché reste
+            // strictement identique, et la hauteur de la carte ne bouge pas.
+            ListenButton(
+              text: statement,
+              tooltip: RelioStrings.listenStatement,
+              compact: true,
+            ),
+          ],
         ),
       ),
     );
@@ -983,12 +1044,15 @@ class _ExercisePageState extends State<ExercisePage> {
   /// s'y applique pas.
   Widget _askRelioButton() {
     return TextButton.icon(
-      onPressed: () => showRelioTutorSheet(
-        context,
-        client: widget.tutor ?? const UnavailableTutorClient(),
-        exercise: TutorExerciseContext.fromExercise(widget.exercise),
-        onErrorDetected: _applyTutorDiagnosis,
-      ),
+      onPressed: () {
+        unawaited(AudioService.instance.stop());
+        showRelioTutorSheet(
+          context,
+          client: widget.tutor ?? const UnavailableTutorClient(),
+          exercise: TutorExerciseContext.fromExercise(widget.exercise),
+          onErrorDetected: _applyTutorDiagnosis,
+        );
+      },
       icon: const Icon(Icons.chat_bubble_outline, size: 18),
       label: const Text(RelioStrings.askRelio),
     );

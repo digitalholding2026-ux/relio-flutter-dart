@@ -13,11 +13,15 @@
 /// l'historique de session, `RichHintSheet` sert la consultation courante.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../domain/curriculum/rich_hint.dart';
+import '../../services/audio/audio_service.dart';
 import '../strings/relio_strings.dart';
 import '../theme/relio_theme.dart';
+import 'listen_button.dart';
 import 'math_text.dart';
 
 /// Fraction de la hauteur d'ecran occupee par la fiche.
@@ -114,6 +118,29 @@ class _RichHintSheetState extends State<_RichHintSheet> {
   }
 
   @override
+  void dispose() {
+    // Refermer la fiche coupe sa lecture : la voix ne poursuit pas derrière
+    // un panneau qu'on a quitté.
+    unawaited(AudioService.instance.stop());
+    super.dispose();
+  }
+
+  /// Texte que le LECTEUR prononce pour cette fiche.
+  ///
+  /// Titre puis blocs, dans l'ordre affiché : la voix ne réordonne rien et
+  /// n'ajoute rien que l'élève ne puisse lire.
+  String get _spokenText {
+    final String title = widget.hint.title.trim();
+    final String body = widget.hint.blocks
+        .map((HintBlock block) => block.text.trim())
+        .where((String part) => part.isNotEmpty)
+        .join('. ');
+    if (title.isEmpty) return body;
+    if (body.isEmpty) return title;
+    return '$title. $body';
+  }
+
+  @override
   Widget build(BuildContext context) {
     final palette = RelioPaletteScope.of(context);
 
@@ -136,9 +163,22 @@ class _RichHintSheetState extends State<_RichHintSheet> {
                 ],
                 // Titre 20 / SemiBold. L'emoji du libelle fait partie du
                 // texte : il ne doit pas etre traite comme une icone distincte.
-                Text(
-                  widget.hint.title,
-                  style: RelioType.title(palette).copyWith(fontSize: 20),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        widget.hint.title,
+                        style: RelioType.title(palette).copyWith(fontSize: 20),
+                      ),
+                    ),
+                    // Même bouton que sur l'énoncé, au même endroit du regard :
+                    // en haut à droite de ce qu'on peut faire lire.
+                    ListenButton(
+                      text: _spokenText,
+                      tooltip: RelioStrings.listenHint,
+                    ),
+                  ],
                 ),
               ],
             ),

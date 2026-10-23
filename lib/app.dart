@@ -49,6 +49,7 @@ import 'presentation/screens/revision_screen.dart';
 import 'presentation/strings/relio_strings.dart';
 import 'presentation/theme/relio_theme.dart';
 import 'presentation/widgets/relio_page_route.dart';
+import 'services/audio/audio_service.dart';
 
 /// Étape de premier lancement, lue depuis un seul endroit.
 ///
@@ -156,6 +157,19 @@ class _RelioAppState extends State<RelioApp> {
     _controller = provided ?? SettingsController(_repository);
     if (_ownsController) _controller.load();
 
+    // LA BASE EST LA SOURCE DE VÉRITÉ, LE SERVICE N'EN EST QUE LE MIROIR.
+    //
+    // Deux chemins écrivent la préférence :
+    //  - l'écran Profil, qui passe par le contrôleur ;
+    //  - l'icône globale, qui ne connaît que le service.
+    // Le premier se reflète ici par écoute ; le second remonte par le rappel.
+    // Dans les deux cas, c'est `app_settings` qui garde le dernier mot.
+    _controller.addListener(_syncAudioPreference);
+    AudioService.instance.onEnabledChanged = (bool value) => _controller.apply(
+      _controller.settings.copyWith(voiceEnabled: value),
+    );
+    _syncAudioPreference();
+
     if (!widget.showIntro) {
       _stage = _Stage.home;
     } else {
@@ -223,10 +237,20 @@ class _RelioAppState extends State<RelioApp> {
 
   @override
   void dispose() {
+    _controller.removeListener(_syncAudioPreference);
+    AudioService.instance.onEnabledChanged = null;
+    // Quitter l'application coupe la voix : rien ne doit continuer à parler
+    // une fois l'écran parti.
+    unawaited(AudioService.instance.stop());
     // Seul un contrôleur créé ici est détruit : un contrôleur fourni par un
     // parent reste la responsabilité de son propriétaire.
     if (_ownsController) _controller.dispose();
     super.dispose();
+  }
+
+  /// Reflète la préférence persistée dans le service audio.
+  void _syncAudioPreference() {
+    AudioService.instance.syncEnabled(_controller.settings.voiceEnabled);
   }
 
   /// L'ouverture est terminée : on présente l'écran Bienvenue.
@@ -972,6 +996,9 @@ class SettingsController extends ChangeNotifier {
     }
     if (next.reduceAnimations != previous.reduceAnimations) {
       await _repository.setReduceAnimations(next.reduceAnimations);
+    }
+    if (next.voiceEnabled != previous.voiceEnabled) {
+      await _repository.setVoiceEnabled(next.voiceEnabled);
     }
   }
 

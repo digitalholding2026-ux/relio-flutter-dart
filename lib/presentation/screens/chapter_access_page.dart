@@ -22,6 +22,7 @@ import '../strings/relio_strings.dart';
 import '../theme/relio_theme.dart';
 import '../widgets/lesson_status_pill.dart';
 import '../widgets/relio_progress_bar.dart';
+import '../widgets/voice_toggle_button.dart';
 
 /// Couleur d'un état de leçon.
 ///
@@ -227,6 +228,7 @@ class ChapterAccessPage extends StatelessWidget {
             color: palette.textPrimary,
           ),
         ),
+        actions: const <Widget>[VoiceToggleButton()],
       ),
       body: SafeArea(
         child: ListView(

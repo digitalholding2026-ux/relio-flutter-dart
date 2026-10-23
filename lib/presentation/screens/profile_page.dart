@@ -32,6 +32,7 @@ import '../../domain/settings/learner_settings.dart';
 import '../home/pressable_scale.dart';
 import '../strings/relio_strings.dart';
 import '../theme/relio_theme.dart';
+import '../widgets/voice_toggle_button.dart';
 
 /// Écran Profil.
 class ProfilePage extends StatefulWidget {
@@ -124,10 +125,17 @@ class _ProfilePageState extends State<ProfilePage> {
             RelioSpacing.xxxl,
           ),
           children: <Widget>[
-            Text(
-              RelioStrings.profileTitle,
-              style: RelioType.display(palette)
-                  .copyWith(color: palette.primary),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    RelioStrings.profileTitle,
+                    style: RelioType.display(palette)
+                        .copyWith(color: palette.primary),
+                  ),
+                ),
+                const VoiceToggleButton(),
+              ],
             ),
             const SizedBox(height: RelioSpacing.xxl),
             _IdentityCard(
@@ -152,6 +160,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   widget.onChanged(widget.settings.copyWith(textScale: value)),
               onHighContrastChanged: (value) => widget.onChanged(
                 widget.settings.copyWith(highContrast: value),
+              ),
+            ),
+            const SizedBox(height: RelioSpacing.cardGap),
+            _VoiceCard(
+              enabled: settings.voiceEnabled,
+              onChanged: (bool value) => widget.onChanged(
+                widget.settings.copyWith(voiceEnabled: value),
               ),
             ),
             const SizedBox(height: RelioSpacing.cardGap),
@@ -554,6 +569,50 @@ class _AccessibilityCard extends StatelessWidget {
             label: RelioStrings.reduceAnimationsLabel,
             value: reduceAnimations,
             onChanged: onReduceAnimationsChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Carte « Voix » : l'interrupteur du Narrateur et du Lecteur.
+///
+/// Désactivé par défaut. La description dit ce que la voix fait, sans
+/// promettre autre chose : elle lit les consignes, les énoncés, les indices et
+/// les réponses du tuteur.
+class _VoiceCard extends StatelessWidget {
+  const _VoiceCard({required this.enabled, required this.onChanged});
+
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = RelioPaletteScope.of(context);
+
+    return _ProfileCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            RelioStrings.sectionVoice,
+            style: RelioType.sectionTitle(palette),
+          ),
+          const SizedBox(height: RelioSpacing.sm),
+          Text(
+            RelioStrings.voiceTutorDescription,
+            style: RelioType.caption(palette).copyWith(
+              fontSize: 13,
+              height: 1.35,
+              color: palette.textSecondary,
+            ),
+          ),
+          const SizedBox(height: RelioSpacing.xs),
+          _SwitchRow(
+            label: RelioStrings.voiceTutorLabel,
+            value: enabled,
+            onChanged: onChanged,
           ),
         ],
       ),

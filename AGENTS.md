@@ -590,8 +590,9 @@ passer derrière un proxy serveur — décision d'architecture, pas de build.
 | NDK requis | 28.2.13676358 |
 | Persistance | Drift / SQLite, schéma v2 |
 | Marque | `assets/branding/` — spécification dans `docs/brand/`, voir [règle 9](#règle-9--la-marque-est-générée-pas-dessinée) |
-| Tests | 1064 (`test/`), plus 5 captures dans `tool/capture_etat_vide_test.dart` |
+| Tests | 1093 (`test/`), plus 5 captures dans `tool/capture_etat_vide_test.dart` |
 | Diagnostics | Panneaux C (intervention) et D (clarification) actifs ; le tuteur peut signaler une erreur par un marqueur fermé |
+| Voix | Service central `AudioService` : narrateur (accueil), lecteur (énoncés, indices, corrections, tuteur), dictée (chat) — préférence `voice.enabled`, désactivée par défaut |
 | Révision | Séquence déduite de la date (6 séquences), points faibles issus des erreurs constatées — voir `curriculum_data.dart` et `revision_plan.dart` |
 | Écran d'entrée | 7 étapes, 1,8 s d'ouverture sans bouton, tap pour passer — voir règle 10 |
 

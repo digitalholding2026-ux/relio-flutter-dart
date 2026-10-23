@@ -19,12 +19,15 @@
 /// l'impression d'avoir quitté l'exercice.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../domain/tutor/tutor_client.dart';
 import '../../domain/tutor/tutor_error_signal.dart';
 import '../../domain/tutor/tutor_exercise_context.dart';
 import '../../domain/tutor/tutor_message.dart';
+import '../../services/audio/audio_service.dart';
 import '../branding/relio_mark.dart';
 import '../strings/relio_strings.dart';
 import '../theme/relio_theme.dart';
@@ -109,11 +112,71 @@ class _RelioTutorSheetState extends State<RelioTutorSheet> {
   /// fil, telle qu'il l'a écrite, et le bouton relance exactement cet appel.
   bool _failed = false;
 
+  /// Une dictée est-elle en cours ?
+  ///
+  /// L'état est porté par le panneau, pas par le service : deux panneaux ne
+  /// peuvent pas écouter en même temps, et c'est celui qui a demandé le micro
+  /// qui doit pouvoir l'arrêter.
+  bool _listening = false;
+
   @override
   void dispose() {
+    // Fermer la conversation coupe la voix ET le micro : rien ne doit
+    // continuer à écouter derrière un panneau qu'on a quitté.
+    unawaited(AudioService.instance.stop());
+    unawaited(AudioService.instance.cancelListening());
     _controller.dispose();
     _scroll.dispose();
     super.dispose();
+  }
+
+  /// Démarre ou arrête la dictée.
+  ///
+  /// La permission est demandée au premier appui, jamais au démarrage. Un
+  /// refus, un micro absent ou un moteur indisponible n'interrompent rien :
+  /// l'élève voit un message doux et garde son clavier.
+  Future<void> _toggleListening() async {
+    if (_listening) {
+      setState(() => _listening = false);
+      unawaited(AudioService.instance.stopListening());
+      return;
+    }
+
+    // Une dictée n'a pas de sens par-dessus une réponse qu'on écoute.
+    unawaited(AudioService.instance.stop());
+
+    setState(() => _listening = true);
+    final bool started = await AudioService.instance.startListening(
+      onWords: (String words) {
+        if (!mounted || !_listening) return;
+        // La transcription REMPLACE la saisie : c'est une dictée, pas une
+        // correction. L'élève peut ensuite modifier le texte avant d'envoyer.
+        _controller.text = words;
+        _controller.selection = TextSelection.collapsed(offset: words.length);
+      },
+      onEnd: () {
+        if (!mounted) return;
+        setState(() => _listening = false);
+      },
+      onError: (String _) {
+        if (mounted) _microphoneUnavailable();
+      },
+    );
+
+    if (!started && mounted) {
+      setState(() => _listening = false);
+      _microphoneUnavailable();
+    }
+  }
+
+  /// Message doux, jamais un dialogue bloquant.
+  void _microphoneUnavailable() {
+    setState(() => _listening = false);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.hideCurrentSnackBar();
+    messenger?.showSnackBar(
+      const SnackBar(content: Text(RelioStrings.microphoneUnavailable)),
+    );
   }
 
   /// Envoie la saisie au tuteur, puis affiche sa réponse.
@@ -124,6 +187,15 @@ class _RelioTutorSheetState extends State<RelioTutorSheet> {
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _sending) return;
+
+    // Envoyer met fin à la dictée et coupe la lecture en cours. Ces appels
+    // sont VOLONTAIREMENT non attendus : l'envoi du message ne doit jamais
+    // dépendre du moteur audio, qui peut être lent ou absent.
+    if (_listening) {
+      setState(() => _listening = false);
+      unawaited(AudioService.instance.stopListening());
+    }
+    unawaited(AudioService.instance.stop());
 
     setState(() {
       _messages.add(TutorMessage(text: text, fromRelio: false));
@@ -299,13 +371,18 @@ class _RelioTutorSheetState extends State<RelioTutorSheet> {
     );
   }
 
-  /// Zone de saisie : champ pleine largeur et bouton d'envoi.
+  /// Zone de saisie : micro, champ pleine largeur et bouton d'envoi.
   Widget _composer(RelioPalette palette) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: <Widget>[
+          _MicButton(
+            listening: _listening,
+            onPressed: _toggleListening,
+          ),
+          const SizedBox(width: RelioSpacing.xs),
           Expanded(
             child: TextField(
               controller: _controller,
@@ -400,10 +477,42 @@ class _MessageBubble extends StatelessWidget {
               // rendus en glyphes. Le message de l'élève, lui, est affiché
               // tel qu'il l'a écrit.
               child: fromRelio
-                  ? MathText(
-                      text: normalizeTutorText(message.text),
-                      style: RelioType.body(palette)
-                          .copyWith(height: 1.45, color: palette.textPrimary),
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        MathText(
+                          text: normalizeTutorText(message.text),
+                          style: RelioType.body(palette).copyWith(
+                            height: 1.45,
+                            color: palette.textPrimary,
+                          ),
+                        ),
+                        // Haut-parleur de la bulle : le LECTEUR relit cette
+                        // réponse précise, sans toucher au reste du fil.
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: IconButton(
+                            onPressed: () => unawaited(
+                              AudioService.instance.speak(
+                                normalizeTutorText(message.text),
+                              ),
+                            ),
+                            icon: const Icon(
+                              Icons.volume_up_outlined,
+                              size: 18,
+                            ),
+                            tooltip: RelioStrings.listenReply,
+                            color: palette.textSecondary,
+                            padding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.compact,
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
+                          ),
+                        ),
+                      ],
                     )
                   : Text(
                       message.text,
@@ -544,6 +653,83 @@ class _RetryBubble extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Bouton micro du composeur.
+///
+/// Il devient ROUGE et pulse tant que l'écoute dure : l'élève doit voir d'un
+/// coup d'œil que le micro est ouvert, sans quoi il parlerait dans le vide.
+class _MicButton extends StatefulWidget {
+  const _MicButton({required this.listening, required this.onPressed});
+
+  final bool listening;
+  final VoidCallback onPressed;
+
+  @override
+  State<_MicButton> createState() => _MicButtonState();
+}
+
+class _MicButtonState extends State<_MicButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 700),
+  );
+
+  static const Color _listeningRed = Color(0xFFD92D20);
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.listening) _pulse.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant _MicButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.listening == oldWidget.listening) return;
+    if (widget.listening) {
+      _pulse.repeat(reverse: true);
+    } else {
+      _pulse.stop();
+      _pulse.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final RelioPalette palette = RelioPaletteScope.of(context);
+    final bool listening = widget.listening;
+
+    final Widget icon = Icon(
+      listening ? Icons.mic : Icons.mic_none_rounded,
+      size: 22,
+      color: listening ? _listeningRed : palette.textSecondary,
+    );
+
+    return IconButton(
+      onPressed: widget.onPressed,
+      tooltip: listening ? RelioStrings.dictateStop : RelioStrings.dictate,
+      constraints: const BoxConstraints(
+        minWidth: RelioSizes.minTouchTarget,
+        minHeight: RelioSizes.minTouchTarget,
+      ),
+      icon: listening
+          ? ScaleTransition(
+              scale: Tween<double>(begin: 0.86, end: 1.08).animate(
+                CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
+              ),
+              child: icon,
+            )
+          : icon,
     );
   }
 }

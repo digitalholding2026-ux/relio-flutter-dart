@@ -317,7 +317,44 @@ lib/
     converters.dart             Mapping domaine ↔ SQL
   presentation/
     home_page.dart              Écran d'accueil technique
+  services/audio/
+    audio_service.dart          Point de passage unique de la voix
+    speech_text.dart            Nettoyage du texte avant synthèse
+    voice_engine.dart           Synthèse (flutter_tts), derrière une interface
+    listening_engine.dart       Dictée (speech_to_text), derrière une interface
 ```
+
+### 6.1 Voix — narrateur, lecteur, conversationaliste
+
+La voix traverse l'application, mais elle n'a **qu'un seul point de passage** :
+`AudioService`. Trois rôles s'y appuient :
+
+| Rôle | Ce qu'il lit | Où il est déclenché |
+|---|---|---|
+| Narrateur | Le message d'accueil | Ouverture de l'écran Accueil, si la voix est active |
+| Lecteur | Énoncés, fiches d'indice, corrections, réponses du tuteur | Boutons « Écouter », haut-parleur des bulles, validation d'un exercice |
+| Conversationaliste | La dictée de l'élève | Bouton micro du chat du tuteur |
+
+Deux règles structurent le service :
+
+1. **Une action chasse l'autre.** Toute lecture commence par couper la
+   précédente ; deux voix ne se superposent jamais.
+2. **Le mode muet est absolu.** `AudioService.speak` ne fait rien tant que la
+   préférence est désactivée, même si un écran oublie de vérifier.
+
+La préférence vit dans `app_settings`, sous la clé `voice.enabled` — aucune
+migration de schéma n'est nécessaire. `LearnerSettings` en est la source de
+vérité ; `AudioService.syncEnabled` n'en est que le miroir. L'icône globale
+(haut-parleur) et l'interrupteur du Profil écrivent tous deux la même
+préférence, l'une par le service, l'autre par `SettingsController`.
+
+Les moteurs (`VoiceEngine`, `ListeningEngine`) sont injectables : les tests
+vérifient les décisions du service sans plateforme audio. Les appels réels sont
+toujours non bloquants pour l'interface — un moteur absent ou lent ne fige
+jamais un écran.
+
+Le texte affiché n'est **jamais** modifié : `speechText` ne fabrique que la
+chaîne donnée au moteur (`AM/AB` → « A M sur A B », `−` → « moins », etc.).
 
 La règle de dépendance est stricte : `domain` ne connaît pas `data`, et
 `data` ne connaît que le modèle de domaine. Aucune dépendance réseau n'existe

@@ -527,6 +527,51 @@ abstract final class RelioStrings {
   static const String reduceAnimationsLabel = 'Réduire les animations';
 
   // ---------------------------------------------------------------------
+  // Voix — narrateur, lecteur, conversationaliste
+  // ---------------------------------------------------------------------
+
+  /// Carte du Profil qui porte l'interrupteur de la voix.
+  static const String sectionVoice = 'Voix';
+
+  /// Interrupteur « Voix du tuteur » (désactivé par défaut).
+  static const String voiceTutorLabel = 'Voix du tuteur';
+
+  /// Explication de ce que la voix lit.
+  static const String voiceTutorDescription =
+      'Relio lit les consignes, les énoncés, les indices et ses réponses.';
+
+  /// Infobulle de l'icône globale quand la voix est active.
+  static const String voiceDisable = 'Couper la voix';
+
+  /// Infobulle de l'icône globale quand la voix est coupée.
+  static const String voiceEnable = 'Activer la voix';
+
+  /// Bouton « Écouter » d'un énoncé ou d'une fiche.
+  static const String listen = 'Écouter';
+
+  /// Infobulle du bouton d'écoute d'un énoncé.
+  static const String listenStatement = 'Écouter l’énoncé';
+
+  /// Infobulle du bouton d'écoute d'une fiche d'indice.
+  static const String listenHint = 'Écouter l’indice';
+
+  /// Infobulle du haut-parleur d'une réponse du tuteur.
+  static const String listenReply = 'Écouter la réponse';
+
+  /// Infobulle du bouton micro du chat.
+  static const String dictate = 'Dicter';
+
+  /// Infobulle du bouton micro pendant l'écoute.
+  static const String dictateStop = 'Arrêter la dictée';
+
+  /// Message doux quand le micro est indisponible ou refusé.
+  static const String microphoneUnavailable =
+      'Le micro n’est pas disponible pour le moment.';
+
+  /// État visuel pendant l'écoute.
+  static const String listening = 'Je t’écoute…';
+
+  // ---------------------------------------------------------------------
   // ---------------------------------------------------------------------
   // Ouverture — révélation de la marque
   //

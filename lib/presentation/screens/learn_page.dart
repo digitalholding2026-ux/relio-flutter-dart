@@ -18,6 +18,7 @@ import '../home/pressable_scale.dart';
 import '../learn/learn_state.dart';import '../strings/relio_strings.dart';
 import '../theme/relio_theme.dart';
 import '../widgets/relio_progress_bar.dart';
+import '../widgets/voice_toggle_button.dart';
 
 /// Carte d'un chapitre du catalogue.
 ///
@@ -197,6 +198,7 @@ class LearnPage extends StatelessWidget {
                   ),
                   icon: const Icon(Icons.search),
                 ),
+                const VoiceToggleButton(),
               ],
             ),
             const SizedBox(height: RelioSpacing.xl),

@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import '../../domain/learning/revision_plan.dart';
 import '../strings/relio_strings.dart';
 import '../theme/relio_theme.dart';
+import '../widgets/voice_toggle_button.dart';
 
 /// Écran de révision.
 class RevisionScreen extends StatelessWidget {
@@ -51,6 +52,7 @@ class RevisionScreen extends StatelessWidget {
             color: palette.textPrimary,
           ),
         ),
+        actions: const <Widget>[VoiceToggleButton()],
       ),
       body: SafeArea(
         child: ListView(

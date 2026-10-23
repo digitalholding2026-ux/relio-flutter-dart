@@ -420,6 +420,7 @@ void main() {
       expect(settings.textScale, TextScalePreference.normal);
       expect(settings.highContrast, isFalse);
       expect(settings.reduceAnimations, isFalse);
+      expect(settings.voiceEnabled, isFalse);
     });
 
     test('les preferences ecrites sont relues', () async {
@@ -432,12 +433,14 @@ void main() {
       await repository.setTextScale(TextScalePreference.tresGrand);
       await repository.setHighContrast(true);
       await repository.setReduceAnimations(true);
+      await repository.setVoiceEnabled(true);
 
       final reloaded = await repository.load();
       expect(reloaded.name, 'Camille');
       expect(reloaded.textScale, TextScalePreference.tresGrand);
       expect(reloaded.highContrast, isTrue);
       expect(reloaded.reduceAnimations, isTrue);
+      expect(reloaded.voiceEnabled, isTrue);
 
       // Réécrire la même clé ne crée pas de doublon.
       await repository.setName('Camille');

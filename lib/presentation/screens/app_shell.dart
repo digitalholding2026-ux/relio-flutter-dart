@@ -11,9 +11,12 @@
 library;
 
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../services/audio/audio_service.dart';
 import '../theme/relio_theme.dart';
 import 'app_shell_nav.dart';
 
@@ -185,6 +188,9 @@ class AppShellState extends State<AppShell> {
   /// Bascule sur l'onglet [tab].
   void selectTab(RelioTab tab) {
     if (tab == _current) return;
+    // Changer d'onglet QUITTE l'écran courant : la voix s'arrête tout de
+    // suite, y compris quand l'onglet quitté reste vivant dans l'IndexedStack.
+    unawaited(AudioService.instance.stop());
     setState(() => _current = tab);
   }
 

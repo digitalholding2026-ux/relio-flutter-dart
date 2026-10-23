@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 
 import '../strings/relio_strings.dart';
 import '../theme/relio_theme.dart';
+import '../widgets/voice_toggle_button.dart';
 
 /// Écran de fin de session rapide.
 class QuickSessionEndPage extends StatelessWidget {
@@ -37,6 +38,7 @@ class QuickSessionEndPage extends StatelessWidget {
             color: palette.textPrimary,
           ),
         ),
+        actions: const <Widget>[VoiceToggleButton()],
       ),
       body: SafeArea(
         child: Center(

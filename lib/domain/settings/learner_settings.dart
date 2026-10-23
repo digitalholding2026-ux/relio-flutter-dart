@@ -6,7 +6,8 @@
 ///  - le prénom saisi sur l'écran Profil ;
 ///  - l'échelle de texte (normal / grand / très grand) ;
 ///  - le contraste renforcé ;
-///  - la réduction des animations.
+///  - la réduction des animations ;
+///  - la voix du tuteur (narrateur, lecteur, dictée).
 ///
 /// ⚠️ AUCUNE de ces valeurs n'est un fait d'apprentissage. Ni score, ni
 /// niveau, ni progression, ni maîtrise : la règle 5 d'`AGENTS.md` interdit
@@ -50,6 +51,7 @@ class LearnerSettings {
     this.textScale = TextScalePreference.normal,
     this.highContrast = false,
     this.reduceAnimations = false,
+    this.voiceEnabled = false,
   });
 
   /// Prénom renseigné. Vide si l'élève ne l'a pas saisi.
@@ -64,6 +66,13 @@ class LearnerSettings {
   /// Désactivation des animations non essentielles.
   final bool reduceAnimations;
 
+  /// La voix du tuteur est-elle active ?
+  ///
+  /// Désactivée par défaut : aucune lecture ne se déclenche tant que l'élève
+  /// ne l'a pas demandé. C'est un réglage de confort, pas un fait
+  /// d'apprentissage.
+  final bool voiceEnabled;
+
   /// Les valeurs par défaut, appliquées à une installation neuve.
   static const LearnerSettings defaults = LearnerSettings();
 
@@ -72,19 +81,22 @@ class LearnerSettings {
     TextScalePreference? textScale,
     bool? highContrast,
     bool? reduceAnimations,
+    bool? voiceEnabled,
   }) {
     return LearnerSettings(
       name: name ?? this.name,
       textScale: textScale ?? this.textScale,
       highContrast: highContrast ?? this.highContrast,
       reduceAnimations: reduceAnimations ?? this.reduceAnimations,
+      voiceEnabled: voiceEnabled ?? this.voiceEnabled,
     );
   }
 
   @override
   String toString() =>
       'LearnerSettings(name: "$name", textScale: ${textScale.name}, '
-      'highContrast: $highContrast, reduceAnimations: $reduceAnimations)';
+      'highContrast: $highContrast, reduceAnimations: $reduceAnimations, '
+      'voiceEnabled: $voiceEnabled)';
 }
 
 /// Clés de stockage, en un seul endroit.
@@ -93,6 +105,12 @@ abstract final class _Keys {
   static const String textScale = 'display.text_scale';
   static const String highContrast = 'display.high_contrast';
   static const String reduceAnimations = 'a11y.reduce_animations';
+
+  /// Interrupteur « Voix du tuteur ».
+  ///
+  /// Réglage de confort, au même titre que le contraste : il ne dit rien de ce
+  /// que l'élève sait faire.
+  static const String voiceEnabled = 'voice.enabled';
 
   /// Drapeau « le parcours d'onboarding a été mené à son terme ».
   ///
@@ -200,6 +218,7 @@ class SettingsRepository {
       textScale: _parseScale(values[_Keys.textScale]),
       highContrast: values[_Keys.highContrast] == 'true',
       reduceAnimations: values[_Keys.reduceAnimations] == 'true',
+      voiceEnabled: values[_Keys.voiceEnabled] == 'true',
     );
   }
 
@@ -218,6 +237,10 @@ class SettingsRepository {
   /// Enregistre la préférence de réduction des animations.
   Future<void> setReduceAnimations(bool value) =>
       _write(_Keys.reduceAnimations, value ? 'true' : 'false');
+
+  /// Enregistre la préférence « Voix du tuteur ».
+  Future<void> setVoiceEnabled(bool value) =>
+      _write(_Keys.voiceEnabled, value ? 'true' : 'false');
 
   /// Identifiant de la session de test d'entrée, `null` s'il n'y en a pas.
   ///
