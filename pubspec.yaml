@@ -21,7 +21,12 @@ dependencies:
   http: ^1.6.0
   flutter_tts: ^4.2.5
   speech_to_text: ^7.5.0
-  permission_handler: ^13.0.2
+  # Épinglé à la branche 12.x : `permission_handler_android` 14.x exige
+  # `compileSdk = 37`, que l'AGP 9.1.0 ne sait pas résoudre (aucune
+  # plateforme de hash `android-37` n'est publiée). L'implémentation 13.0.1
+  # vise `compileSdk 35`. L'API utilisée (`Permission.microphone`) est
+  # identique.
+  permission_handler: ^12.0.1
 
 dev_dependencies:
   flutter_test:
